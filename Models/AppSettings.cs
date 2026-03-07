@@ -15,6 +15,7 @@ namespace MediaWorkflowOrchestrator.Models
         public bool SubtitleSkipSummary { get; set; } = true;
         public string TrackCleanupScriptPath { get; set; } = @"C:\Users\gilbe\OneDrive\Documentos\SubForge\limpiar_tracks.py";
         public bool TrackCleanupCloseQbittorrent { get; set; } = true;
+        public bool TrackCleanupDeleteOriginals { get; set; }
         public string TagAndRenameScriptPath { get; set; } = @"C:\Users\gilbe\OneDrive\Documentos\ENCODER_INMORTUS\1 Subs\ETIQUETAS_GDRIVELATINO.py";
         public string RarPackagingScriptPath { get; set; } = @"C:\Users\gilbe\OneDrive\Documentos\WorkflowRAR_IMG\rar_folder_image_info.py";
         public string MkvmergePath { get; set; } = @"C:\Program Files\MKVToolNix\mkvmerge.exe";

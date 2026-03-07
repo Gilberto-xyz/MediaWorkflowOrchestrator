@@ -105,6 +105,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _cleanupCloseQbittorrentEnabled = true;
 
         [ObservableProperty]
+        private bool _cleanupDeleteOriginalsEnabled;
+
+        [ObservableProperty]
         private bool _rarSkipImagesEnabled;
 
         [ObservableProperty]
@@ -121,6 +124,11 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
         partial void OnSelectedStepChanged(WorkflowStepState? value)
         {
+            foreach (var step in StepItems)
+            {
+                step.IsSelected = ReferenceEquals(step, value);
+            }
+
             SelectedStepTitle = value?.DisplayName ?? "Sin paso seleccionado";
             SelectedStepDescription = value?.StatusReason ?? "Selecciona un paso para ver detalle y salida.";
             UpdateQuickOptionsVisibility();
@@ -132,6 +140,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string TranslateFastModeButtonLabel => $"Modo rápido: {(TranslateFastModeEnabled ? "ON" : "OFF")}";
         public string TranslateSkipSummaryButtonLabel => $"Omitir resumen: {(TranslateSkipSummaryEnabled ? "ON" : "OFF")}";
         public string CleanupCloseQbittorrentButtonLabel => $"Cerrar qBittorrent: {(CleanupCloseQbittorrentEnabled ? "ON" : "OFF")}";
+        public string CleanupDeleteOriginalsButtonLabel => $"Eliminar originales: {(CleanupDeleteOriginalsEnabled ? "ON" : "OFF")}";
         public string RarSkipImagesButtonLabel => $"Sin imágenes: {(RarSkipImagesEnabled ? "ON" : "OFF")}";
         public string RarNoCompressButtonLabel => $"Solo info: {(RarNoCompressEnabled ? "ON" : "OFF")}";
         public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "normal" : "almacenar")}";
@@ -168,7 +177,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
             SelectStep(SelectedStep.StepKey);
             await ExecuteAsync(
-                () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, SelectedStep.StepKey, AppendOutput, CancellationToken),
+                () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, SelectedStep.StepKey, AppendOutput, CancellationToken, forceExecution: true),
                 SelectedStep.StepKey);
         }
 
@@ -255,6 +264,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             CleanupCloseQbittorrentEnabled = !CleanupCloseQbittorrentEnabled;
             OnPropertyChanged(nameof(CleanupCloseQbittorrentButtonLabel));
+            await PersistQuickSettingsAsync();
+        }
+
+        [RelayCommand]
+        private async Task ToggleCleanupDeleteOriginalsAsync()
+        {
+            CleanupDeleteOriginalsEnabled = !CleanupDeleteOriginalsEnabled;
+            OnPropertyChanged(nameof(CleanupDeleteOriginalsButtonLabel));
             await PersistQuickSettingsAsync();
         }
 
@@ -477,6 +494,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             TranslateFastModeEnabled = quickSettings.SubtitleFastMode;
             TranslateSkipSummaryEnabled = quickSettings.SubtitleSkipSummary;
             CleanupCloseQbittorrentEnabled = quickSettings.TrackCleanupCloseQbittorrent;
+            CleanupDeleteOriginalsEnabled = quickSettings.TrackCleanupDeleteOriginals;
             RarSkipImagesEnabled = quickSettings.RarSkipImages;
             RarNoCompressEnabled = quickSettings.RarNoCompress;
             RarUseCompressionNormalEnabled = quickSettings.RarUseCompressionNormal;
@@ -492,6 +510,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             quickSettings.SubtitleFastMode = TranslateFastModeEnabled;
             quickSettings.SubtitleSkipSummary = TranslateSkipSummaryEnabled;
             quickSettings.TrackCleanupCloseQbittorrent = CleanupCloseQbittorrentEnabled;
+            quickSettings.TrackCleanupDeleteOriginals = CleanupDeleteOriginalsEnabled;
             quickSettings.RarSkipImages = RarSkipImagesEnabled;
             quickSettings.RarNoCompress = RarNoCompressEnabled;
             quickSettings.RarUseCompressionNormal = RarUseCompressionNormalEnabled;
@@ -522,6 +541,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             OnPropertyChanged(nameof(TranslateFastModeButtonLabel));
             OnPropertyChanged(nameof(TranslateSkipSummaryButtonLabel));
             OnPropertyChanged(nameof(CleanupCloseQbittorrentButtonLabel));
+            OnPropertyChanged(nameof(CleanupDeleteOriginalsButtonLabel));
             OnPropertyChanged(nameof(RarSkipImagesButtonLabel));
             OnPropertyChanged(nameof(RarNoCompressButtonLabel));
             OnPropertyChanged(nameof(RarCompressionModeButtonLabel));
@@ -838,7 +858,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 WorkflowStepKey.Download => "Ajusta cómo se lanzan las descargas de Nyaa desde el panel lateral.",
                 WorkflowStepKey.TranslateSubs => "Controla los flags rápidos del traductor antes de ejecutarlo.",
-                WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso.",
+                WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso y si conserva la carpeta ORIGINAL.",
                 WorkflowStepKey.PackageRar => "Puedes saltar pasos previos y empaquetar de inmediato si tu release ya está lista.",
                 _ => "Este paso no tiene flags rápidos expuestos en el dashboard."
             };

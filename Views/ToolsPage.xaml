@@ -25,6 +25,7 @@
                     <CheckBox Content="Forzar latest en Nyaa" IsChecked="{x:Bind ViewModel.Settings.DownloaderForceLatest, Mode=TwoWay}" />
                     <TextBox Header="Script traducción" Text="{x:Bind ViewModel.Settings.SubtitleTranslatorScriptPath, Mode=TwoWay}" />
                     <TextBox Header="Script limpiar tracks" Text="{x:Bind ViewModel.Settings.TrackCleanupScriptPath, Mode=TwoWay}" />
+                    <CheckBox Content="Limpiar tracks: eliminar originales después de filtrar" IsChecked="{x:Bind ViewModel.Settings.TrackCleanupDeleteOriginals, Mode=TwoWay}" />
                     <TextBox Header="Script etiquetas" Text="{x:Bind ViewModel.Settings.TagAndRenameScriptPath, Mode=TwoWay}" />
                     <TextBox Header="Script RAR" Text="{x:Bind ViewModel.Settings.RarPackagingScriptPath, Mode=TwoWay}" />
                     <TextBox Header="mkvmerge" Text="{x:Bind ViewModel.Settings.MkvmergePath, Mode=TwoWay}" />

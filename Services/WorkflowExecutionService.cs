@@ -109,7 +109,7 @@ namespace MediaWorkflowOrchestrator.Services
             return nextStep is null ? null : await ExecuteStepAsync(workflow, nextStep.StepKey, onOutput, cancellationToken);
         }
 
-        public async Task<ExecutionRecord?> ExecuteStepAsync(WorkflowInstance workflow, WorkflowStepKey stepKey, Action<string>? onOutput, CancellationToken cancellationToken)
+        public async Task<ExecutionRecord?> ExecuteStepAsync(WorkflowInstance workflow, WorkflowStepKey stepKey, Action<string>? onOutput, CancellationToken cancellationToken, bool forceExecution = false)
         {
             var settings = await appSettingsService.LoadAsync();
             var step = workflow.FindStep(stepKey);
@@ -118,11 +118,16 @@ namespace MediaWorkflowOrchestrator.Services
                 return null;
             }
 
-            if (step.Status is WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision)
+            if (!forceExecution && (step.Status is WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision))
             {
                 step.StatusReason = "Resuelve primero el estado del workflow antes de ejecutar este paso.";
                 await workflowStore.SaveAsync(workflow);
                 return null;
+            }
+
+            if (forceExecution)
+            {
+                PrepareStepForForcedExecution(step, stepKey, onOutput);
             }
 
             if (stepKey == WorkflowStepKey.InspectSubs)
@@ -356,10 +361,11 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static IEnumerable<string> BuildTrackCleanupArgs(AppSettings settings, WorkflowInstance workflow)
         {
+            var cleanupInputPath = ResolveTrackCleanupInputPath(workflow);
             var args = new List<string>
             {
                 settings.TrackCleanupScriptPath,
-                string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) ? workflow.RootPath : workflow.PrimaryVideoPath,
+                cleanupInputPath,
                 "--brand",
                 settings.BrandName,
             };
@@ -370,7 +376,67 @@ namespace MediaWorkflowOrchestrator.Services
                 args.Add("close-qbittorrent");
             }
 
+            if (settings.TrackCleanupDeleteOriginals)
+            {
+                args.Add("--delete-originals");
+            }
+
             return args;
+        }
+
+        private static string ResolveTrackCleanupInputPath(WorkflowInstance workflow)
+        {
+            if (!string.IsNullOrWhiteSpace(workflow.RootPath) && Directory.Exists(workflow.RootPath))
+            {
+                var rootPath = Path.GetFullPath(workflow.RootPath);
+                if (workflow.SourceSelectionIsFile is false)
+                {
+                    return rootPath;
+                }
+
+                if (workflow.SourceSelectionIsFile is null && CountVideoFiles(rootPath) > 1)
+                {
+                    return rootPath;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath))
+            {
+                return workflow.PrimaryVideoPath;
+            }
+
+            return workflow.RootPath;
+        }
+
+        private static int CountVideoFiles(string directoryPath)
+        {
+            return Directory.EnumerateFiles(directoryPath, "*.*", SearchOption.TopDirectoryOnly)
+                .Count(IsVideoFile);
+        }
+
+        private static void PrepareStepForForcedExecution(WorkflowStepState step, WorkflowStepKey stepKey, Action<string>? onOutput)
+        {
+            if (step.Status == WorkflowStepStatus.Blocked)
+            {
+                onOutput?.Invoke($"Ejecucion manual forzada de {step.DisplayName}. Se omiten dependencias previas pendientes.");
+            }
+            else if (step.Status == WorkflowStepStatus.NeedsDecision)
+            {
+                onOutput?.Invoke($"Ejecucion manual forzada de {step.DisplayName}. Se usa la decision explicita del usuario.");
+            }
+
+            if (stepKey == WorkflowStepKey.TranslateSubs && step.Status == WorkflowStepStatus.NeedsDecision)
+            {
+                step.UserDecision = "translate";
+            }
+
+            step.Status = WorkflowStepStatus.Pending;
+            step.StatusReason = "Paso lanzado manualmente desde la interfaz.";
+            step.StartedAt = null;
+            step.FinishedAt = null;
+            step.ExitCode = null;
+            step.StdoutLogPath = string.Empty;
+            step.StderrLogPath = string.Empty;
         }
 
         private static string BuildFailureSummary(ProcessExecutionResult result)

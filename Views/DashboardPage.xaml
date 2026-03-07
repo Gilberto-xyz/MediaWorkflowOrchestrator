@@ -73,6 +73,7 @@
 
                         <StackPanel x:Name="CleanTracksQuickOptionsPanel" Orientation="Horizontal" Spacing="12">
                             <ToggleButton Command="{x:Bind ViewModel.ToggleCleanupCloseQbittorrentCommand}" Content="{x:Bind ViewModel.CleanupCloseQbittorrentButtonLabel, Mode=OneWay}" IsChecked="{x:Bind ViewModel.CleanupCloseQbittorrentEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}" />
+                            <ToggleButton Command="{x:Bind ViewModel.ToggleCleanupDeleteOriginalsCommand}" Content="{x:Bind ViewModel.CleanupDeleteOriginalsButtonLabel, Mode=OneWay}" IsChecked="{x:Bind ViewModel.CleanupDeleteOriginalsEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}" />
                         </StackPanel>
 
                         <StackPanel x:Name="PackageRarQuickOptionsPanel" Orientation="Horizontal" Spacing="12">
@@ -101,9 +102,9 @@
                                         <Border
                                             Margin="0,0,0,10"
                                             Padding="12"
-                                            Background="{x:Bind CardBackgroundBrush}"
-                                            BorderBrush="{x:Bind CardBorderBrush}"
-                                            BorderThickness="1"
+                                            Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
+                                            BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                            BorderThickness="{x:Bind CardBorderThickness, Mode=OneWay}"
                                             CornerRadius="12">
                                             <Grid ColumnSpacing="12" RowSpacing="8">
                                                 <Grid.ColumnDefinitions>
@@ -111,17 +112,30 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="4">
-                                                    <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" TextWrapping="Wrap" />
-                                                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind StatusReason}" />
+                                                    <TextBlock
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                        Text="{x:Bind DisplayName, Mode=OneWay}"
+                                                        TextWrapping="Wrap" />
+                                                    <TextBlock
+                                                        Style="{StaticResource MutedCaptionTextStyle}"
+                                                        Foreground="{x:Bind ReasonBrush, Mode=OneWay}"
+                                                        Text="{x:Bind StatusReason, Mode=OneWay}" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="4">
                                                     <TextBlock
                                                         HorizontalAlignment="Right"
+                                                        FontSize="11"
                                                         FontWeight="SemiBold"
-                                                        Foreground="{x:Bind StatusAccentBrush}"
-                                                        Text="{x:Bind Status}"
+                                                        Foreground="{StaticResource AccentPrimaryBrush}"
+                                                        Text="{x:Bind SelectionLabel, Mode=OneWay}" />
+                                                    <TextBlock
+                                                        HorizontalAlignment="Right"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}"
+                                                        Text="{x:Bind Status, Mode=OneWay}"
                                                         TextWrapping="WrapWholeWords" />
-                                                    <TextBlock HorizontalAlignment="Right" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind FinishedAtDisplay}" />
+                                                    <TextBlock HorizontalAlignment="Right" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind FinishedAtDisplay, Mode=OneWay}" />
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
