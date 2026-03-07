@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="MediaWorkflowOrchestrator.Views.ToolsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:MediaWorkflowOrchestrator.Models"
+    mc:Ignorable="d">
+    <Grid Padding="24">
+        <ScrollViewer
+            HorizontalScrollMode="Disabled"
+            HorizontalScrollBarVisibility="Disabled"
+            VerticalScrollBarVisibility="Visible"
+            VerticalScrollMode="Auto">
+            <StackPanel Spacing="16">
+                <Border Style="{StaticResource CardContainerStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Rutas y defaults" />
+                    <TextBox Header="Marca" Text="{x:Bind ViewModel.Settings.BrandName, Mode=TwoWay}" />
+                    <TextBox Header="Python" Text="{x:Bind ViewModel.Settings.PythonPath, Mode=TwoWay}" />
+                    <TextBox Header="Script Nyaa" Text="{x:Bind ViewModel.Settings.DownloaderScriptPath, Mode=TwoWay}" />
+                    <TextBox Header="Script Nyaa por link" Text="{x:Bind ViewModel.Settings.DownloaderLinkScriptPath, Mode=TwoWay}" />
+                    <CheckBox Content="Descarga en dry-run" IsChecked="{x:Bind ViewModel.Settings.DownloaderDryRun, Mode=TwoWay}" />
+                    <CheckBox Content="Forzar latest en Nyaa" IsChecked="{x:Bind ViewModel.Settings.DownloaderForceLatest, Mode=TwoWay}" />
+                    <TextBox Header="Script traducción" Text="{x:Bind ViewModel.Settings.SubtitleTranslatorScriptPath, Mode=TwoWay}" />
+                    <TextBox Header="Script limpiar tracks" Text="{x:Bind ViewModel.Settings.TrackCleanupScriptPath, Mode=TwoWay}" />
+                    <TextBox Header="Script etiquetas" Text="{x:Bind ViewModel.Settings.TagAndRenameScriptPath, Mode=TwoWay}" />
+                    <TextBox Header="Script RAR" Text="{x:Bind ViewModel.Settings.RarPackagingScriptPath, Mode=TwoWay}" />
+                    <TextBox Header="mkvmerge" Text="{x:Bind ViewModel.Settings.MkvmergePath, Mode=TwoWay}" />
+                    <TextBox Header="rar.exe" Text="{x:Bind ViewModel.Settings.RarExePath, Mode=TwoWay}" />
+                    <TextBox Header="Ollama host" Text="{x:Bind ViewModel.Settings.OllamaHost, Mode=TwoWay}" />
+                    <TextBox Header="Modelo traducción" Text="{x:Bind ViewModel.Settings.OllamaModel, Mode=TwoWay}" />
+                    <PasswordBox Password="{x:Bind ViewModel.RarPassword, Mode=TwoWay}" Header="Contraseña RAR" />
+                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Opciones de empaquetado RAR" />
+                    <CheckBox Content="No generar imágenes" IsChecked="{x:Bind ViewModel.Settings.RarSkipImages, Mode=TwoWay}" />
+                    <CheckBox Content="Solo mostrar info, sin crear RAR" IsChecked="{x:Bind ViewModel.Settings.RarNoCompress, Mode=TwoWay}" />
+                    <CheckBox Content="Usar compresión normal en RAR" IsChecked="{x:Bind ViewModel.Settings.RarUseCompressionNormal, Mode=TwoWay}" />
+                    <TextBox Header="Número de capturas (opcional)" PlaceholderText="Ej. 6" Text="{x:Bind ViewModel.Settings.RarCaptureCount, Mode=TwoWay}" />
+                    <ComboBox Header="Formato de imagen" SelectedItem="{x:Bind ViewModel.Settings.RarImageFormat, Mode=TwoWay}">
+                        <x:String>jpg</x:String>
+                        <x:String>png</x:String>
+                    </ComboBox>
+                    <CheckBox Content="RAR verbose" IsChecked="{x:Bind ViewModel.Settings.RarVerbose, Mode=TwoWay}" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Command="{x:Bind ViewModel.SaveSettingsCommand}" Content="Guardar" Style="{StaticResource PrimaryCommandButtonStyle}" />
+                        <Button Command="{x:Bind ViewModel.RestoreDefaultsCommand}" Content="Restaurar defaults" />
+                    </StackPanel>
+                </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainerStyle}">
+                    <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Validación" />
+                    <Button Command="{x:Bind ViewModel.ValidateAllToolsCommand}" Content="Validar herramientas" Style="{StaticResource PrimaryCommandButtonStyle}" />
+                    <ListView
+                        ItemsSource="{x:Bind ViewModel.ValidationResults, Mode=OneWay}"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.HorizontalScrollMode="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollMode="Disabled">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="models:ToolValidationResult">
+                                <Border Margin="0,0,0,10" Padding="12" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" />
+                                        <TextBlock Text="{x:Bind StateDisplay}" />
+                                        <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind Message}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardContainerStyle}">
+                    <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Notas operativas" />
+                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="La V1 no reescribe tus scripts. La app valida rutas, ejecuta procesos y persiste estado por workflow." />
+                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Si una dependencia no existe, el paso queda bloqueado y la validación muestra la causa exacta." />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

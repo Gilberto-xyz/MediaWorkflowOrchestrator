@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="MediaWorkflowOrchestrator.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid x:Name="RootShell" Background="{StaticResource WindowBackdropBrush}" Loaded="OnRootShellLoaded">
+        <Grid IsHitTestVisible="False">
+            <Ellipse
+                x:Name="MatrixGlow"
+                Width="700"
+                Height="700"
+                Margin="-180,40,0,0"
+                Fill="{StaticResource MatrixGlowBrush}"
+                Opacity="0.18"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform>
+                    <CompositeTransform x:Name="MatrixGlowTransform" TranslateX="-40" TranslateY="0" />
+                </Ellipse.RenderTransform>
+            </Ellipse>
+
+            <Ellipse
+                x:Name="AnimeGlow"
+                Width="760"
+                Height="760"
+                Margin="0,-180,-180,0"
+                Fill="{StaticResource AnimeGlowBrush}"
+                Opacity="0.2"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform>
+                    <CompositeTransform x:Name="AnimeGlowTransform" TranslateX="0" TranslateY="0" />
+                </Ellipse.RenderTransform>
+            </Ellipse>
+
+            <Ellipse
+                x:Name="CinemaGlow"
+                Width="880"
+                Height="880"
+                Margin="0,0,-160,-240"
+                Fill="{StaticResource CinemaGlowBrush}"
+                Opacity="0.16"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                RenderTransformOrigin="0.5,0.5">
+                <Ellipse.RenderTransform>
+                    <CompositeTransform x:Name="CinemaGlowTransform" TranslateX="0" TranslateY="0" />
+                </Ellipse.RenderTransform>
+            </Ellipse>
+
+            <Rectangle
+                x:Name="SweepAccent"
+                Width="420"
+                Height="1600"
+                Fill="{StaticResource SweepAccentBrush}"
+                Opacity="0.12"
+                RenderTransformOrigin="0.5,0.5">
+                <Rectangle.RenderTransform>
+                    <CompositeTransform x:Name="SweepTransform" Rotation="-24" TranslateX="-320" TranslateY="-140" />
+                </Rectangle.RenderTransform>
+            </Rectangle>
+
+            <Rectangle Fill="{StaticResource CinematicVeilBrush}" />
+        </Grid>
+
+        <NavigationView
+            x:Name="AppNavigationView"
+            Background="Transparent"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            CompactModeThresholdWidth="860"
+            ExpandedModeThresholdWidth="1180"
+            OpenPaneLength="340"
+            PaneDisplayMode="Auto"
+            SelectionChanged="OnNavigationSelectionChanged">
+            <NavigationView.Header>
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource HeroTitleTextStyle}" Text="{x:Bind ViewModel.WindowTitle, Mode=OneWay}" />
+                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Orquesta descargas, inspección, traducción, limpieza y empaquetado desde una sola ventana." />
+                </StackPanel>
+            </NavigationView.Header>
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="DashboardItem" Content="Dashboard" Icon="Home" Tag="dashboard" />
+                <NavigationViewItem Content="Herramientas" Icon="Setting" Tag="tools" />
+                <NavigationViewItem Content="Historial" Icon="Clock" Tag="history" />
+            </NavigationView.MenuItems>
+            <NavigationView.PaneCustomContent>
+                <ScrollViewer
+                    Margin="12,8,12,12"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto"
+                    VerticalScrollMode="Auto">
+                    <StackPanel Spacing="12">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Inicio rápido" />
+
+                        <Border Padding="12" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="8">
+                                <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Cargar o descargar" />
+                                <Button Click="OnQuickPickFileClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Document" />
+                                        <TextBlock Text="Elegir archivo base" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickPickFolderClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Folder" />
+                                        <TextBlock Text="Elegir carpeta del release" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickDownloadWeeklyClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Download" />
+                                        <TextBlock Text="Descarga semanal desde Nyaa" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickDownloadFromLinkClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="World" />
+                                        <TextBlock Text="Descargar desde link de Nyaa" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="12" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="8">
+                                <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Acciones del flujo" />
+                                <Button Click="OnQuickRunNextClicked" HorizontalAlignment="Stretch" Style="{StaticResource PrimaryCommandButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Play" />
+                                        <TextBlock Text="Ejecutar siguiente paso" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickRunSelectedClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Forward" />
+                                        <TextBlock Text="Ejecutar paso seleccionado" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickRetryClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Refresh" />
+                                        <TextBlock Text="Reintentar paso" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickSkipClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Redo" />
+                                        <TextBlock Text="Omitir paso seleccionado" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickCancelClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Cancel" />
+                                        <TextBlock Text="Cancelar ejecución actual" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Padding="12" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="8">
+                                <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Revisión y salida" />
+                                <Button Click="OnQuickOpenFolderClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="OpenFile" />
+                                        <TextBlock Text="Abrir carpeta del workflow" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="OnQuickOpenLogClicked" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <SymbolIcon Symbol="Page" />
+                                        <TextBlock Text="Abrir log del paso" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </NavigationView.PaneCustomContent>
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+    </Grid>
+</Window>

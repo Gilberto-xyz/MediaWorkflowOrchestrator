@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MediaWorkflowOrchestrator (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "MediaWorkflowOrchestrator (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
