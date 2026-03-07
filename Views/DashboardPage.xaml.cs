@@ -1,11 +1,16 @@
 using Windows.Storage.Pickers;
 using System.ComponentModel;
 using MediaWorkflowOrchestrator.Models;
+using Microsoft.UI.Input;
+using Microsoft.UI.Xaml.Input;
 
 namespace MediaWorkflowOrchestrator.Views
 {
     public sealed partial class DashboardPage : Page
     {
+        private bool detailOutputResizeActive;
+        private double lastDetailOutputPointerY;
+
         public DashboardPage()
         {
             DiagnosticsTrace.Write("DashboardPage ctor start.");
@@ -13,6 +18,7 @@ namespace MediaWorkflowOrchestrator.Views
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
+            SizeChanged += OnPageSizeChanged;
             DiagnosticsTrace.Write("DashboardPage ctor completed.");
         }
 
@@ -20,6 +26,7 @@ namespace MediaWorkflowOrchestrator.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
+            ViewModel.EnsureDetailOutputFitsViewport(ActualHeight);
             UpdateTranslationDecisionVisibility();
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActionsVisibility();
@@ -29,7 +36,13 @@ namespace MediaWorkflowOrchestrator.Views
         {
             Loaded -= OnLoaded;
             Unloaded -= OnUnloaded;
+            SizeChanged -= OnPageSizeChanged;
             ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        }
+
+        private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            ViewModel.EnsureDetailOutputFitsViewport(e.NewSize.Height);
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -83,6 +96,58 @@ namespace MediaWorkflowOrchestrator.Views
             if (sender is FrameworkElement { DataContext: WorkflowStepState step })
             {
                 ViewModel.SelectStepFromUser(step);
+            }
+        }
+
+        private void OnDetailOutputResizeHandlePointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            detailOutputResizeActive = true;
+            lastDetailOutputPointerY = e.GetCurrentPoint(this).Position.Y;
+            if (sender is UIElement element)
+            {
+                element.CapturePointer(e.Pointer);
+            }
+        }
+
+        private void OnDetailOutputResizeHandlePointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (!detailOutputResizeActive)
+            {
+                return;
+            }
+
+            var pointerY = e.GetCurrentPoint(this).Position.Y;
+            var delta = pointerY - lastDetailOutputPointerY;
+            if (Math.Abs(delta) < 1)
+            {
+                return;
+            }
+
+            ViewModel.ResizeDetailOutput(delta);
+            lastDetailOutputPointerY = pointerY;
+        }
+
+        private void OnDetailOutputResizeHandlePointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            ReleaseDetailOutputResize(sender, e.Pointer);
+        }
+
+        private void OnDetailOutputResizeHandlePointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            ReleaseDetailOutputResize(sender, e.Pointer);
+        }
+
+        private void OnDetailOutputAutoSizeClicked(object sender, RoutedEventArgs e)
+        {
+            ViewModel.ResetDetailOutputAutoSize(ActualHeight);
+        }
+
+        private void ReleaseDetailOutputResize(object sender, Pointer pointer)
+        {
+            detailOutputResizeActive = false;
+            if (sender is UIElement element)
+            {
+                element.ReleasePointerCapture(pointer);
             }
         }
 

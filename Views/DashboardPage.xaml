@@ -175,6 +175,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Spacing="4">
                             <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Detalle y salida" />
@@ -207,18 +208,39 @@
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
+                        <Grid Grid.Row="1" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Border
+                                Background="{StaticResource OverlayStrokeBrush}"
+                                CornerRadius="999"
+                                Height="6"
+                                HorizontalAlignment="Stretch"
+                                Opacity="0.55"
+                                PointerCaptureLost="OnDetailOutputResizeHandlePointerCaptureLost"
+                                PointerMoved="OnDetailOutputResizeHandlePointerMoved"
+                                PointerPressed="OnDetailOutputResizeHandlePointerPressed"
+                                PointerReleased="OnDetailOutputResizeHandlePointerReleased"
+                                VerticalAlignment="Center" />
+                            <Button
+                                Grid.Column="1"
+                                Click="OnDetailOutputAutoSizeClicked"
+                                Content="Autoajustar"
+                                Style="{StaticResource DenseActionButtonStyle}" />
+                        </Grid>
                         <TextBox
-                            Grid.Row="1"
+                            Grid.Row="2"
                             AcceptsReturn="True"
                             FontFamily="Consolas"
+                            Height="{x:Bind ViewModel.DetailOutputHeight, Mode=OneWay}"
                             HorizontalAlignment="Stretch"
                             IsReadOnly="True"
-                            MinHeight="150"
-                            MaxHeight="340"
                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
                             ScrollViewer.VerticalScrollBarVisibility="Visible"
                             Text="{x:Bind ViewModel.DetailOutput, Mode=OneWay}"
-                            TextWrapping="Wrap" />
+                            TextWrapping="NoWrap" />
                     </Grid>
                 </Border>
             </StackPanel>

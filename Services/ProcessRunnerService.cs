@@ -5,6 +5,9 @@ namespace MediaWorkflowOrchestrator.Services
 {
     public sealed class ProcessRunnerService : IProcessRunnerService
     {
+        private const string DefaultTerminalColumns = "180";
+        private const string DefaultTerminalLines = "48";
+
         public async Task<ProcessExecutionResult> RunAsync(ProcessExecutionRequest request, Action<string>? onOutput, CancellationToken cancellationToken)
         {
             var stdout = new StringBuilder();
@@ -21,6 +24,9 @@ namespace MediaWorkflowOrchestrator.Services
                 RedirectStandardError = true,
                 CreateNoWindow = true,
             };
+            psi.Environment["COLUMNS"] = DefaultTerminalColumns;
+            psi.Environment["LINES"] = DefaultTerminalLines;
+            psi.Environment["TERM"] = "xterm";
 
             foreach (var arg in request.Arguments)
             {

@@ -7,6 +7,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
 {
     public partial class DashboardViewModel : BaseViewModel, IRecipient<WorkflowSelectedMessage>
     {
+        private const double MinDetailOutputHeight = 220;
+        private const double MaxDetailOutputHeight = 1200;
+
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBackgroundBrush = CreateBrush(0x26, 0x14, 0x18, 0x22);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBorderBrush = CreateBrush(0x66, 0xF8, 0xFA, 0xFF);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush CopiedButtonBackgroundBrush = CreateBrush(0xCC, 0x0F, 0x76, 0x6E);
@@ -62,6 +65,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
         [ObservableProperty]
         private string _detailOutput = "Selecciona un paso para ver detalle y salida.";
+
+        [ObservableProperty]
+        private double _detailOutputHeight = 420;
+
+        [ObservableProperty]
+        private bool _detailOutputHeightWasResized;
 
         [ObservableProperty]
         private string _selectedStepTitle = "Sin paso seleccionado";
@@ -184,6 +193,32 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonForeground => ButtonForegroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonForeground => ButtonForegroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonForeground => ButtonForegroundBrush;
+
+        public void EnsureDetailOutputFitsViewport(double viewportHeight)
+        {
+            if (DetailOutputHeightWasResized || viewportHeight <= 0)
+            {
+                return;
+            }
+
+            var targetHeight = Math.Clamp((viewportHeight * 0.48) - 60, MinDetailOutputHeight, 760);
+            if (Math.Abs(targetHeight - DetailOutputHeight) > 1)
+            {
+                DetailOutputHeight = targetHeight;
+            }
+        }
+
+        public void ResizeDetailOutput(double delta)
+        {
+            DetailOutputHeightWasResized = true;
+            DetailOutputHeight = Math.Clamp(DetailOutputHeight + delta, MinDetailOutputHeight, MaxDetailOutputHeight);
+        }
+
+        public void ResetDetailOutputAutoSize(double viewportHeight)
+        {
+            DetailOutputHeightWasResized = false;
+            EnsureDetailOutputFitsViewport(viewportHeight);
+        }
 
         [RelayCommand]
         private async Task RunNextAsync()
@@ -890,6 +925,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
             activeOutputStepKey = null;
             LiveOutput = string.Empty;
             HasExplicitStepSelection = false;
+            DetailOutputHeightWasResized = false;
+            DetailOutputHeight = 420;
             StepItems.Clear();
             foreach (var step in CreateNeutralStepTemplate())
             {
