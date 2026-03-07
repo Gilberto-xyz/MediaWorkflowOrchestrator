@@ -62,41 +62,49 @@
     </LinearGradientBrush>
 
     <Style x:Key="HeroTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontSize" Value="24" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
     <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <Style x:Key="MutedCaptionTextStyle" TargetType="TextBlock">
         <Setter Property="Opacity" Value="0.72" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="10" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
     <Style x:Key="CardContainerStyle" TargetType="Border">
         <Setter Property="CornerRadius" Value="16" />
-        <Setter Property="Padding" Value="20" />
-        <Setter Property="Margin" Value="0,0,0,16" />
+        <Setter Property="Padding" Value="9" />
+        <Setter Property="Margin" Value="0,0,0,8" />
         <Setter Property="Background" Value="{StaticResource CardGlassBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource OverlayStrokeBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
+    <Style x:Key="DenseActionButtonStyle" TargetType="Button">
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="MinHeight" Value="30" />
+    </Style>
+
     <Style x:Key="PrimaryCommandButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="14,10" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="MinHeight" Value="30" />
         <Setter Property="Background" Value="{StaticResource AccentPrimaryBrush}" />
         <Setter Property="Foreground" Value="White" />
     </Style>
 
     <Style x:Key="QuickToggleButtonStyle" TargetType="ToggleButton">
-        <Setter Property="Padding" Value="14,10" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="MinHeight" Value="30" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 </ResourceDictionary>

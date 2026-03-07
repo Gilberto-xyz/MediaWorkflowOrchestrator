@@ -75,11 +75,11 @@
             IsSettingsVisible="False"
             CompactModeThresholdWidth="860"
             ExpandedModeThresholdWidth="1180"
-            OpenPaneLength="340"
+            OpenPaneLength="296"
             PaneDisplayMode="Auto"
             SelectionChanged="OnNavigationSelectionChanged">
             <NavigationView.Header>
-                <StackPanel Spacing="4">
+                <StackPanel Spacing="2">
                     <TextBlock Style="{StaticResource HeroTitleTextStyle}" Text="{x:Bind ViewModel.WindowTitle, Mode=OneWay}" />
                     <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Orquesta descargas, inspección, traducción, limpieza y empaquetado desde una sola ventana." />
                 </StackPanel>
@@ -91,36 +91,36 @@
             </NavigationView.MenuItems>
             <NavigationView.PaneCustomContent>
                 <ScrollViewer
-                    Margin="12,8,12,12"
+                    Margin="6,3,6,6"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto"
                     VerticalScrollMode="Auto">
-                    <StackPanel Spacing="12">
+                    <StackPanel Spacing="6">
                         <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Inicio rápido" />
 
-                        <Border Padding="12" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
-                            <StackPanel Spacing="8">
+                        <Border Padding="6" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="4">
                                 <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Cargar o descargar" />
-                                <Button Click="OnQuickPickFileClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickPickFileClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Document" />
                                         <TextBlock Text="Elegir archivo base" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickPickFolderClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickPickFolderClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Folder" />
                                         <TextBlock Text="Elegir carpeta del release" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickDownloadWeeklyClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickDownloadWeeklyClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Download" />
                                         <TextBlock Text="Descarga semanal desde Nyaa" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickDownloadFromLinkClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickDownloadFromLinkClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="World" />
                                         <TextBlock Text="Descargar desde link de Nyaa" TextWrapping="Wrap" />
                                     </StackPanel>
@@ -128,35 +128,35 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Padding="12" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
-                            <StackPanel Spacing="8">
+                        <Border Padding="6" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="4">
                                 <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Acciones del flujo" />
                                 <Button Click="OnQuickRunNextClicked" HorizontalAlignment="Stretch" Style="{StaticResource PrimaryCommandButtonStyle}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Play" />
                                         <TextBlock Text="Ejecutar siguiente paso" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button x:Name="QuickRunSelectedButton" Click="OnQuickRunSelectedClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="QuickRunSelectedButton" Click="OnQuickRunSelectedClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Forward" />
                                         <TextBlock Text="Ejecutar paso seleccionado" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickRetryClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickRetryClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Refresh" />
                                         <TextBlock Text="Reintentar paso" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickSkipClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickSkipClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Redo" />
                                         <TextBlock Text="Omitir paso seleccionado" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickCancelClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickCancelClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Cancel" />
                                         <TextBlock Text="Cancelar ejecución actual" TextWrapping="Wrap" />
                                     </StackPanel>
@@ -164,17 +164,17 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Padding="12" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
-                            <StackPanel Spacing="8">
+                        <Border Padding="6" Background="{StaticResource PaneGlassBrush}" BorderBrush="{StaticResource OverlayStrokeBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="4">
                                 <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Revisión y salida" />
-                                <Button Click="OnQuickOpenFolderClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickOpenFolderClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="OpenFile" />
                                         <TextBlock Text="Abrir carpeta del workflow" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>
-                                <Button Click="OnQuickOpenLogClicked" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Click="OnQuickOpenLogClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
                                         <SymbolIcon Symbol="Page" />
                                         <TextBlock Text="Abrir log del paso" TextWrapping="Wrap" />
                                     </StackPanel>
