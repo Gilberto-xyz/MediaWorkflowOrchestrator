@@ -1,15 +1,22 @@
 using MediaWorkflowOrchestrator.Messages;
 using MediaWorkflowOrchestrator.Views;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml.Media;
 using System.Windows.Input;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace MediaWorkflowOrchestrator
 {
     public sealed partial class MainWindow : Window, IRecipient<WorkflowSelectedMessage>
     {
+        private static readonly SolidColorBrush ActiveQuickRunSelectedBackgroundBrush = CreateBrush(0xCC, 0x0F, 0x76, 0x6E);
+        private static readonly SolidColorBrush ActiveQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0x2A, 0xF5, 0x98);
+        private static readonly SolidColorBrush ActiveQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
+
         private readonly Stopwatch backdropClock = new();
         private DispatcherQueueTimer? backdropTimer;
+        private DashboardPage? trackedDashboardPage;
 
         public MainWindow()
         {
@@ -78,6 +85,7 @@ namespace MediaWorkflowOrchestrator
                 ContentFrame.Navigate(targetPage);
             }
 
+            TryAttachDashboardPageFromFrame();
             ViewModel.SelectedNavigationTag = tag;
         }
 
@@ -89,6 +97,7 @@ namespace MediaWorkflowOrchestrator
                 ContentFrame.Navigate(typeof(DashboardPage));
             }
 
+            TryAttachDashboardPageFromFrame();
             ViewModel.SelectedNavigationTag = "dashboard";
         }
 
@@ -101,7 +110,67 @@ namespace MediaWorkflowOrchestrator
                 ViewModel.SelectedNavigationTag = "dashboard";
             }
 
+            TryAttachDashboardPageFromFrame();
             return (DashboardPage)ContentFrame.Content;
+        }
+
+        private void TryAttachDashboardPageFromFrame()
+        {
+            if (ContentFrame.Content is not DashboardPage page)
+            {
+                AttachDashboardPage(null);
+                return;
+            }
+
+            AttachDashboardPage(page);
+        }
+
+        private void AttachDashboardPage(DashboardPage? page)
+        {
+            if (ReferenceEquals(trackedDashboardPage, page))
+            {
+                UpdateQuickRunSelectedButtonVisual();
+                return;
+            }
+
+            if (trackedDashboardPage is not null)
+            {
+                trackedDashboardPage.ViewModel.PropertyChanged -= OnDashboardViewModelPropertyChanged;
+            }
+
+            trackedDashboardPage = page;
+
+            if (trackedDashboardPage is not null)
+            {
+                trackedDashboardPage.ViewModel.PropertyChanged += OnDashboardViewModelPropertyChanged;
+            }
+
+            UpdateQuickRunSelectedButtonVisual();
+        }
+
+        private void OnDashboardViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(DashboardViewModel.HasExplicitStepSelection)
+                or nameof(DashboardViewModel.SelectedStep))
+            {
+                _ = DispatcherQueue.TryEnqueue(UpdateQuickRunSelectedButtonVisual);
+            }
+        }
+
+        private void UpdateQuickRunSelectedButtonVisual()
+        {
+            var isActive = trackedDashboardPage?.ViewModel.HasExplicitStepSelection == true;
+            if (isActive)
+            {
+                QuickRunSelectedButton.Background = ActiveQuickRunSelectedBackgroundBrush;
+                QuickRunSelectedButton.BorderBrush = ActiveQuickRunSelectedBorderBrush;
+                QuickRunSelectedButton.Foreground = ActiveQuickRunSelectedForegroundBrush;
+                return;
+            }
+
+            QuickRunSelectedButton.ClearValue(Button.BackgroundProperty);
+            QuickRunSelectedButton.ClearValue(Button.BorderBrushProperty);
+            QuickRunSelectedButton.ClearValue(Button.ForegroundProperty);
         }
 
         private static void ExecuteCommand(ICommand command)
@@ -153,5 +222,8 @@ namespace MediaWorkflowOrchestrator
 
         private void OnQuickOpenLogClicked(object sender, RoutedEventArgs e) =>
             ExecuteCommand(EnsureDashboardPage().ViewModel.OpenSelectedLogCommand);
+
+        private static SolidColorBrush CreateBrush(byte a, byte r, byte g, byte b) =>
+            new(Microsoft.UI.ColorHelper.FromArgb(a, r, g, b));
     }
 }

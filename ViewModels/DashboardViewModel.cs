@@ -1,11 +1,18 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using MediaWorkflowOrchestrator.Messages;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace MediaWorkflowOrchestrator.ViewModels
 {
     public partial class DashboardViewModel : BaseViewModel, IRecipient<WorkflowSelectedMessage>
     {
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBackgroundBrush = CreateBrush(0x26, 0x14, 0x18, 0x22);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBorderBrush = CreateBrush(0x66, 0xF8, 0xFA, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush CopiedButtonBackgroundBrush = CreateBrush(0xCC, 0x0F, 0x76, 0x6E);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush CopiedButtonBorderBrush = CreateBrush(0xFF, 0x2A, 0xF5, 0x98);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush ButtonForegroundBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
+
         private readonly IWorkflowExecutionService workflowExecutionService = App.Host.WorkflowExecutionService;
         private readonly IWorkflowStore workflowStore = App.Host.WorkflowStore;
         private CancellationTokenSource? executionCancellationTokenSource;
@@ -63,6 +70,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private string _selectedStepDescription = "Selecciona un paso para ver detalle y salida.";
 
         [ObservableProperty]
+        private string _packageRarDetailSummary = "Ejecuta Empaquetar RAR para habilitar la copia rápida.";
+
+        [ObservableProperty]
         private bool _showTranslationDecisionActions;
 
         [ObservableProperty]
@@ -81,7 +91,22 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _showPackageRarQuickOptions;
 
         [ObservableProperty]
+        private bool _showPackageRarDetailActions;
+
+        [ObservableProperty]
         private bool _showSkipAheadActions;
+
+        [ObservableProperty]
+        private bool _hasExplicitStepSelection;
+
+        [ObservableProperty]
+        private bool _packageRarRawDataCopied;
+
+        [ObservableProperty]
+        private bool _packageRarWeightSummaryCopied;
+
+        [ObservableProperty]
+        private bool _packageRarCleanNameCopied;
 
         [ObservableProperty]
         private string _quickOptionsTitle = "Opciones rápidas";
@@ -132,6 +157,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             SelectedStepTitle = value?.DisplayName ?? "Sin paso seleccionado";
             SelectedStepDescription = value?.StatusReason ?? "Selecciona un paso para ver detalle y salida.";
             UpdateQuickOptionsVisibility();
+            UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
         }
 
@@ -141,11 +167,23 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string TranslateSkipSummaryButtonLabel => $"Omitir resumen: {(TranslateSkipSummaryEnabled ? "ON" : "OFF")}";
         public string CleanupCloseQbittorrentButtonLabel => $"Cerrar qBittorrent: {(CleanupCloseQbittorrentEnabled ? "ON" : "OFF")}";
         public string CleanupDeleteOriginalsButtonLabel => $"Eliminar originales: {(CleanupDeleteOriginalsEnabled ? "ON" : "OFF")}";
+        public string PackageRarRawDataButtonLabel => "Raw Data";
+        public string PackageRarWeightSummaryButtonLabel => "Peso completo";
+        public string PackageRarCleanNameButtonLabel => "Nombre limpio";
         public string RarSkipImagesButtonLabel => $"Sin imágenes: {(RarSkipImagesEnabled ? "ON" : "OFF")}";
         public string RarNoCompressButtonLabel => $"Solo info: {(RarNoCompressEnabled ? "ON" : "OFF")}";
         public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "normal" : "almacenar")}";
         public string RarVerboseButtonLabel => $"Verbose: {(RarVerboseEnabled ? "ON" : "OFF")}";
         public string RarImageFormatButtonLabel => $"Formato imagen: {RarImageFormatQuick.ToUpperInvariant()}";
+        public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonBackground => PackageRarRawDataCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonBackground => PackageRarWeightSummaryCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonBackground => PackageRarCleanNameCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonBorderBrush => PackageRarRawDataCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonBorderBrush => PackageRarWeightSummaryCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonBorderBrush => PackageRarCleanNameCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonForeground => ButtonForegroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonForeground => ButtonForegroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonForeground => ButtonForegroundBrush;
 
         [RelayCommand]
         private async Task RunNextAsync()
@@ -441,12 +479,45 @@ namespace MediaWorkflowOrchestrator.ViewModels
             executionCancellationTokenSource?.Cancel();
         }
 
+        [RelayCommand]
+        private void CopyPackageRarRawData()
+        {
+            CopyPackageRarHint(
+                WorkflowExecutionService.PackageRarRawDataHintKey,
+                "No hay datos RAW del empaquetado para copiar.",
+                "Se copiaron los datos RAW del empaquetado.");
+        }
+
+        [RelayCommand]
+        private void CopyPackageRarWeightSummary()
+        {
+            CopyPackageRarHint(
+                WorkflowExecutionService.PackageRarWeightSummaryHintKey,
+                "No hay resumen de pesos disponible para copiar.",
+                "Se copió el resumen completo de pesos.");
+        }
+
+        [RelayCommand]
+        private void CopyPackageRarCleanName()
+        {
+            CopyPackageRarHint(
+                WorkflowExecutionService.PackageRarCleanNameHintKey,
+                "No hay nombre limpio disponible para copiar.",
+                "Se copió el nombre limpio.");
+        }
+
         public async Task CreateWorkflowFromPathAsync(string path, bool isFile)
         {
             ResetWorkflowState("Cargando un nuevo workflow desde la ruta seleccionada...");
             currentWorkflow = await workflowExecutionService.CreateWorkflowAsync(path, isFile, CancellationToken.None);
             utilityOutputActive = false;
             RefreshFromWorkflow(currentWorkflow);
+        }
+
+        public void SelectStepFromUser(WorkflowStepState step)
+        {
+            HasExplicitStepSelection = true;
+            SelectedStep = step;
         }
 
         public void BeginWorkflowSelection(string message)
@@ -708,11 +779,17 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 : InfoBarSeverity.Informational;
             UpdateTranslationDecisionVisibility(workflow);
             UpdateQuickOptionsVisibility();
+            UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
         }
 
         private void AppendOutput(string line)
         {
+            if (IsStructuredOutputMetadata(line))
+            {
+                return;
+            }
+
             void UpdateOutput()
             {
                 LiveOutput += string.IsNullOrWhiteSpace(LiveOutput) ? line : $"{Environment.NewLine}{line}";
@@ -812,6 +889,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             currentWorkflow = null;
             activeOutputStepKey = null;
             LiveOutput = string.Empty;
+            HasExplicitStepSelection = false;
             StepItems.Clear();
             foreach (var step in CreateNeutralStepTemplate())
             {
@@ -827,6 +905,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             IsStatusInfoOpen = true;
             ShowTranslationDecisionActions = false;
             UpdateQuickOptionsVisibility();
+            UpdatePackageRarDetailActions();
         }
 
         private void UpdateTranslationDecisionVisibility(WorkflowInstance? workflow)
@@ -862,6 +941,80 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowStepKey.PackageRar => "Puedes saltar pasos previos y empaquetar de inmediato si tu release ya está lista.",
                 _ => "Este paso no tiene flags rápidos expuestos en el dashboard."
             };
+        }
+
+        private void UpdatePackageRarDetailActions()
+        {
+            var hasHints = SelectedStep?.StepKey == WorkflowStepKey.PackageRar
+                && SelectedStep.OutputHints.Count > 0;
+
+            ShowPackageRarDetailActions = hasHints;
+            ResetPackageRarCopyState();
+            PackageRarDetailSummary = hasHints
+                ? SelectedStep?.OutputHints.TryGetValue(WorkflowExecutionService.PackageRarWeightSummaryHintKey, out var summary) == true
+                    ? summary
+                    : "Los datos del empaquetado están listos para copiar."
+                : "Ejecuta Empaquetar RAR para habilitar la copia rápida.";
+        }
+
+        private void CopyPackageRarHint(string hintKey, string missingMessage, string successMessage)
+        {
+            if (SelectedStep?.OutputHints.TryGetValue(hintKey, out var value) != true || string.IsNullOrWhiteSpace(value))
+            {
+                ShowStatus(InfoBarSeverity.Warning, missingMessage);
+                return;
+            }
+
+            var package = new DataPackage();
+            package.SetText(value);
+            Clipboard.SetContent(package);
+            MarkPackageRarDetailActionCopied(hintKey);
+            ShowStatus(InfoBarSeverity.Success, successMessage);
+        }
+
+        private void MarkPackageRarDetailActionCopied(string hintKey)
+        {
+            switch (hintKey)
+            {
+                case WorkflowExecutionService.PackageRarRawDataHintKey:
+                    PackageRarRawDataCopied = true;
+                    break;
+                case WorkflowExecutionService.PackageRarWeightSummaryHintKey:
+                    PackageRarWeightSummaryCopied = true;
+                    break;
+                case WorkflowExecutionService.PackageRarCleanNameHintKey:
+                    PackageRarCleanNameCopied = true;
+                    break;
+            }
+
+            NotifyPackageRarCopyButtonVisuals();
+        }
+
+        private void ResetPackageRarCopyState()
+        {
+            PackageRarRawDataCopied = false;
+            PackageRarWeightSummaryCopied = false;
+            PackageRarCleanNameCopied = false;
+            NotifyPackageRarCopyButtonVisuals();
+        }
+
+        private void NotifyPackageRarCopyButtonVisuals()
+        {
+            OnPropertyChanged(nameof(PackageRarRawDataButtonBackground));
+            OnPropertyChanged(nameof(PackageRarWeightSummaryButtonBackground));
+            OnPropertyChanged(nameof(PackageRarCleanNameButtonBackground));
+            OnPropertyChanged(nameof(PackageRarRawDataButtonBorderBrush));
+            OnPropertyChanged(nameof(PackageRarWeightSummaryButtonBorderBrush));
+            OnPropertyChanged(nameof(PackageRarCleanNameButtonBorderBrush));
+            OnPropertyChanged(nameof(PackageRarRawDataButtonForeground));
+            OnPropertyChanged(nameof(PackageRarWeightSummaryButtonForeground));
+            OnPropertyChanged(nameof(PackageRarCleanNameButtonForeground));
+        }
+
+        private static bool IsStructuredOutputMetadata(string line)
+        {
+            return line.StartsWith("MWO_RAW_DATA\t", StringComparison.Ordinal)
+                || line.StartsWith("MWO_WEIGHT_SUMMARY\t", StringComparison.Ordinal);
         }
 
         private static IReadOnlyList<WorkflowStepState> CreateNeutralStepTemplate() => new List<WorkflowStepState>
@@ -945,5 +1098,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 string.Equals(mode, "all", StringComparison.OrdinalIgnoreCase) ? "all" : "from-latest",
             };
         }
+
+        private static Microsoft.UI.Xaml.Media.SolidColorBrush CreateBrush(byte a, byte r, byte g, byte b) =>
+            new(Microsoft.UI.ColorHelper.FromArgb(a, r, g, b));
     }
 }

@@ -22,6 +22,7 @@ namespace MediaWorkflowOrchestrator.Views
         {
             UpdateTranslationDecisionVisibility();
             UpdateQuickOptionsVisibility();
+            UpdatePackageRarDetailActionsVisibility();
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -47,6 +48,11 @@ namespace MediaWorkflowOrchestrator.Views
             {
                 _ = DispatcherQueue.TryEnqueue(UpdateQuickOptionsVisibility);
             }
+
+            if (e.PropertyName == nameof(DashboardViewModel.ShowPackageRarDetailActions))
+            {
+                _ = DispatcherQueue.TryEnqueue(UpdatePackageRarDetailActionsVisibility);
+            }
         }
 
         private void UpdateTranslationDecisionVisibility()
@@ -65,11 +71,18 @@ namespace MediaWorkflowOrchestrator.Views
             PackageRarQuickOptionsPanel.Visibility = ViewModel.ShowPackageRarQuickOptions ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        private void UpdatePackageRarDetailActionsVisibility()
+        {
+            PackageRarDetailActionsPanel.Visibility = ViewModel.ShowPackageRarDetailActions
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
         private void OnStepItemClicked(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement { DataContext: WorkflowStepState step })
             {
-                ViewModel.SelectedStep = step;
+                ViewModel.SelectStepFromUser(step);
             }
         }
 

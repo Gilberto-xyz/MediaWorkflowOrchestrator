@@ -5,6 +5,10 @@ namespace MediaWorkflowOrchestrator.Services
 {
     public sealed class WorkflowExecutionService : IWorkflowExecutionService
     {
+        public const string PackageRarRawDataHintKey = "package_rar_raw_data";
+        public const string PackageRarWeightSummaryHintKey = "package_rar_weight_summary";
+        public const string PackageRarCleanNameHintKey = "package_rar_clean_name";
+
         private readonly IAppSettingsService appSettingsService;
         private readonly IWorkflowStore workflowStore;
         private readonly ISecretProtector secretProtector;
@@ -225,6 +229,8 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             result = NormalizeProcessResult(stepKey, result, onOutput);
+            step.OutputHints = new Dictionary<string, string>();
+            result = ExtractStructuredOutputHints(stepKey, step, result);
 
             await File.WriteAllTextAsync(logPaths.stdout, result.StandardOutput, cancellationToken);
             await File.WriteAllTextAsync(logPaths.stderr, result.StandardError, cancellationToken);
@@ -684,6 +690,111 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return command.Replace(secret, "[SECRET]", StringComparison.Ordinal);
+        }
+
+        private static ProcessExecutionResult ExtractStructuredOutputHints(
+            WorkflowStepKey stepKey,
+            WorkflowStepState step,
+            ProcessExecutionResult result)
+        {
+            if (stepKey != WorkflowStepKey.PackageRar || string.IsNullOrWhiteSpace(result.StandardOutput))
+            {
+                return result;
+            }
+
+            var visibleLines = new List<string>();
+            var rawRows = new List<string>();
+            var cleanNames = new List<string>();
+            string? weightSummary = null;
+
+            using var reader = new StringReader(result.StandardOutput);
+            while (reader.ReadLine() is { } line)
+            {
+                if (TryParsePackageRarRawDataLine(line, out var rawRow, out var cleanName))
+                {
+                    rawRows.Add(rawRow);
+                    if (!string.IsNullOrWhiteSpace(cleanName))
+                    {
+                        cleanNames.Add(cleanName);
+                    }
+
+                    continue;
+                }
+
+                if (TryParsePackageRarWeightSummaryLine(line, out var summary))
+                {
+                    weightSummary = summary;
+                    continue;
+                }
+
+                visibleLines.Add(line);
+            }
+
+            if (rawRows.Count > 0)
+            {
+                step.OutputHints[PackageRarRawDataHintKey] = string.Join(Environment.NewLine, rawRows);
+            }
+
+            if (cleanNames.Count > 0)
+            {
+                step.OutputHints[PackageRarCleanNameHintKey] = string.Join(Environment.NewLine, cleanNames.Distinct());
+            }
+
+            if (!string.IsNullOrWhiteSpace(weightSummary))
+            {
+                step.OutputHints[PackageRarWeightSummaryHintKey] = weightSummary;
+            }
+
+            return new ProcessExecutionResult
+            {
+                ExitCode = result.ExitCode,
+                StandardOutput = string.Join(Environment.NewLine, visibleLines).Trim(),
+                StandardError = result.StandardError,
+                StartedAt = result.StartedAt,
+                FinishedAt = result.FinishedAt,
+                CommandDisplay = result.CommandDisplay,
+                Success = result.Success,
+            };
+        }
+
+        private static bool TryParsePackageRarRawDataLine(string line, out string rawRow, out string cleanName)
+        {
+            rawRow = string.Empty;
+            cleanName = string.Empty;
+            const string prefix = "MWO_RAW_DATA\t";
+            if (!line.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var parts = line.Split('\t');
+            if (parts.Length < 7)
+            {
+                return false;
+            }
+
+            rawRow = string.Join('\t', parts.Skip(1).Take(5));
+            cleanName = parts[6].Trim();
+            return true;
+        }
+
+        private static bool TryParsePackageRarWeightSummaryLine(string line, out string summary)
+        {
+            summary = string.Empty;
+            const string prefix = "MWO_WEIGHT_SUMMARY\t";
+            if (!line.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var parts = line.Split('\t');
+            if (parts.Length < 3)
+            {
+                return false;
+            }
+
+            summary = $"{parts[1].Trim()} - Promedio {parts[2].Trim()}";
+            return true;
         }
 
         private static async Task<(bool reachable, string message)> CheckOllamaReachabilityAsync(string host, CancellationToken cancellationToken)

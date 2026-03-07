@@ -156,6 +156,29 @@
                             <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Detalle y salida" />
                             <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.SelectedStepTitle, Mode=OneWay}" TextWrapping="Wrap" />
                             <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind ViewModel.SelectedStepDescription, Mode=OneWay}" />
+                            <StackPanel x:Name="PackageRarDetailActionsPanel" Spacing="8">
+                                <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind ViewModel.PackageRarDetailSummary, Mode=OneWay}" />
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <Button
+                                        Background="{x:Bind ViewModel.PackageRarRawDataButtonBackground, Mode=OneWay}"
+                                        BorderBrush="{x:Bind ViewModel.PackageRarRawDataButtonBorderBrush, Mode=OneWay}"
+                                        Command="{x:Bind ViewModel.CopyPackageRarRawDataCommand}"
+                                        Content="{x:Bind ViewModel.PackageRarRawDataButtonLabel, Mode=OneWay}"
+                                        Foreground="{x:Bind ViewModel.PackageRarRawDataButtonForeground, Mode=OneWay}" />
+                                    <Button
+                                        Background="{x:Bind ViewModel.PackageRarWeightSummaryButtonBackground, Mode=OneWay}"
+                                        BorderBrush="{x:Bind ViewModel.PackageRarWeightSummaryButtonBorderBrush, Mode=OneWay}"
+                                        Command="{x:Bind ViewModel.CopyPackageRarWeightSummaryCommand}"
+                                        Content="{x:Bind ViewModel.PackageRarWeightSummaryButtonLabel, Mode=OneWay}"
+                                        Foreground="{x:Bind ViewModel.PackageRarWeightSummaryButtonForeground, Mode=OneWay}" />
+                                    <Button
+                                        Background="{x:Bind ViewModel.PackageRarCleanNameButtonBackground, Mode=OneWay}"
+                                        BorderBrush="{x:Bind ViewModel.PackageRarCleanNameButtonBorderBrush, Mode=OneWay}"
+                                        Command="{x:Bind ViewModel.CopyPackageRarCleanNameCommand}"
+                                        Content="{x:Bind ViewModel.PackageRarCleanNameButtonLabel, Mode=OneWay}"
+                                        Foreground="{x:Bind ViewModel.PackageRarCleanNameButtonForeground, Mode=OneWay}" />
+                                </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                         <TextBox
                             Grid.Row="1"
