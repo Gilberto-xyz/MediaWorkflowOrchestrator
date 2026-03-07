@@ -99,46 +99,70 @@
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch"
                                         Padding="0">
-                                        <Border
-                                            Margin="0,0,0,10"
-                                            Padding="12"
-                                            Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
-                                            BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
-                                            BorderThickness="{x:Bind CardBorderThickness, Mode=OneWay}"
-                                            CornerRadius="12">
-                                            <Grid ColumnSpacing="12" RowSpacing="8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0" Spacing="4">
-                                                    <TextBlock
-                                                        FontWeight="SemiBold"
-                                                        Foreground="{x:Bind TitleBrush, Mode=OneWay}"
-                                                        Text="{x:Bind DisplayName, Mode=OneWay}"
-                                                        TextWrapping="Wrap" />
-                                                    <TextBlock
-                                                        Style="{StaticResource MutedCaptionTextStyle}"
-                                                        Foreground="{x:Bind ReasonBrush, Mode=OneWay}"
-                                                        Text="{x:Bind StatusReason, Mode=OneWay}" />
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="4">
-                                                    <TextBlock
-                                                        HorizontalAlignment="Right"
-                                                        FontSize="11"
-                                                        FontWeight="SemiBold"
-                                                        Foreground="{StaticResource AccentPrimaryBrush}"
-                                                        Text="{x:Bind SelectionLabel, Mode=OneWay}" />
-                                                    <TextBlock
-                                                        HorizontalAlignment="Right"
-                                                        FontWeight="SemiBold"
-                                                        Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}"
-                                                        Text="{x:Bind Status, Mode=OneWay}"
-                                                        TextWrapping="WrapWholeWords" />
-                                                    <TextBlock HorizontalAlignment="Right" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind FinishedAtDisplay, Mode=OneWay}" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
+                                        <Grid Margin="0,0,0,10">
+                                            <Border
+                                                Background="Transparent"
+                                                BorderBrush="{x:Bind SelectionGlowOuterBrush, Mode=OneWay}"
+                                                BorderThickness="{x:Bind SelectionGlowOuterThickness, Mode=OneWay}"
+                                                CornerRadius="18"
+                                                Margin="-3"
+                                                Opacity="{x:Bind SelectionGlowOpacity, Mode=OneWay}" />
+                                            <Border
+                                                Background="Transparent"
+                                                BorderBrush="{x:Bind SelectionGlowInnerBrush, Mode=OneWay}"
+                                                BorderThickness="{x:Bind SelectionGlowInnerThickness, Mode=OneWay}"
+                                                CornerRadius="15"
+                                                Margin="-1"
+                                                Opacity="{x:Bind SelectionGlowOpacity, Mode=OneWay}" />
+                                            <Border
+                                                Padding="12"
+                                                Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
+                                                BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                BorderThickness="{x:Bind CardBorderThickness, Mode=OneWay}"
+                                                CornerRadius="12">
+                                                <Grid ColumnSpacing="12" RowSpacing="8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="6" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border
+                                                        Grid.Column="0"
+                                                        Background="{x:Bind SelectionRailBrush, Mode=OneWay}"
+                                                        CornerRadius="999"
+                                                        Opacity="{x:Bind SelectionRailOpacity, Mode=OneWay}" />
+                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                        <TextBlock
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                            Text="{x:Bind DisplayName, Mode=OneWay}"
+                                                            TextWrapping="Wrap" />
+                                                        <TextBlock
+                                                            Style="{StaticResource MutedCaptionTextStyle}"
+                                                            Foreground="{x:Bind ReasonBrush, Mode=OneWay}"
+                                                            Text="{x:Bind StatusReason, Mode=OneWay}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" HorizontalAlignment="Right" Spacing="6">
+                                                        <Border
+                                                            Width="12"
+                                                            Height="12"
+                                                            HorizontalAlignment="Right"
+                                                            Background="{x:Bind SelectionIndicatorBackgroundBrush, Mode=OneWay}"
+                                                            BorderBrush="{x:Bind SelectionIndicatorBorderBrush, Mode=OneWay}"
+                                                            BorderThickness="1.5"
+                                                            CornerRadius="999"
+                                                            Opacity="{x:Bind SelectionIndicatorOpacity, Mode=OneWay}" />
+                                                        <TextBlock
+                                                            HorizontalAlignment="Right"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}"
+                                                            Text="{x:Bind Status, Mode=OneWay}"
+                                                            TextWrapping="WrapWholeWords" />
+                                                        <TextBlock HorizontalAlignment="Right" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind FinishedAtDisplay, Mode=OneWay}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
                                     </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

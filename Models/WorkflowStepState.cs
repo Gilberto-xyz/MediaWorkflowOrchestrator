@@ -24,12 +24,17 @@ namespace MediaWorkflowOrchestrator.Models
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FailedBorderBrush = CreateBrush(0x88, 0xF0, 0x71, 0x78);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FailedAccentBrush = CreateBrush(0xFF, 0xFF, 0xD6, 0xD9);
 
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBackgroundBrush = CreateBrush(0x33, 0xD9, 0x77, 0x06);
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBorderBrush = CreateBrush(0xFF, 0xD9, 0x77, 0x06);
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedAccentBrush = CreateBrush(0xFF, 0xFF, 0xE1, 0xBC);
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedTextBrush = CreateBrush(0xFF, 0xFF, 0xF7, 0xED);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBackgroundBrush = CreateBrush(0x4D, 0x4B, 0x3F, 0x68);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBorderBrush = CreateBrush(0xFF, 0xC6, 0x9D, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedAccentBrush = CreateBrush(0xFF, 0xEE, 0xE4, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedTextBrush = CreateBrush(0xFF, 0xF9, 0xF7, 0xFF);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DefaultTextBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedSubtitleBrush = CreateBrush(0xEE, 0xFF, 0xEA, 0xCF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedSubtitleBrush = CreateBrush(0xEE, 0xDE, 0xD7, 0xF2);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedGlowOuterBrush = CreateBrush(0x4A, 0xD9, 0xB8, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedGlowInnerBrush = CreateBrush(0xA6, 0xF1, 0xE4, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedIndicatorBackgroundBrush = CreateBrush(0xFF, 0xF1, 0xE4, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedIndicatorBorderBrush = CreateBrush(0xFF, 0xC6, 0x9D, 0xFF);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedRailBrush = CreateBrush(0xFF, 0xD7, 0xC2, 0xFF);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DefaultSubtitleBrush = CreateBrush(0xB8, 0xFF, 0xFF, 0xFF);
 
         private WorkflowStepKey stepKey;
@@ -182,7 +187,34 @@ namespace MediaWorkflowOrchestrator.Models
         public Thickness CardBorderThickness => IsSelected ? new Thickness(2) : new Thickness(1);
 
         [JsonIgnore]
-        public string SelectionLabel => IsSelected ? "Seleccionado" : string.Empty;
+        public Microsoft.UI.Xaml.Media.Brush SelectionGlowOuterBrush => IsSelected ? SelectedGlowOuterBrush : TransparentBrush;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush SelectionGlowInnerBrush => IsSelected ? SelectedGlowInnerBrush : TransparentBrush;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush SelectionIndicatorBackgroundBrush => IsSelected ? SelectedIndicatorBackgroundBrush : TransparentBrush;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush SelectionIndicatorBorderBrush => IsSelected ? SelectedIndicatorBorderBrush : TransparentBrush;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush SelectionRailBrush => IsSelected ? SelectedRailBrush : TransparentBrush;
+
+        [JsonIgnore]
+        public double SelectionGlowOpacity => IsSelected ? 1 : 0;
+
+        [JsonIgnore]
+        public Thickness SelectionGlowOuterThickness => IsSelected ? new Thickness(6) : new Thickness(0);
+
+        [JsonIgnore]
+        public Thickness SelectionGlowInnerThickness => IsSelected ? new Thickness(2) : new Thickness(0);
+
+        [JsonIgnore]
+        public double SelectionIndicatorOpacity => IsSelected ? 1 : 0;
+
+        [JsonIgnore]
+        public double SelectionRailOpacity => IsSelected ? 1 : 0;
 
         private void NotifyVisualStateChanged()
         {
@@ -192,8 +224,19 @@ namespace MediaWorkflowOrchestrator.Models
             OnPropertyChanged(nameof(TitleBrush));
             OnPropertyChanged(nameof(ReasonBrush));
             OnPropertyChanged(nameof(CardBorderThickness));
-            OnPropertyChanged(nameof(SelectionLabel));
+            OnPropertyChanged(nameof(SelectionGlowOuterBrush));
+            OnPropertyChanged(nameof(SelectionGlowInnerBrush));
+            OnPropertyChanged(nameof(SelectionGlowOpacity));
+            OnPropertyChanged(nameof(SelectionGlowOuterThickness));
+            OnPropertyChanged(nameof(SelectionGlowInnerThickness));
+            OnPropertyChanged(nameof(SelectionIndicatorBackgroundBrush));
+            OnPropertyChanged(nameof(SelectionIndicatorBorderBrush));
+            OnPropertyChanged(nameof(SelectionIndicatorOpacity));
+            OnPropertyChanged(nameof(SelectionRailBrush));
+            OnPropertyChanged(nameof(SelectionRailOpacity));
         }
+
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TransparentBrush = CreateBrush(0x00, 0x00, 0x00, 0x00);
 
         private static Microsoft.UI.Xaml.Media.SolidColorBrush CreateBrush(byte a, byte r, byte g, byte b) =>
             new(Microsoft.UI.ColorHelper.FromArgb(a, r, g, b));
