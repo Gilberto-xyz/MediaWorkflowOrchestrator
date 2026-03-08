@@ -59,6 +59,7 @@ namespace MediaWorkflowOrchestrator
             InitializeMatrixBackdrop();
             RootShell.SizeChanged += OnRootShellSizeChanged;
             StartMatrixGhostGlyphLoop();
+            UpdateQuickActionsPaneState();
             isMatrixBackdropInitialized = true;
         }
 
@@ -286,6 +287,31 @@ namespace MediaWorkflowOrchestrator
             ViewModel.SelectedNavigationTag = tag;
         }
 
+        private void OnNavigationDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
+        {
+            UpdateQuickActionsPaneState();
+        }
+
+        private void OnNavigationPaneVisibilityChanged(NavigationView sender, object args)
+        {
+            UpdateQuickActionsPaneState();
+        }
+
+        private void UpdateQuickActionsPaneState()
+        {
+            var showExpandedPaneActions =
+                AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded
+                && AppNavigationView.IsPaneOpen;
+
+            UpdateQuickActionsPaneCompactMode(!showExpandedPaneActions);
+        }
+
+        private void UpdateQuickActionsPaneCompactMode(bool compactMode)
+        {
+            QuickActionsExpandedRoot.Visibility = compactMode ? Visibility.Collapsed : Visibility.Visible;
+            QuickActionsCompactRoot.Visibility = compactMode ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         public void Receive(WorkflowSelectedMessage message)
         {
             AppNavigationView.SelectedItem = DashboardItem;
@@ -362,12 +388,18 @@ namespace MediaWorkflowOrchestrator
                 QuickRunSelectedButton.Background = ActiveQuickRunSelectedBackgroundBrush;
                 QuickRunSelectedButton.BorderBrush = ActiveQuickRunSelectedBorderBrush;
                 QuickRunSelectedButton.Foreground = ActiveQuickRunSelectedForegroundBrush;
+                CompactQuickRunSelectedButton.Background = ActiveQuickRunSelectedBackgroundBrush;
+                CompactQuickRunSelectedButton.BorderBrush = ActiveQuickRunSelectedBorderBrush;
+                CompactQuickRunSelectedButton.Foreground = ActiveQuickRunSelectedForegroundBrush;
                 return;
             }
 
             QuickRunSelectedButton.ClearValue(Button.BackgroundProperty);
             QuickRunSelectedButton.ClearValue(Button.BorderBrushProperty);
             QuickRunSelectedButton.ClearValue(Button.ForegroundProperty);
+            CompactQuickRunSelectedButton.ClearValue(Button.BackgroundProperty);
+            CompactQuickRunSelectedButton.ClearValue(Button.BorderBrushProperty);
+            CompactQuickRunSelectedButton.ClearValue(Button.ForegroundProperty);
         }
 
         private static void ExecuteCommand(ICommand command)
