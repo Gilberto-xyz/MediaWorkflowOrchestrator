@@ -21,6 +21,9 @@ namespace MediaWorkflowOrchestrator
         private static readonly SolidColorBrush ActiveQuickRunSelectedBackgroundBrush = CreateBrush(0xCC, 0x0F, 0x76, 0x6E);
         private static readonly SolidColorBrush ActiveQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0x2A, 0xF5, 0x98);
         private static readonly SolidColorBrush ActiveQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
+        private static readonly Thickness ExpandedQuickActionsPaneMargin = new(6, 3, 6, 6);
+        private static readonly Thickness CompactOverlayQuickActionsPaneMargin = new(12, 3, 12, 6);
+        private static readonly Thickness CompactStripQuickActionsPaneMargin = new(0, 3, 0, 6);
         private const string MatrixGhostGlyphs = "影界電流空夜月星雨光夢幻零心火水風雪龍門森海山気道式波天狐炎雷静声鏡黒白緑青赤花鳥雲華桜刃文語字魂";
         private const double MatrixBackdropMinimumWidth = 960;
         private const double MatrixBackdropMinimumHeight = 720;
@@ -67,6 +70,7 @@ namespace MediaWorkflowOrchestrator
         {
             MatrixRainHost.Width = Math.Max(e.NewSize.Width, MatrixBackdropMinimumWidth);
             MatrixRainHost.Height = Math.Max(e.NewSize.Height, MatrixBackdropMinimumHeight);
+            UpdateQuickActionsPaneState();
 
             matrixResizeDebounceTimer ??= CreateMatrixResizeDebounceTimer();
             matrixResizeDebounceTimer.Stop();
@@ -292,18 +296,43 @@ namespace MediaWorkflowOrchestrator
             UpdateQuickActionsPaneState();
         }
 
+        private void OnNavigationPaneOpening(NavigationView sender, object args)
+        {
+            UpdateQuickActionsPaneState(paneOpenOverride: true);
+        }
+
+        private void OnNavigationPaneClosing(NavigationView sender, object args)
+        {
+            UpdateQuickActionsPaneState(paneOpenOverride: false);
+        }
+
         private void OnNavigationPaneVisibilityChanged(NavigationView sender, object args)
         {
             UpdateQuickActionsPaneState();
         }
 
-        private void UpdateQuickActionsPaneState()
+        private void UpdateQuickActionsPaneState(bool? paneOpenOverride = null)
         {
-            var showExpandedPaneActions =
-                AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded
-                && AppNavigationView.IsPaneOpen;
+            var isPaneOpen = paneOpenOverride ?? AppNavigationView.IsPaneOpen;
+            var isExpandedPane = AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded && isPaneOpen;
+            var isCompactOverlayPane = AppNavigationView.DisplayMode != NavigationViewDisplayMode.Expanded && isPaneOpen;
 
-            UpdateQuickActionsPaneCompactMode(!showExpandedPaneActions);
+            UpdateQuickActionsPaneCompactMode(!isExpandedPane);
+            QuickActionsPaneScrollViewer.Margin = isExpandedPane
+                ? ExpandedQuickActionsPaneMargin
+                : isCompactOverlayPane
+                    ? CompactOverlayQuickActionsPaneMargin
+                    : CompactStripQuickActionsPaneMargin;
+            QuickActionsPaneScrollViewer.HorizontalAlignment =
+                isExpandedPane || isCompactOverlayPane
+                    ? HorizontalAlignment.Stretch
+                    : HorizontalAlignment.Center;
+            QuickActionsPaneScrollViewer.Width = isExpandedPane || isCompactOverlayPane
+                ? double.NaN
+                : AppNavigationView.CompactPaneLength;
+            QuickActionsCompactRoot.HorizontalAlignment = isCompactOverlayPane
+                ? HorizontalAlignment.Left
+                : HorizontalAlignment.Center;
         }
 
         private void UpdateQuickActionsPaneCompactMode(bool compactMode)

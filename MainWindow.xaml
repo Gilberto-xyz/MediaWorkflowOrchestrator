@@ -121,11 +121,14 @@
             Background="Transparent"
             IsBackButtonVisible="Collapsed"
             IsSettingsVisible="False"
+            CompactPaneLength="56"
             CompactModeThresholdWidth="860"
-            ExpandedModeThresholdWidth="1180"
+            ExpandedModeThresholdWidth="1320"
             OpenPaneLength="296"
             PaneDisplayMode="Auto"
             DisplayModeChanged="OnNavigationDisplayModeChanged"
+            PaneOpening="OnNavigationPaneOpening"
+            PaneClosing="OnNavigationPaneClosing"
             PaneOpened="OnNavigationPaneVisibilityChanged"
             PaneClosed="OnNavigationPaneVisibilityChanged"
             SelectionChanged="OnNavigationSelectionChanged">
@@ -237,37 +240,37 @@
                         </StackPanel>
 
                         <StackPanel x:Name="QuickActionsCompactRoot" Spacing="8" HorizontalAlignment="Center" Visibility="Collapsed">
-                            <Button Click="OnQuickPickFileClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Elegir archivo base">
+                            <Button Click="OnQuickPickFileClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Elegir archivo base">
                                 <SymbolIcon Symbol="Document" />
                             </Button>
-                            <Button Click="OnQuickPickFolderClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Elegir carpeta del release">
+                            <Button Click="OnQuickPickFolderClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Elegir carpeta del release">
                                 <SymbolIcon Symbol="Folder" />
                             </Button>
-                            <Button Click="OnQuickDownloadWeeklyClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Descarga semanal desde Nyaa">
+                            <Button Click="OnQuickDownloadWeeklyClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Descarga semanal desde Nyaa">
                                 <SymbolIcon Symbol="Download" />
                             </Button>
-                            <Button Click="OnQuickDownloadFromLinkClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Descargar desde link de Nyaa">
+                            <Button Click="OnQuickDownloadFromLinkClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Descargar desde link de Nyaa">
                                 <SymbolIcon Symbol="World" />
                             </Button>
-                            <Button Click="OnQuickRunNextClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Ejecutar siguiente paso">
+                            <Button Click="OnQuickRunNextClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Ejecutar siguiente paso">
                                 <SymbolIcon Symbol="Play" />
                             </Button>
-                            <Button x:Name="CompactQuickRunSelectedButton" Click="OnQuickRunSelectedClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Ejecutar paso seleccionado">
+                            <Button x:Name="CompactQuickRunSelectedButton" Click="OnQuickRunSelectedClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Ejecutar paso seleccionado">
                                 <SymbolIcon Symbol="Forward" />
                             </Button>
-                            <Button Click="OnQuickRetryClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Reintentar paso">
+                            <Button Click="OnQuickRetryClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Reintentar paso">
                                 <SymbolIcon Symbol="Refresh" />
                             </Button>
-                            <Button Click="OnQuickSkipClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Omitir paso seleccionado">
+                            <Button Click="OnQuickSkipClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Omitir paso seleccionado">
                                 <SymbolIcon Symbol="Redo" />
                             </Button>
-                            <Button Click="OnQuickCancelClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Cancelar ejecución actual">
+                            <Button Click="OnQuickCancelClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Cancelar ejecución actual">
                                 <SymbolIcon Symbol="Cancel" />
                             </Button>
-                            <Button Click="OnQuickOpenFolderClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Abrir carpeta del workflow">
+                            <Button Click="OnQuickOpenFolderClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Abrir carpeta del workflow">
                                 <SymbolIcon Symbol="OpenFile" />
                             </Button>
-                            <Button Click="OnQuickOpenLogClicked" Width="40" Height="40" MinWidth="40" Padding="0" ToolTipService.ToolTip="Abrir log del paso">
+                            <Button Click="OnQuickOpenLogClicked" Width="36" Height="36" MinWidth="36" Padding="0" HorizontalAlignment="Left" ToolTipService.ToolTip="Abrir log del paso">
                                 <SymbolIcon Symbol="Page" />
                             </Button>
                         </StackPanel>
