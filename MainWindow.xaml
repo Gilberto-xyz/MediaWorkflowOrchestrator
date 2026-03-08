@@ -13,47 +13,47 @@
             <Grid x:Name="MatrixRainHost">
                 <Image x:Name="MatrixRainImageA" Source="Assets/MatrixLoop.png" Stretch="UniformToFill" Opacity="0.3" />
                 <Canvas x:Name="MatrixScannerLayer">
-                    <Grid x:Name="MatrixRevealScannerPrimary" Opacity="0.6">
+                    <Grid x:Name="MatrixRevealScannerPrimary" Opacity="0.5">
                         <Rectangle>
                             <Rectangle.Fill>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                     <GradientStop Color="#00000000" Offset="0" />
-                                    <GradientStop Color="#0E0B2A1B" Offset="0.22" />
-                                    <GradientStop Color="#3A1DAF5F" Offset="0.48" />
-                                    <GradientStop Color="#72B8F5D6" Offset="0.5" />
-                                    <GradientStop Color="#3A1DAF5F" Offset="0.52" />
-                                    <GradientStop Color="#0E0B2A1B" Offset="0.78" />
+                                    <GradientStop Color="#0A091E15" Offset="0.22" />
+                                    <GradientStop Color="#28158746" Offset="0.48" />
+                                    <GradientStop Color="#52A7E5C4" Offset="0.5" />
+                                    <GradientStop Color="#28158746" Offset="0.52" />
+                                    <GradientStop Color="#0A091E15" Offset="0.78" />
                                     <GradientStop Color="#00000000" Offset="1" />
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
                         </Rectangle>
-                        <Rectangle Width="42" HorizontalAlignment="Center" Opacity="0.56">
+                        <Rectangle Width="22" HorizontalAlignment="Center" Opacity="0.38">
                             <Rectangle.Fill>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                     <GradientStop Color="#00000000" Offset="0" />
-                                    <GradientStop Color="#168AD0B5" Offset="0.3" />
-                                    <GradientStop Color="#68DDF4E8" Offset="0.5" />
-                                    <GradientStop Color="#168AD0B5" Offset="0.7" />
+                                    <GradientStop Color="#106BA391" Offset="0.3" />
+                                    <GradientStop Color="#46CFE7DB" Offset="0.5" />
+                                    <GradientStop Color="#106BA391" Offset="0.7" />
                                     <GradientStop Color="#00000000" Offset="1" />
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
                         </Rectangle>
-                        <Rectangle Width="6" HorizontalAlignment="Center" Fill="#A8E3F4EE" Opacity="0.58" />
+                        <Rectangle Width="3" HorizontalAlignment="Center" Fill="#88D6E9E0" Opacity="0.42" />
                     </Grid>
 
-                    <Grid x:Name="MatrixRevealScannerSecondary" Opacity="0.42">
+                    <Grid x:Name="MatrixRevealScannerSecondary" Opacity="0.34">
                         <Rectangle>
                             <Rectangle.Fill>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                     <GradientStop Color="#00000000" Offset="0" />
-                                    <GradientStop Color="#0A11261C" Offset="0.26" />
-                                    <GradientStop Color="#2A1A9752" Offset="0.5" />
-                                    <GradientStop Color="#0A11261C" Offset="0.74" />
+                                    <GradientStop Color="#08101D16" Offset="0.26" />
+                                    <GradientStop Color="#22157B43" Offset="0.5" />
+                                    <GradientStop Color="#08101D16" Offset="0.74" />
                                     <GradientStop Color="#00000000" Offset="1" />
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
                         </Rectangle>
-                        <Rectangle Height="3" VerticalAlignment="Center" Fill="#70C4E7D8" Opacity="0.48" />
+                        <Rectangle Height="3" VerticalAlignment="Center" Fill="#58B6DDD0" Opacity="0.38" />
                     </Grid>
 
                     <Grid x:Name="MatrixHideScanner" Opacity="0.64">
