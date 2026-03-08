@@ -8,64 +8,112 @@
     mc:Ignorable="d">
     <Grid x:Name="RootShell" Background="{StaticResource WindowBackdropBrush}" Loaded="OnRootShellLoaded">
         <Grid IsHitTestVisible="False">
-            <Ellipse
-                x:Name="MatrixGlow"
-                Width="700"
-                Height="700"
-                Margin="-180,40,0,0"
-                Fill="{StaticResource MatrixGlowBrush}"
-                Opacity="0.18"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                RenderTransformOrigin="0.5,0.5">
-                <Ellipse.RenderTransform>
-                    <CompositeTransform x:Name="MatrixGlowTransform" TranslateX="-40" TranslateY="0" />
-                </Ellipse.RenderTransform>
-            </Ellipse>
+            <Rectangle Fill="#020403" />
 
-            <Ellipse
-                x:Name="AnimeGlow"
-                Width="760"
-                Height="760"
-                Margin="0,-180,-180,0"
-                Fill="{StaticResource AnimeGlowBrush}"
-                Opacity="0.2"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                RenderTransformOrigin="0.5,0.5">
-                <Ellipse.RenderTransform>
-                    <CompositeTransform x:Name="AnimeGlowTransform" TranslateX="0" TranslateY="0" />
-                </Ellipse.RenderTransform>
-            </Ellipse>
+            <Grid x:Name="MatrixRainHost">
+                <Image x:Name="MatrixRainImageA" Source="Assets/MatrixLoop.png" Stretch="UniformToFill" Opacity="0.3" />
+                <Canvas x:Name="MatrixScannerLayer">
+                    <Grid x:Name="MatrixRevealScannerPrimary" Opacity="0.6">
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#0E0B2A1B" Offset="0.22" />
+                                    <GradientStop Color="#3A1DAF5F" Offset="0.48" />
+                                    <GradientStop Color="#72B8F5D6" Offset="0.5" />
+                                    <GradientStop Color="#3A1DAF5F" Offset="0.52" />
+                                    <GradientStop Color="#0E0B2A1B" Offset="0.78" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle Width="42" HorizontalAlignment="Center" Opacity="0.56">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#168AD0B5" Offset="0.3" />
+                                    <GradientStop Color="#68DDF4E8" Offset="0.5" />
+                                    <GradientStop Color="#168AD0B5" Offset="0.7" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle Width="6" HorizontalAlignment="Center" Fill="#A8E3F4EE" Opacity="0.58" />
+                    </Grid>
 
-            <Ellipse
-                x:Name="CinemaGlow"
-                Width="880"
-                Height="880"
-                Margin="0,0,-160,-240"
-                Fill="{StaticResource CinemaGlowBrush}"
-                Opacity="0.16"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                RenderTransformOrigin="0.5,0.5">
-                <Ellipse.RenderTransform>
-                    <CompositeTransform x:Name="CinemaGlowTransform" TranslateX="0" TranslateY="0" />
-                </Ellipse.RenderTransform>
-            </Ellipse>
+                    <Grid x:Name="MatrixRevealScannerSecondary" Opacity="0.42">
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#0A11261C" Offset="0.26" />
+                                    <GradientStop Color="#2A1A9752" Offset="0.5" />
+                                    <GradientStop Color="#0A11261C" Offset="0.74" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle Height="3" VerticalAlignment="Center" Fill="#70C4E7D8" Opacity="0.48" />
+                    </Grid>
 
-            <Rectangle
-                x:Name="SweepAccent"
-                Width="420"
-                Height="1600"
-                Fill="{StaticResource SweepAccentBrush}"
-                Opacity="0.12"
-                RenderTransformOrigin="0.5,0.5">
-                <Rectangle.RenderTransform>
-                    <CompositeTransform x:Name="SweepTransform" Rotation="-24" TranslateX="-320" TranslateY="-140" />
-                </Rectangle.RenderTransform>
-            </Rectangle>
+                    <Grid x:Name="MatrixHideScanner" Opacity="0.64">
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#58010302" Offset="0.18" />
+                                    <GradientStop Color="#D0010302" Offset="0.5" />
+                                    <GradientStop Color="#58010302" Offset="0.82" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                    </Grid>
 
-            <Rectangle Fill="{StaticResource CinematicVeilBrush}" />
+                    <TextBlock
+                        x:Name="MatrixGhostGlyph0"
+                        Opacity="0"
+                        FontFamily="Yu Gothic UI"
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        Foreground="#A8DDF4E2"
+                        Text="影" />
+                    <TextBlock
+                        x:Name="MatrixGhostGlyph1"
+                        Opacity="0"
+                        FontFamily="Yu Gothic UI"
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        Foreground="#A8DDF4E2"
+                        Text="界" />
+                    <TextBlock
+                        x:Name="MatrixGhostGlyph2"
+                        Opacity="0"
+                        FontFamily="Yu Gothic UI"
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        Foreground="#A8DDF4E2"
+                        Text="電" />
+                    <TextBlock
+                        x:Name="MatrixGhostGlyph3"
+                        Opacity="0"
+                        FontFamily="Yu Gothic UI"
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        Foreground="#A8DDF4E2"
+                        Text="雨" />
+                    <TextBlock
+                        x:Name="MatrixGhostGlyph4"
+                        Opacity="0"
+                        FontFamily="Yu Gothic UI"
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        Foreground="#A8DDF4E2"
+                        Text="夢" />
+                </Canvas>
+            </Grid>
+
+            <Rectangle Fill="#20000000" />
         </Grid>
 
         <NavigationView
