@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using MediaWorkflowOrchestrator.Persistence;
 
 namespace MediaWorkflowOrchestrator
 {
@@ -7,10 +8,12 @@ namespace MediaWorkflowOrchestrator
     /// </summary>
     public partial class App : Application
     {
+        public const string CleanReloadArgument = "--clean-reload";
         private Window? window;
 
         public static AppHost Host { get; } = new();
         public static MainWindow? MainWindowInstance { get; private set; }
+        public static bool StartWithCleanReloadState { get; private set; }
 
         public static IntPtr MainWindowHandle
         {
@@ -44,10 +47,41 @@ namespace MediaWorkflowOrchestrator
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
             DiagnosticsTrace.Write($"OnLaunched args: '{e.Arguments}'.");
+            AppDataPaths.EnsureAll();
+            StartWithCleanReloadState = ConsumeCleanReloadMarker()
+                || e.Arguments?
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Contains(CleanReloadArgument, StringComparer.OrdinalIgnoreCase) == true;
+            DiagnosticsTrace.Write($"StartWithCleanReloadState: {StartWithCleanReloadState}.");
             MainWindowInstance ??= new MainWindow();
             window = MainWindowInstance;
             window.Activate();
             DiagnosticsTrace.Write("Main window activated.");
+        }
+
+        public static void MarkNextLaunchAsCleanReload()
+        {
+            AppDataPaths.EnsureAll();
+            File.WriteAllText(AppDataPaths.CleanReloadMarkerPath, DateTimeOffset.UtcNow.ToString("O"));
+        }
+
+        public static void ClearCleanReloadMarker()
+        {
+            if (File.Exists(AppDataPaths.CleanReloadMarkerPath))
+            {
+                File.Delete(AppDataPaths.CleanReloadMarkerPath);
+            }
+        }
+
+        private static bool ConsumeCleanReloadMarker()
+        {
+            if (!File.Exists(AppDataPaths.CleanReloadMarkerPath))
+            {
+                return false;
+            }
+
+            File.Delete(AppDataPaths.CleanReloadMarkerPath);
+            return true;
         }
 
         private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)

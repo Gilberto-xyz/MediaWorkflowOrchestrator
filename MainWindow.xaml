@@ -131,6 +131,7 @@
             PaneClosing="OnNavigationPaneClosing"
             PaneOpened="OnNavigationPaneVisibilityChanged"
             PaneClosed="OnNavigationPaneVisibilityChanged"
+            ItemInvoked="OnNavigationItemInvoked"
             SelectionChanged="OnNavigationSelectionChanged">
             <NavigationView.Header>
                 <StackPanel Spacing="2">
@@ -142,6 +143,7 @@
                 <NavigationViewItem x:Name="DashboardItem" Content="Dashboard" Icon="Home" Tag="dashboard" />
                 <NavigationViewItem Content="Herramientas" Icon="Setting" Tag="tools" />
                 <NavigationViewItem Content="Historial" Icon="Clock" Tag="history" />
+                <NavigationViewItem Content="Reload" Icon="Refresh" SelectsOnInvoked="False" Tag="reload" />
             </NavigationView.MenuItems>
             <NavigationView.PaneCustomContent>
                 <ScrollViewer

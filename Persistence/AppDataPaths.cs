@@ -8,6 +8,7 @@ namespace MediaWorkflowOrchestrator.Persistence
         public static string SettingsPath => Path.Combine(RootDirectory, "settings.json");
         public static string WorkflowsDirectory => Path.Combine(RootDirectory, "workflows");
         public static string LogsDirectory => Path.Combine(RootDirectory, "logs");
+        public static string CleanReloadMarkerPath => Path.Combine(RootDirectory, "clean-reload.flag");
 
         public static void EnsureAll()
         {

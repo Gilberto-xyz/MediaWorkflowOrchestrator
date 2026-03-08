@@ -275,6 +275,11 @@ namespace MediaWorkflowOrchestrator
                 return;
             }
 
+            if (string.Equals(tag, "reload", StringComparison.Ordinal))
+            {
+                return;
+            }
+
             var targetPage = tag switch
             {
                 "tools" => typeof(ToolsPage),
@@ -289,6 +294,18 @@ namespace MediaWorkflowOrchestrator
 
             TryAttachDashboardPageFromFrame();
             ViewModel.SelectedNavigationTag = tag;
+        }
+
+        private async void OnNavigationItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+        {
+            if (args.InvokedItemContainer is not NavigationViewItem item
+                || item.Tag is not string tag
+                || !string.Equals(tag, "reload", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            await RestartApplicationAsync();
         }
 
         private void OnNavigationDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
@@ -437,6 +454,85 @@ namespace MediaWorkflowOrchestrator
             {
                 command.Execute(null);
             }
+        }
+
+        private async Task RestartApplicationAsync()
+        {
+            try
+            {
+                await PrepareWorkflowForCleanReloadAsync();
+                App.MarkNextLaunchAsCleanReload();
+
+                var executablePath = Environment.ProcessPath;
+                if (string.IsNullOrWhiteSpace(executablePath))
+                {
+                    executablePath = Process.GetCurrentProcess().MainModule?.FileName;
+                }
+
+                if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
+                {
+                    App.ClearCleanReloadMarker();
+                    DiagnosticsTrace.Write("Reload requested but executable path could not be resolved.");
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = executablePath,
+                    Arguments = App.CleanReloadArgument,
+                    WorkingDirectory = AppContext.BaseDirectory,
+                    UseShellExecute = true,
+                });
+
+                App.Current.Exit();
+            }
+            catch (Exception ex)
+            {
+                App.ClearCleanReloadMarker();
+                DiagnosticsTrace.Write($"Reload failed: {ex}");
+            }
+        }
+
+        private async Task PrepareWorkflowForCleanReloadAsync()
+        {
+            if (trackedDashboardPage is not null)
+            {
+                await trackedDashboardPage.ViewModel.PrepareCurrentWorkflowForCleanReloadAsync();
+                return;
+            }
+
+            var latestWorkflow = await App.Host.WorkflowStore.LoadLatestAsync();
+            if (latestWorkflow is null
+                || !TryResolveWorkflowReloadSource(latestWorkflow, out var sourcePath, out var isFile))
+            {
+                return;
+            }
+
+            var cleanWorkflow = App.Host.WorkflowEngine.CreateWorkflow(sourcePath, isFile);
+            cleanWorkflow.Id = latestWorkflow.Id;
+            cleanWorkflow.CreatedAt = latestWorkflow.CreatedAt;
+            cleanWorkflow.LastExecutionSummary = "Sin ejecuciones todavía.";
+
+            await App.Host.WorkflowStore.SaveAsync(cleanWorkflow);
+        }
+
+        private static bool TryResolveWorkflowReloadSource(Models.WorkflowInstance workflow, out string sourcePath, out bool isFile)
+        {
+            var sourceSelectionIsFile = workflow.SourceSelectionIsFile == true;
+            var candidatePath = sourceSelectionIsFile
+                ? workflow.PrimaryVideoPath
+                : workflow.RootPath;
+
+            if (string.IsNullOrWhiteSpace(candidatePath))
+            {
+                candidatePath = !string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                    ? workflow.PrimaryVideoPath
+                    : workflow.RootPath;
+            }
+
+            sourcePath = candidatePath ?? string.Empty;
+            isFile = sourceSelectionIsFile;
+            return !string.IsNullOrWhiteSpace(sourcePath);
         }
 
         private void TrySetWindowIcon()

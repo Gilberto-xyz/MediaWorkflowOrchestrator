@@ -31,7 +31,10 @@ namespace MediaWorkflowOrchestrator.ViewModels
             ResetWorkflowState("La descarga Nyaa se ejecuta como utilidad global; el workflow real empieza cuando eliges el archivo o carpeta.");
             WeakReferenceMessenger.Default.Register(this);
             _ = LoadQuickSettingsAsync();
-            _ = LoadLatestWorkflowAsync();
+            if (!App.StartWithCleanReloadState)
+            {
+                _ = LoadLatestWorkflowAsync();
+            }
         }
 
         public ObservableCollection<WorkflowStepState> StepItems { get; }
@@ -564,6 +567,26 @@ namespace MediaWorkflowOrchestrator.ViewModels
             DetailOutput = "Esperando que elijas el archivo o carpeta base.";
         }
 
+        public async Task PrepareCurrentWorkflowForCleanReloadAsync()
+        {
+            if (currentWorkflow is null
+                || !TryResolveWorkflowReloadSource(currentWorkflow, out var sourcePath, out var isFile))
+            {
+                return;
+            }
+
+            var cleanWorkflow = App.Host.WorkflowEngine.CreateWorkflow(sourcePath, isFile);
+            cleanWorkflow.Id = currentWorkflow.Id;
+            cleanWorkflow.CreatedAt = currentWorkflow.CreatedAt;
+            cleanWorkflow.LastExecutionSummary = "Sin ejecuciones todavía.";
+
+            await workflowStore.SaveAsync(cleanWorkflow);
+
+            currentWorkflow = cleanWorkflow;
+            utilityOutputActive = false;
+            RefreshFromWorkflow(cleanWorkflow);
+        }
+
         public async void Receive(WorkflowSelectedMessage message)
         {
             var workflow = await workflowExecutionService.LoadWorkflowAsync(message.Value);
@@ -591,6 +614,25 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             quickSettings = await workflowExecutionService.GetSettingsAsync();
             SyncQuickOptionsFromSettings();
+        }
+
+        private static bool TryResolveWorkflowReloadSource(WorkflowInstance workflow, out string sourcePath, out bool isFile)
+        {
+            var sourceSelectionIsFile = workflow.SourceSelectionIsFile == true;
+            var candidatePath = sourceSelectionIsFile
+                ? workflow.PrimaryVideoPath
+                : workflow.RootPath;
+
+            if (string.IsNullOrWhiteSpace(candidatePath))
+            {
+                candidatePath = !string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                    ? workflow.PrimaryVideoPath
+                    : workflow.RootPath;
+            }
+
+            sourcePath = candidatePath ?? string.Empty;
+            isFile = sourceSelectionIsFile;
+            return !string.IsNullOrWhiteSpace(sourcePath);
         }
 
         private void SyncQuickOptionsFromSettings()
