@@ -36,7 +36,7 @@
                     <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Opciones de empaquetado RAR" />
                     <CheckBox Content="No generar imágenes" IsChecked="{x:Bind ViewModel.Settings.RarSkipImages, Mode=TwoWay}" />
                     <CheckBox Content="Solo mostrar info, sin crear RAR" IsChecked="{x:Bind ViewModel.Settings.RarNoCompress, Mode=TwoWay}" />
-                    <CheckBox Content="Usar compresión normal en RAR" IsChecked="{x:Bind ViewModel.Settings.RarUseCompressionNormal, Mode=TwoWay}" />
+                    <CheckBox Content="Usar modo Comprimir en RAR" IsChecked="{x:Bind ViewModel.Settings.RarUseCompressionNormal, Mode=TwoWay}" />
                     <TextBox Header="Número de capturas (opcional)" PlaceholderText="Ej. 6" Text="{x:Bind ViewModel.Settings.RarCaptureCount, Mode=TwoWay}" />
                     <ComboBox Header="Formato de imagen" SelectedItem="{x:Bind ViewModel.Settings.RarImageFormat, Mode=TwoWay}">
                         <x:String>jpg</x:String>

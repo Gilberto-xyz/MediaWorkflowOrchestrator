@@ -184,7 +184,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string PackageRarCleanNameButtonLabel => "Nombre limpio";
         public string RarSkipImagesButtonLabel => $"Sin imágenes: {(RarSkipImagesEnabled ? "ON" : "OFF")}";
         public string RarNoCompressButtonLabel => $"Solo info: {(RarNoCompressEnabled ? "ON" : "OFF")}";
-        public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "normal" : "almacenar")}";
+        public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "Comprimir" : "Contenedor fast")}";
         public string RarVerboseButtonLabel => $"Verbose: {(RarVerboseEnabled ? "ON" : "OFF")}";
         public string RarImageFormatButtonLabel => $"Formato imagen: {RarImageFormatQuick.ToUpperInvariant()}";
         public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonBackground => PackageRarRawDataCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;

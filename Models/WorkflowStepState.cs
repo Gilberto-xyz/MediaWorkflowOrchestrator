@@ -147,7 +147,6 @@ namespace MediaWorkflowOrchestrator.Models
         [JsonIgnore]
         public Microsoft.UI.Xaml.Media.Brush CardBackgroundBrush => Status switch
         {
-            _ when IsSelected => SelectedBackgroundBrush,
             WorkflowStepStatus.Succeeded => SuccessBackgroundBrush,
             WorkflowStepStatus.Skipped => SkippedBackgroundBrush,
             WorkflowStepStatus.Ready or WorkflowStepStatus.Running or WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision => ExpectedBackgroundBrush,
@@ -169,7 +168,6 @@ namespace MediaWorkflowOrchestrator.Models
         [JsonIgnore]
         public Microsoft.UI.Xaml.Media.Brush StatusAccentBrush => Status switch
         {
-            _ when IsSelected => SelectedAccentBrush,
             WorkflowStepStatus.Succeeded => SuccessAccentBrush,
             WorkflowStepStatus.Skipped => SkippedAccentBrush,
             WorkflowStepStatus.Ready or WorkflowStepStatus.Running or WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision => ExpectedAccentBrush,
@@ -178,43 +176,43 @@ namespace MediaWorkflowOrchestrator.Models
         };
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush TitleBrush => IsSelected ? SelectedTextBrush : DefaultTextBrush;
+        public Microsoft.UI.Xaml.Media.Brush TitleBrush => DefaultTextBrush;
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush ReasonBrush => IsSelected ? SelectedSubtitleBrush : DefaultSubtitleBrush;
+        public Microsoft.UI.Xaml.Media.Brush ReasonBrush => DefaultSubtitleBrush;
 
         [JsonIgnore]
         public Thickness CardBorderThickness => IsSelected ? new Thickness(2) : new Thickness(1);
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush SelectionGlowOuterBrush => IsSelected ? SelectedGlowOuterBrush : TransparentBrush;
+        public Microsoft.UI.Xaml.Media.Brush SelectionGlowOuterBrush => TransparentBrush;
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush SelectionGlowInnerBrush => IsSelected ? SelectedGlowInnerBrush : TransparentBrush;
+        public Microsoft.UI.Xaml.Media.Brush SelectionGlowInnerBrush => TransparentBrush;
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush SelectionIndicatorBackgroundBrush => IsSelected ? SelectedIndicatorBackgroundBrush : TransparentBrush;
+        public Microsoft.UI.Xaml.Media.Brush SelectionIndicatorBackgroundBrush => TransparentBrush;
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush SelectionIndicatorBorderBrush => IsSelected ? SelectedIndicatorBorderBrush : TransparentBrush;
+        public Microsoft.UI.Xaml.Media.Brush SelectionIndicatorBorderBrush => TransparentBrush;
 
         [JsonIgnore]
-        public Microsoft.UI.Xaml.Media.Brush SelectionRailBrush => IsSelected ? SelectedRailBrush : TransparentBrush;
+        public Microsoft.UI.Xaml.Media.Brush SelectionRailBrush => TransparentBrush;
 
         [JsonIgnore]
-        public double SelectionGlowOpacity => IsSelected ? 1 : 0;
+        public double SelectionGlowOpacity => 0;
 
         [JsonIgnore]
-        public Thickness SelectionGlowOuterThickness => IsSelected ? new Thickness(6) : new Thickness(0);
+        public Thickness SelectionGlowOuterThickness => new Thickness(0);
 
         [JsonIgnore]
-        public Thickness SelectionGlowInnerThickness => IsSelected ? new Thickness(2) : new Thickness(0);
+        public Thickness SelectionGlowInnerThickness => new Thickness(0);
 
         [JsonIgnore]
-        public double SelectionIndicatorOpacity => IsSelected ? 1 : 0;
+        public double SelectionIndicatorOpacity => 0;
 
         [JsonIgnore]
-        public double SelectionRailOpacity => IsSelected ? 1 : 0;
+        public double SelectionRailOpacity => 0;
 
         private void NotifyVisualStateChanged()
         {
