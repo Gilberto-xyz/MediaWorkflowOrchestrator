@@ -1,17 +1,13 @@
 using MediaWorkflowOrchestrator.Messages;
 using MediaWorkflowOrchestrator.Views;
-using Microsoft.UI.Composition;
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using System.Windows.Input;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.IO;
-using System.Numerics;
 using WinRT.Interop;
 
 namespace MediaWorkflowOrchestrator
@@ -24,20 +20,8 @@ namespace MediaWorkflowOrchestrator
         private static readonly Thickness ExpandedQuickActionsPaneMargin = new(6, 3, 6, 6);
         private static readonly Thickness CompactOverlayQuickActionsPaneMargin = new(12, 3, 12, 6);
         private static readonly Thickness CompactStripQuickActionsPaneMargin = new(0, 3, 0, 6);
-        private const string MatrixGhostGlyphs = "影界電流空夜月星雨光夢幻零心火水風雪龍門森海山気道式波天狐炎雷静声鏡黒白緑青赤花鳥雲華桜刃文語字魂";
-        private const double MatrixBackdropMinimumWidth = 960;
-        private const double MatrixBackdropMinimumHeight = 720;
-        private const float MatrixScannerMinimumDurationSeconds = 12f;
-        private const double MatrixGhostGlyphMinimumDelaySeconds = 0.34;
-        private const double MatrixGhostGlyphMaximumDelaySeconds = 0.78;
-        private static readonly TimeSpan MatrixGhostGlyphAnimationDuration = TimeSpan.FromMilliseconds(2100);
-        private readonly Random matrixBackdropRandom = new();
-        private DispatcherQueueTimer? matrixGhostGlyphTimer;
-        private DispatcherQueueTimer? matrixResizeDebounceTimer;
-        private TextBlock[]? matrixGhostGlyphPool;
-        private int matrixGhostGlyphPoolIndex;
         private DashboardPage? trackedDashboardPage;
-        private bool isMatrixBackdropInitialized;
+        private bool rootShellInitialized;
 
         public MainWindow()
         {
@@ -54,218 +38,19 @@ namespace MediaWorkflowOrchestrator
 
         private void OnRootShellLoaded(object sender, RoutedEventArgs e)
         {
-            if (isMatrixBackdropInitialized)
+            if (rootShellInitialized)
             {
                 return;
             }
 
-            InitializeMatrixBackdrop();
             RootShell.SizeChanged += OnRootShellSizeChanged;
-            StartMatrixGhostGlyphLoop();
             UpdateQuickActionsPaneState();
-            isMatrixBackdropInitialized = true;
+            rootShellInitialized = true;
         }
 
         private void OnRootShellSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            MatrixRainHost.Width = Math.Max(e.NewSize.Width, MatrixBackdropMinimumWidth);
-            MatrixRainHost.Height = Math.Max(e.NewSize.Height, MatrixBackdropMinimumHeight);
             UpdateQuickActionsPaneState();
-
-            matrixResizeDebounceTimer ??= CreateMatrixResizeDebounceTimer();
-            matrixResizeDebounceTimer.Stop();
-            matrixResizeDebounceTimer.Start();
-        }
-
-        private DispatcherQueueTimer CreateMatrixResizeDebounceTimer()
-        {
-            var timer = DispatcherQueue.CreateTimer();
-            timer.IsRepeating = false;
-            timer.Interval = TimeSpan.FromMilliseconds(140);
-            timer.Tick += (_, _) => LayoutMatrixBackdrop();
-            return timer;
-        }
-
-        private void InitializeMatrixBackdrop()
-        {
-            matrixGhostGlyphPool =
-            [
-                MatrixGhostGlyph0,
-                MatrixGhostGlyph1,
-                MatrixGhostGlyph2,
-                MatrixGhostGlyph3,
-                MatrixGhostGlyph4
-            ];
-
-            LayoutMatrixBackdrop();
-        }
-
-        private void LayoutMatrixBackdrop()
-        {
-            var width = (float)Math.Max(RootShell.ActualWidth, MatrixBackdropMinimumWidth);
-            var height = (float)Math.Max(RootShell.ActualHeight, MatrixBackdropMinimumHeight);
-
-            MatrixRainHost.Width = width;
-            MatrixRainHost.Height = height;
-            MatrixScannerLayer.Width = width;
-            MatrixScannerLayer.Height = height;
-            MatrixRainImageA.Width = width;
-            MatrixRainImageA.Height = height;
-
-            ConfigureScanner(MatrixRevealScannerPrimary, width * 0.16f, height);
-            ConfigureScanner(MatrixRevealScannerSecondary, width, height * 0.09f);
-            ConfigureScanner(MatrixHideScanner, width * 0.22f, height);
-
-            StartHorizontalScannerLoop(
-                MatrixRevealScannerPrimary,
-                startX: -0.22f * width,
-                midX: 0.36f * width,
-                endX: 0.12f * width,
-                durationSeconds: 16f);
-
-            StartHorizontalScannerLoop(
-                MatrixHideScanner,
-                startX: 1.08f * width,
-                midX: 0.44f * width,
-                endX: 0.82f * width,
-                durationSeconds: 21f);
-
-            StartVerticalScannerLoop(
-                MatrixRevealScannerSecondary,
-                startY: -0.14f * height,
-                midY: 0.46f * height,
-                endY: 0.18f * height,
-                durationSeconds: 27f);
-        }
-
-        private static void ConfigureScanner(FrameworkElement element, float width, float height)
-        {
-            element.Width = width;
-            element.Height = height;
-        }
-
-        private static void StartHorizontalScannerLoop(FrameworkElement element, float startX, float midX, float endX, float durationSeconds)
-        {
-            var visual = ElementCompositionPreview.GetElementVisual(element);
-            var compositor = visual.Compositor;
-
-            visual.StopAnimation("Offset.X");
-            visual.StopAnimation("Offset.Y");
-            visual.Offset = new Vector3(startX, 0f, 0f);
-
-            var animationX = compositor.CreateScalarKeyFrameAnimation();
-            animationX.InsertKeyFrame(0f, startX);
-            animationX.InsertKeyFrame(0.42f, midX);
-            animationX.InsertKeyFrame(0.74f, endX);
-            animationX.InsertKeyFrame(1f, startX);
-            animationX.Duration = TimeSpan.FromSeconds(Math.Max(durationSeconds, MatrixScannerMinimumDurationSeconds));
-            animationX.IterationBehavior = AnimationIterationBehavior.Forever;
-
-            visual.StartAnimation("Offset.X", animationX);
-        }
-
-        private static void StartVerticalScannerLoop(FrameworkElement element, float startY, float midY, float endY, float durationSeconds)
-        {
-            var visual = ElementCompositionPreview.GetElementVisual(element);
-            var compositor = visual.Compositor;
-
-            visual.StopAnimation("Offset.X");
-            visual.StopAnimation("Offset.Y");
-            visual.Offset = new Vector3(0f, startY, 0f);
-
-            var animationY = compositor.CreateScalarKeyFrameAnimation();
-            animationY.InsertKeyFrame(0f, startY);
-            animationY.InsertKeyFrame(0.4f, midY);
-            animationY.InsertKeyFrame(0.76f, endY);
-            animationY.InsertKeyFrame(1f, startY);
-            animationY.Duration = TimeSpan.FromSeconds(Math.Max(durationSeconds, MatrixScannerMinimumDurationSeconds));
-            animationY.IterationBehavior = AnimationIterationBehavior.Forever;
-
-            visual.StartAnimation("Offset.Y", animationY);
-        }
-
-        private void StartMatrixGhostGlyphLoop()
-        {
-            matrixGhostGlyphTimer ??= CreateMatrixGhostGlyphTimer();
-            ScheduleNextMatrixGhostGlyph();
-            matrixGhostGlyphTimer.Stop();
-            matrixGhostGlyphTimer.Start();
-        }
-
-        private DispatcherQueueTimer CreateMatrixGhostGlyphTimer()
-        {
-            var timer = DispatcherQueue.CreateTimer();
-            timer.IsRepeating = false;
-            timer.Tick += (_, _) =>
-            {
-                ShowRandomMatrixGhostGlyph();
-                ScheduleNextMatrixGhostGlyph();
-                timer.Start();
-            };
-
-            return timer;
-        }
-
-        private void ScheduleNextMatrixGhostGlyph()
-        {
-            if (matrixGhostGlyphTimer is null)
-            {
-                return;
-            }
-
-            var seconds = MatrixGhostGlyphMinimumDelaySeconds
-                + (matrixBackdropRandom.NextDouble() * (MatrixGhostGlyphMaximumDelaySeconds - MatrixGhostGlyphMinimumDelaySeconds));
-            matrixGhostGlyphTimer.Interval = TimeSpan.FromSeconds(seconds);
-        }
-
-        private void ShowRandomMatrixGhostGlyph()
-        {
-            if (matrixGhostGlyphPool is null || matrixGhostGlyphPool.Length == 0)
-            {
-                return;
-            }
-
-            var width = Math.Max(MatrixScannerLayer.Width, MatrixBackdropMinimumWidth);
-            var height = Math.Max(MatrixScannerLayer.Height, MatrixBackdropMinimumHeight);
-            var glyph = MatrixGhostGlyphs[matrixBackdropRandom.Next(MatrixGhostGlyphs.Length)].ToString();
-            var fontSize = 20 + matrixBackdropRandom.Next(0, 14);
-            var glyphTextBlock = matrixGhostGlyphPool[matrixGhostGlyphPoolIndex];
-            matrixGhostGlyphPoolIndex = (matrixGhostGlyphPoolIndex + 1) % matrixGhostGlyphPool.Length;
-
-            glyphTextBlock.Text = glyph;
-            glyphTextBlock.FontSize = fontSize;
-
-            var glyphX = 28 + (matrixBackdropRandom.NextDouble() * Math.Max(1, width - 84));
-            var glyphY = 22 + (matrixBackdropRandom.NextDouble() * Math.Max(1, height - 84));
-            Canvas.SetLeft(glyphTextBlock, glyphX);
-            Canvas.SetTop(glyphTextBlock, glyphY);
-
-            var visual = ElementCompositionPreview.GetElementVisual(glyphTextBlock);
-            visual.StopAnimation("Opacity");
-            visual.StopAnimation("Scale.X");
-            visual.StopAnimation("Scale.Y");
-            visual.Opacity = 0f;
-            visual.CenterPoint = new Vector3((float)(fontSize * 0.5), (float)(fontSize * 0.5), 0f);
-            visual.Scale = new Vector3(0.94f, 0.94f, 1f);
-
-            var compositor = visual.Compositor;
-            var opacityAnimation = compositor.CreateScalarKeyFrameAnimation();
-            opacityAnimation.InsertKeyFrame(0f, 0f);
-            opacityAnimation.InsertKeyFrame(0.1f, 0.8f);
-            opacityAnimation.InsertKeyFrame(0.32f, 0.72f);
-            opacityAnimation.InsertKeyFrame(0.58f, 0.46f);
-            opacityAnimation.InsertKeyFrame(0.82f, 0.2f);
-            opacityAnimation.InsertKeyFrame(1f, 0f);
-            opacityAnimation.Duration = MatrixGhostGlyphAnimationDuration;
-
-            var scaleAnimation = compositor.CreateVector3KeyFrameAnimation();
-            scaleAnimation.InsertKeyFrame(0f, new Vector3(0.94f, 0.94f, 1f));
-            scaleAnimation.InsertKeyFrame(0.18f, new Vector3(1.02f, 1.02f, 1f));
-            scaleAnimation.InsertKeyFrame(1f, new Vector3(1.06f, 1.06f, 1f));
-            scaleAnimation.Duration = MatrixGhostGlyphAnimationDuration;
-
-            visual.StartAnimation("Opacity", opacityAnimation);
-            visual.StartAnimation("Scale", scaleAnimation);
         }
 
         private void OnNavigationSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
