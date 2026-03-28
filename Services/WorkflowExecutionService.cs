@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text.Json;
 
 namespace MediaWorkflowOrchestrator.Services
 {
@@ -173,7 +174,9 @@ namespace MediaWorkflowOrchestrator.Services
                 }
             }
 
-            var request = BuildRequest(settings, workflow, stepKey);
+            var request = stepKey == WorkflowStepKey.CleanTracks
+                ? await BuildTrackCleanupRequestAsync(settings, workflow, onOutput, cancellationToken)
+                : BuildRequest(settings, workflow, stepKey);
             step.Status = WorkflowStepStatus.Running;
             step.StartedAt = DateTimeOffset.UtcNow;
             step.StatusReason = "Proceso en ejecución...";
@@ -291,7 +294,7 @@ namespace MediaWorkflowOrchestrator.Services
                 WorkflowStepKey.CleanTracks => new ProcessExecutionRequest
                 {
                     FileName = settings.PythonPath,
-                    Arguments = BuildTrackCleanupArgs(settings, workflow).ToArray(),
+                    Arguments = BuildTrackCleanupArgs(settings, ResolveTrackCleanupInputPath(workflow), settings.TrackCleanupDeleteOriginals).ToArray(),
                     WorkingDirectory = Path.GetDirectoryName(settings.TrackCleanupScriptPath) ?? workflow.RootPath,
                 },
                 WorkflowStepKey.TagAndRename => new ProcessExecutionRequest
@@ -365,9 +368,36 @@ namespace MediaWorkflowOrchestrator.Services
             return args;
         }
 
-        private static IEnumerable<string> BuildTrackCleanupArgs(AppSettings settings, WorkflowInstance workflow)
+        private async Task<ProcessExecutionRequest> BuildTrackCleanupRequestAsync(
+            AppSettings settings,
+            WorkflowInstance workflow,
+            Action<string>? onOutput,
+            CancellationToken cancellationToken)
         {
             var cleanupInputPath = ResolveTrackCleanupInputPath(workflow);
+            var deleteOriginals = settings.TrackCleanupDeleteOriginals;
+            var targetVideoPath = ResolveTrackCleanupTargetVideo(workflow, cleanupInputPath);
+
+            if (deleteOriginals && !string.IsNullOrWhiteSpace(targetVideoPath))
+            {
+                var audioTrackCount = await GetAudioTrackCountAsync(targetVideoPath, settings, cancellationToken);
+                if (audioTrackCount == 1)
+                {
+                    deleteOriginals = false;
+                    onOutput?.Invoke("Se omitió --delete-originals porque el archivo objetivo solo tiene una pista de audio.");
+                }
+            }
+
+            return new ProcessExecutionRequest
+            {
+                FileName = settings.PythonPath,
+                Arguments = BuildTrackCleanupArgs(settings, cleanupInputPath, deleteOriginals).ToArray(),
+                WorkingDirectory = Path.GetDirectoryName(settings.TrackCleanupScriptPath) ?? workflow.RootPath,
+            };
+        }
+
+        private static IEnumerable<string> BuildTrackCleanupArgs(AppSettings settings, string cleanupInputPath, bool deleteOriginals)
+        {
             var args = new List<string>
             {
                 settings.TrackCleanupScriptPath,
@@ -382,12 +412,52 @@ namespace MediaWorkflowOrchestrator.Services
                 args.Add("close-qbittorrent");
             }
 
-            if (settings.TrackCleanupDeleteOriginals)
+            if (deleteOriginals)
             {
                 args.Add("--delete-originals");
             }
 
             return args;
+        }
+
+        private async Task<int?> GetAudioTrackCountAsync(string videoPath, AppSettings settings, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath) || !File.Exists(settings.MkvmergePath))
+            {
+                return null;
+            }
+
+            var result = await processRunnerService.RunAsync(
+                new ProcessExecutionRequest
+                {
+                    FileName = settings.MkvmergePath,
+                    Arguments = new[] { "-J", videoPath },
+                    WorkingDirectory = Path.GetDirectoryName(videoPath) ?? Environment.CurrentDirectory,
+                },
+                null,
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                return null;
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(result.StandardOutput);
+                if (!doc.RootElement.TryGetProperty("tracks", out var tracks))
+                {
+                    return null;
+                }
+
+                return tracks.EnumerateArray()
+                    .Count(track => track.TryGetProperty("type", out var typeElement)
+                        && string.Equals(typeElement.GetString(), "audio", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
         }
 
         private static string ResolveTrackCleanupInputPath(WorkflowInstance workflow)
@@ -412,6 +482,34 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return workflow.RootPath;
+        }
+
+        private static string? ResolveTrackCleanupTargetVideo(WorkflowInstance workflow, string cleanupInputPath)
+        {
+            if (File.Exists(cleanupInputPath) && IsVideoFile(cleanupInputPath))
+            {
+                return cleanupInputPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) && File.Exists(workflow.PrimaryVideoPath))
+            {
+                return workflow.PrimaryVideoPath;
+            }
+
+            if (Directory.Exists(cleanupInputPath))
+            {
+                var videos = Directory.EnumerateFiles(cleanupInputPath, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(IsVideoFile)
+                    .Take(2)
+                    .ToList();
+
+                if (videos.Count == 1)
+                {
+                    return videos[0];
+                }
+            }
+
+            return null;
         }
 
         private static int CountVideoFiles(string directoryPath)
