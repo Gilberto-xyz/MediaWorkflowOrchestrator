@@ -121,6 +121,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _packageRarCleanNameCopied;
 
         [ObservableProperty]
+        private bool _packageRarSeriesTitleCopied;
+
+        [ObservableProperty]
         private string _quickOptionsTitle = "Opciones rápidas";
 
         [ObservableProperty]
@@ -182,6 +185,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string PackageRarRawDataButtonLabel => "Raw Data";
         public string PackageRarWeightSummaryButtonLabel => "Peso completo";
         public string PackageRarCleanNameButtonLabel => "Nombre limpio";
+        public string PackageRarSeriesTitleButtonLabel => "Nombre serie";
         public string RarSkipImagesButtonLabel => $"Sin imágenes: {(RarSkipImagesEnabled ? "ON" : "OFF")}";
         public string RarNoCompressButtonLabel => $"Solo info: {(RarNoCompressEnabled ? "ON" : "OFF")}";
         public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "Comprimir" : "Contenedor fast")}";
@@ -190,12 +194,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonBackground => PackageRarRawDataCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonBackground => PackageRarWeightSummaryCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonBackground => PackageRarCleanNameCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarSeriesTitleButtonBackground => PackageRarSeriesTitleCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonBorderBrush => PackageRarRawDataCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonBorderBrush => PackageRarWeightSummaryCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonBorderBrush => PackageRarCleanNameCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarSeriesTitleButtonBorderBrush => PackageRarSeriesTitleCopied ? CopiedButtonBorderBrush : PendingButtonBorderBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonForeground => ButtonForegroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonForeground => ButtonForegroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonForeground => ButtonForegroundBrush;
+        public Microsoft.UI.Xaml.Media.Brush PackageRarSeriesTitleButtonForeground => ButtonForegroundBrush;
 
         public void EnsureDetailOutputFitsViewport(double viewportHeight)
         {
@@ -542,6 +549,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowExecutionService.PackageRarCleanNameHintKey,
                 "No hay nombre limpio disponible para copiar.",
                 "Se copió el nombre limpio.");
+        }
+
+        [RelayCommand]
+        private void CopyPackageRarSeriesTitle()
+        {
+            CopyPackageRarHint(
+                WorkflowExecutionService.PackageRarSeriesNameHintKey,
+                "No hay nombre de serie disponible para copiar.",
+                "Se copió el nombre de la serie.");
         }
 
         public async Task CreateWorkflowFromPathAsync(string path, bool isFile)
@@ -1064,6 +1080,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 case WorkflowExecutionService.PackageRarCleanNameHintKey:
                     PackageRarCleanNameCopied = true;
                     break;
+                case WorkflowExecutionService.PackageRarSeriesNameHintKey:
+                    PackageRarSeriesTitleCopied = true;
+                    break;
             }
 
             NotifyPackageRarCopyButtonVisuals();
@@ -1074,6 +1093,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             PackageRarRawDataCopied = false;
             PackageRarWeightSummaryCopied = false;
             PackageRarCleanNameCopied = false;
+            PackageRarSeriesTitleCopied = false;
             NotifyPackageRarCopyButtonVisuals();
         }
 
@@ -1082,12 +1102,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
             OnPropertyChanged(nameof(PackageRarRawDataButtonBackground));
             OnPropertyChanged(nameof(PackageRarWeightSummaryButtonBackground));
             OnPropertyChanged(nameof(PackageRarCleanNameButtonBackground));
+            OnPropertyChanged(nameof(PackageRarSeriesTitleButtonBackground));
             OnPropertyChanged(nameof(PackageRarRawDataButtonBorderBrush));
             OnPropertyChanged(nameof(PackageRarWeightSummaryButtonBorderBrush));
             OnPropertyChanged(nameof(PackageRarCleanNameButtonBorderBrush));
+            OnPropertyChanged(nameof(PackageRarSeriesTitleButtonBorderBrush));
             OnPropertyChanged(nameof(PackageRarRawDataButtonForeground));
             OnPropertyChanged(nameof(PackageRarWeightSummaryButtonForeground));
             OnPropertyChanged(nameof(PackageRarCleanNameButtonForeground));
+            OnPropertyChanged(nameof(PackageRarSeriesTitleButtonForeground));
         }
 
         private static bool IsStructuredOutputMetadata(string line)
@@ -1175,6 +1198,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 link.Trim(),
                 "--mode",
                 string.Equals(mode, "all", StringComparison.OrdinalIgnoreCase) ? "all" : "from-latest",
+                "--run-now",
+                "--ephemeral",
             };
         }
 

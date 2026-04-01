@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MediaWorkflowOrchestrator.Services
 {
@@ -9,6 +10,7 @@ namespace MediaWorkflowOrchestrator.Services
         public const string PackageRarRawDataHintKey = "package_rar_raw_data";
         public const string PackageRarWeightSummaryHintKey = "package_rar_weight_summary";
         public const string PackageRarCleanNameHintKey = "package_rar_clean_name";
+        public const string PackageRarSeriesNameHintKey = "package_rar_series_name";
 
         private readonly IAppSettingsService appSettingsService;
         private readonly IWorkflowStore workflowStore;
@@ -233,7 +235,7 @@ namespace MediaWorkflowOrchestrator.Services
 
             result = NormalizeProcessResult(stepKey, result, onOutput);
             step.OutputHints = new Dictionary<string, string>();
-            result = ExtractStructuredOutputHints(stepKey, step, result);
+            result = ExtractStructuredOutputHints(stepKey, workflow, step, result);
 
             await File.WriteAllTextAsync(logPaths.stdout, result.StandardOutput, cancellationToken);
             await File.WriteAllTextAsync(logPaths.stderr, result.StandardError, cancellationToken);
@@ -792,6 +794,7 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static ProcessExecutionResult ExtractStructuredOutputHints(
             WorkflowStepKey stepKey,
+            WorkflowInstance workflow,
             WorkflowStepState step,
             ProcessExecutionResult result)
         {
@@ -801,21 +804,15 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             var visibleLines = new List<string>();
-            var rawRows = new List<string>();
-            var cleanNames = new List<string>();
+            var rawRows = new List<PackageRarStructuredRow>();
             string? weightSummary = null;
 
             using var reader = new StringReader(result.StandardOutput);
             while (reader.ReadLine() is { } line)
             {
-                if (TryParsePackageRarRawDataLine(line, out var rawRow, out var cleanName))
+                if (TryParsePackageRarRawDataLine(line, out var rawRow))
                 {
                     rawRows.Add(rawRow);
-                    if (!string.IsNullOrWhiteSpace(cleanName))
-                    {
-                        cleanNames.Add(cleanName);
-                    }
-
                     continue;
                 }
 
@@ -830,12 +827,26 @@ namespace MediaWorkflowOrchestrator.Services
 
             if (rawRows.Count > 0)
             {
-                step.OutputHints[PackageRarRawDataHintKey] = string.Join(Environment.NewLine, rawRows);
-            }
+                step.OutputHints[PackageRarRawDataHintKey] = string.Join(
+                    Environment.NewLine,
+                    rawRows.Select(row => row.RawRow));
 
-            if (cleanNames.Count > 0)
-            {
-                step.OutputHints[PackageRarCleanNameHintKey] = string.Join(Environment.NewLine, cleanNames.Distinct());
+                var cleanNames = rawRows
+                    .Select(row => row.CleanName)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (cleanNames.Count > 0)
+                {
+                    step.OutputHints[PackageRarCleanNameHintKey] = string.Join(Environment.NewLine, cleanNames);
+                }
+
+                var seriesName = BuildPackageRarSeriesName(rawRows, weightSummary);
+                if (!string.IsNullOrWhiteSpace(seriesName))
+                {
+                    step.OutputHints[PackageRarSeriesNameHintKey] = seriesName;
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(weightSummary))
@@ -855,10 +866,9 @@ namespace MediaWorkflowOrchestrator.Services
             };
         }
 
-        private static bool TryParsePackageRarRawDataLine(string line, out string rawRow, out string cleanName)
+        private static bool TryParsePackageRarRawDataLine(string line, out PackageRarStructuredRow rawRow)
         {
-            rawRow = string.Empty;
-            cleanName = string.Empty;
+            rawRow = default;
             const string prefix = "MWO_RAW_DATA\t";
             if (!line.StartsWith(prefix, StringComparison.Ordinal))
             {
@@ -871,8 +881,19 @@ namespace MediaWorkflowOrchestrator.Services
                 return false;
             }
 
-            rawRow = string.Join('\t', parts.Skip(1).Take(5));
-            cleanName = parts[6].Trim();
+            var originalName = parts[1].Trim();
+            var resolution = parts[2].Trim();
+            var weight = parts[3].Trim();
+            var audio = parts[4].Trim();
+            var subtitles = parts[5].Trim();
+            rawRow = new PackageRarStructuredRow(
+                originalName,
+                string.Join('\t', parts.Skip(1).Take(5)),
+                parts[6].Trim(),
+                resolution,
+                weight,
+                audio,
+                subtitles);
             return true;
         }
 
@@ -893,6 +914,90 @@ namespace MediaWorkflowOrchestrator.Services
 
             summary = $"{parts[1].Trim()} - Promedio {parts[2].Trim()}";
             return true;
+        }
+
+        private static string BuildPackageRarSeriesName(
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            string? weightSummary)
+        {
+            if (rows.Count < 2)
+            {
+                return string.Empty;
+            }
+
+            var firstEpisode = rows
+                .Select(row => new { Row = row, SortKey = GetEpisodeSortKey(row.OriginalName) })
+                .OrderBy(item => item.SortKey.Season)
+                .ThenBy(item => item.SortKey.Episode)
+                .ThenBy(item => item.Row.OriginalName, StringComparer.OrdinalIgnoreCase)
+                .Select(item => item.Row)
+                .First();
+
+            var seriesName = BuildSeriesNameFromEpisode(firstEpisode.OriginalName);
+            if (string.IsNullOrWhiteSpace(seriesName))
+            {
+                return string.Empty;
+            }
+
+            var resolvedWeight = string.IsNullOrWhiteSpace(weightSummary)
+                ? firstEpisode.Weight
+                : weightSummary.Trim();
+
+            return string.Join(
+                '\t',
+                new[]
+                {
+                    seriesName,
+                    firstEpisode.Resolution,
+                    resolvedWeight,
+                    firstEpisode.Audio,
+                    firstEpisode.Subtitles,
+                });
+        }
+
+        private static string BuildSeriesNameFromEpisode(string originalName)
+        {
+            if (string.IsNullOrWhiteSpace(originalName))
+            {
+                return string.Empty;
+            }
+
+            var match = Regex.Match(
+                originalName.Trim(),
+                @"^(?<series>.+?)\s*-\s*S(?<season>\d{1,2})E\d{1,3}\s*-\s*.+?(?<metadata>\s*\([^()]+\))$",
+                RegexOptions.IgnoreCase);
+            if (!match.Success)
+            {
+                return string.Empty;
+            }
+
+            var series = match.Groups["series"].Value.Trim();
+            var season = int.TryParse(match.Groups["season"].Value, out var parsedSeason) ? parsedSeason : 0;
+            var metadata = match.Groups["metadata"].Value.Trim();
+            if (string.IsNullOrWhiteSpace(series) || season <= 0 || string.IsNullOrWhiteSpace(metadata))
+            {
+                return string.Empty;
+            }
+
+            return $"{series} S{season:00} {metadata}";
+        }
+
+        private static (int Season, int Episode) GetEpisodeSortKey(string originalName)
+        {
+            if (string.IsNullOrWhiteSpace(originalName))
+            {
+                return (int.MaxValue, int.MaxValue);
+            }
+
+            var match = Regex.Match(originalName, @"\bS(?<season>\d{1,2})E(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase);
+            if (!match.Success)
+            {
+                return (int.MaxValue, int.MaxValue);
+            }
+
+            return (
+                int.TryParse(match.Groups["season"].Value, out var season) ? season : int.MaxValue,
+                int.TryParse(match.Groups["episode"].Value, out var episode) ? episode : int.MaxValue);
         }
 
         private static async Task<(bool reachable, string message)> CheckOllamaReachabilityAsync(string host, CancellationToken cancellationToken)
@@ -1124,6 +1229,15 @@ namespace MediaWorkflowOrchestrator.Services
                 .Where(path => !string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
                 .Distinct(StringComparer.OrdinalIgnoreCase)!;
         }
+
+        private readonly record struct PackageRarStructuredRow(
+            string OriginalName,
+            string RawRow,
+            string CleanName,
+            string Resolution,
+            string Weight,
+            string Audio,
+            string Subtitles);
 
         private sealed record TagAndRenamePreparation(string WorkingDirectory, string ShortcutPath, bool LaunchRenamerOnly, string StagedVideoPath);
     }

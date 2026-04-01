@@ -205,6 +205,13 @@
                                         Content="{x:Bind ViewModel.PackageRarCleanNameButtonLabel, Mode=OneWay}"
                                         Foreground="{x:Bind ViewModel.PackageRarCleanNameButtonForeground, Mode=OneWay}"
                                         Style="{StaticResource DenseActionButtonStyle}" />
+                                    <Button
+                                        Background="{x:Bind ViewModel.PackageRarSeriesTitleButtonBackground, Mode=OneWay}"
+                                        BorderBrush="{x:Bind ViewModel.PackageRarSeriesTitleButtonBorderBrush, Mode=OneWay}"
+                                        Command="{x:Bind ViewModel.CopyPackageRarSeriesTitleCommand}"
+                                        Content="{x:Bind ViewModel.PackageRarSeriesTitleButtonLabel, Mode=OneWay}"
+                                        Foreground="{x:Bind ViewModel.PackageRarSeriesTitleButtonForeground, Mode=OneWay}"
+                                        Style="{StaticResource DenseActionButtonStyle}" />
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
