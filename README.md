@@ -50,6 +50,10 @@ La app no reemplaza estos scripts. Los ejecuta, valida y monitorea.
 | Etiquetas y renombre | `ETIQUETAS_GDRIVELATINO.py` |
 | Empaquetado / capturas / RAR | `rar_folder_image_info.py` |
 
+Nota:
+`Scripts\ETIQUETAS_GDRIVELATINO.py` es una copia versionada dentro de este repo para respaldo y seguimiento de cambios.
+La ruta operativa del workflow puede seguir apuntando al archivo original externo.
+
 ## Características principales
 
 - Shell WinUI 3 unpackaged sobre `.NET 8`
