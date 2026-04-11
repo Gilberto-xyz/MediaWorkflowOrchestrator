@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using MediaWorkflowOrchestrator.Messages;
 using Windows.ApplicationModel.DataTransfer;
 
@@ -9,6 +10,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
     {
         private const double MinDetailOutputHeight = 220;
         private const double MaxDetailOutputHeight = 1200;
+        private static readonly Regex CompactMuxProgressRegex = new(
+            @"^\[(?<current>\d+)\/(?<total>\d+)\]\s+Mux\s+(?<percent>\d{1,3})%:\s+(?<name>.+)$",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex CompactGlobalProgressRegex = new(
+            @"^\[Global\]\s+.+$",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBackgroundBrush = CreateBrush(0x26, 0x14, 0x18, 0x22);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBorderBrush = CreateBrush(0x66, 0xF8, 0xFA, 0xFF);
@@ -23,6 +30,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private WorkflowStepKey? activeOutputStepKey;
         private bool utilityOutputActive;
         private AppSettings quickSettings = AppSettings.CreateDefault();
+        private readonly List<string> liveOutputDisplayLines = new();
+        private readonly Dictionary<string, int> liveOutputReplaceableIndexes = new(StringComparer.OrdinalIgnoreCase);
 
         public DashboardViewModel()
         {
@@ -174,6 +183,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
+            OnPropertyChanged(nameof(CanOpenSelectedLog));
         }
 
         public string DownloadDryRunButtonLabel => $"Dry-run: {(DownloadDryRunEnabled ? "ON" : "OFF")}";
@@ -186,6 +196,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string PackageRarWeightSummaryButtonLabel => "Peso completo";
         public string PackageRarCleanNameButtonLabel => "Nombre limpio";
         public string PackageRarSeriesTitleButtonLabel => "Nombre serie";
+        public bool CanOpenSelectedLog => SelectedStep is not null
+            && !string.IsNullOrWhiteSpace(SelectedStep.StdoutLogPath)
+            && File.Exists(SelectedStep.StdoutLogPath);
         public string RarSkipImagesButtonLabel => $"Sin imágenes: {(RarSkipImagesEnabled ? "ON" : "OFF")}";
         public string RarNoCompressButtonLabel => $"Solo info: {(RarNoCompressEnabled ? "ON" : "OFF")}";
         public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "Comprimir" : "Contenedor fast")}";
@@ -760,7 +773,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             executionCancellationTokenSource = new CancellationTokenSource();
             activeOutputStepKey = outputStepKey;
             utilityOutputActive = false;
-            LiveOutput = string.Empty;
+            ClearLiveOutputBuffer();
             DetailOutput = "Esperando salida del proceso...";
 
             try
@@ -874,6 +887,71 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
+            OnPropertyChanged(nameof(CanOpenSelectedLog));
+        }
+
+        private void ClearLiveOutputBuffer()
+        {
+            liveOutputDisplayLines.Clear();
+            liveOutputReplaceableIndexes.Clear();
+            LiveOutput = string.Empty;
+        }
+
+        private void AppendLineToLiveOutput(string line)
+        {
+            AppendLineToOutputBuffer(liveOutputDisplayLines, liveOutputReplaceableIndexes, line);
+            LiveOutput = string.Join(Environment.NewLine, liveOutputDisplayLines);
+        }
+
+        private static string FormatOutputForDisplay(string rawOutput)
+        {
+            if (string.IsNullOrWhiteSpace(rawOutput))
+            {
+                return string.Empty;
+            }
+
+            var lines = new List<string>();
+            var replaceableIndexes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var line in rawOutput.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                AppendLineToOutputBuffer(lines, replaceableIndexes, line);
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static void AppendLineToOutputBuffer(List<string> lines, Dictionary<string, int> replaceableIndexes, string rawLine)
+        {
+            var line = rawLine.Replace("\r", string.Empty).TrimEnd();
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return;
+            }
+
+            var slotKey = GetReplaceableOutputSlot(line);
+            if (slotKey is not null)
+            {
+                if (replaceableIndexes.TryGetValue(slotKey, out var existingIndex))
+                {
+                    lines[existingIndex] = line;
+                    return;
+                }
+
+                replaceableIndexes[slotKey] = lines.Count;
+            }
+
+            lines.Add(line);
+        }
+
+        private static string? GetReplaceableOutputSlot(string line)
+        {
+            var muxMatch = CompactMuxProgressRegex.Match(line);
+            if (muxMatch.Success)
+            {
+                return $"mux:{muxMatch.Groups["current"].Value}";
+            }
+
+            return CompactGlobalProgressRegex.IsMatch(line) ? "global" : null;
         }
 
         private void AppendOutput(string line)
@@ -885,7 +963,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
             void UpdateOutput()
             {
-                LiveOutput += string.IsNullOrWhiteSpace(LiveOutput) ? line : $"{Environment.NewLine}{line}";
+                AppendLineToLiveOutput(line);
                 if (activeOutputStepKey is not null && SelectedStep?.StepKey == activeOutputStepKey)
                 {
                     DetailOutput = LiveOutput;
@@ -950,7 +1028,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 var stdout = File.ReadAllText(SelectedStep.StdoutLogPath).Trim();
                 if (!string.IsNullOrWhiteSpace(stdout))
                 {
-                    parts.Add(stdout);
+                    parts.Add(FormatOutputForDisplay(stdout));
                 }
             }
 
@@ -959,13 +1037,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 var stderr = File.ReadAllText(SelectedStep.StderrLogPath).Trim();
                 if (!string.IsNullOrWhiteSpace(stderr))
                 {
-                    parts.Add(parts.Count == 0 ? stderr : $"--- STDERR ---{Environment.NewLine}{stderr}");
+                    var formattedStderr = FormatOutputForDisplay(stderr);
+                    parts.Add(parts.Count == 0 ? formattedStderr : $"--- STDERR ---{Environment.NewLine}{formattedStderr}");
                 }
             }
 
             DetailOutput = parts.Count > 0
                 ? string.Join($"{Environment.NewLine}{Environment.NewLine}", parts)
                 : "No hay salida disponible para este paso todavía.";
+            OnPropertyChanged(nameof(CanOpenSelectedLog));
         }
 
         private void BeginUtilityOutput(string title, string description, string statusMessage)
@@ -981,7 +1061,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             currentWorkflow = null;
             activeOutputStepKey = null;
-            LiveOutput = string.Empty;
+            ClearLiveOutputBuffer();
             HasExplicitStepSelection = false;
             DetailOutputHeightWasResized = false;
             DetailOutputHeight = 420;
@@ -1001,6 +1081,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             ShowTranslationDecisionActions = false;
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
+            OnPropertyChanged(nameof(CanOpenSelectedLog));
         }
 
         private void UpdateTranslationDecisionVisibility(WorkflowInstance? workflow)

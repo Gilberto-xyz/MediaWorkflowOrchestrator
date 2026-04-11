@@ -842,7 +842,7 @@ namespace MediaWorkflowOrchestrator.Services
                     step.OutputHints[PackageRarCleanNameHintKey] = string.Join(Environment.NewLine, cleanNames);
                 }
 
-                var seriesName = BuildPackageRarSeriesName(rawRows, weightSummary);
+                var seriesName = BuildPackageRarSeriesName(rawRows, weightSummary, workflow);
                 if (!string.IsNullOrWhiteSpace(seriesName))
                 {
                     step.OutputHints[PackageRarSeriesNameHintKey] = seriesName;
@@ -918,9 +918,10 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static string BuildPackageRarSeriesName(
             IReadOnlyList<PackageRarStructuredRow> rows,
-            string? weightSummary)
+            string? weightSummary,
+            WorkflowInstance workflow)
         {
-            if (rows.Count < 2)
+            if (rows.Count == 0)
             {
                 return string.Empty;
             }
@@ -933,7 +934,7 @@ namespace MediaWorkflowOrchestrator.Services
                 .Select(item => item.Row)
                 .First();
 
-            var seriesName = BuildSeriesNameFromEpisode(firstEpisode.OriginalName);
+            var seriesName = ResolvePackageRarSeriesName(firstEpisode, rows, workflow);
             if (string.IsNullOrWhiteSpace(seriesName))
             {
                 return string.Empty;
@@ -953,6 +954,51 @@ namespace MediaWorkflowOrchestrator.Services
                     firstEpisode.Audio,
                     firstEpisode.Subtitles,
                 });
+        }
+
+        private static string ResolvePackageRarSeriesName(
+            PackageRarStructuredRow firstEpisode,
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            WorkflowInstance workflow)
+        {
+            foreach (var candidate in new[]
+                     {
+                         BuildSeriesNameFromEpisode(firstEpisode.OriginalName),
+                         BuildSeriesNameFromCleanNames(rows),
+                         BuildSeriesNameFromDirectory(workflow.RootPath),
+                         NormalizeSeriesCandidate(workflow.DisplayName),
+                     })
+            {
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string BuildSeriesNameFromCleanNames(IReadOnlyList<PackageRarStructuredRow> rows)
+        {
+            return rows
+                .Select(row => NormalizeSeriesCandidate(row.CleanName))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.Count())
+                .ThenBy(group => group.Key.Length)
+                .Select(group => group.Key)
+                .FirstOrDefault() ?? string.Empty;
+        }
+
+        private static string BuildSeriesNameFromDirectory(string rootPath)
+        {
+            if (string.IsNullOrWhiteSpace(rootPath))
+            {
+                return string.Empty;
+            }
+
+            var directoryName = Path.GetFileName(Path.TrimEndingDirectorySeparator(rootPath));
+            return NormalizeSeriesCandidate(directoryName);
         }
 
         private static string BuildSeriesNameFromEpisode(string originalName)
@@ -980,6 +1026,19 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return $"{series} S{season:00} {metadata}";
+        }
+
+        private static string NormalizeSeriesCandidate(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var normalized = Regex.Replace(value.Trim(), @"\s+", " ");
+            return string.Equals(normalized, "Workflow nuevo", StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : normalized;
         }
 
         private static (int Season, int Episode) GetEpisodeSortKey(string originalName)

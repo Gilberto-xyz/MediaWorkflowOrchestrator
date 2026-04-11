@@ -219,6 +219,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Border
                                 Background="{StaticResource OverlayStrokeBrush}"
@@ -235,6 +236,12 @@
                                 Grid.Column="1"
                                 Click="OnDetailOutputAutoSizeClicked"
                                 Content="Autoajustar"
+                                Style="{StaticResource DenseActionButtonStyle}" />
+                            <Button
+                                Grid.Column="2"
+                                Command="{x:Bind ViewModel.OpenSelectedLogCommand}"
+                                Content="Abrir log completo"
+                                IsEnabled="{x:Bind ViewModel.CanOpenSelectedLog, Mode=OneWay}"
                                 Style="{StaticResource DenseActionButtonStyle}" />
                         </Grid>
                         <TextBox
