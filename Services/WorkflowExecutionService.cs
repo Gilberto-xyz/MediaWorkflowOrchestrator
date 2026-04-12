@@ -11,6 +11,7 @@ namespace MediaWorkflowOrchestrator.Services
         public const string PackageRarWeightSummaryHintKey = "package_rar_weight_summary";
         public const string PackageRarCleanNameHintKey = "package_rar_clean_name";
         public const string PackageRarSeriesNameHintKey = "package_rar_series_name";
+        private const string EmptyTrackSelectionToken = "__none__";
 
         private readonly IAppSettingsService appSettingsService;
         private readonly IWorkflowStore workflowStore;
@@ -93,6 +94,12 @@ namespace MediaWorkflowOrchestrator.Services
         public Task<IReadOnlyList<WorkflowInstance>> LoadHistoryAsync() => workflowStore.LoadAllAsync();
 
         public Task<WorkflowInstance?> LoadWorkflowAsync(string workflowId) => workflowStore.LoadAsync(workflowId);
+
+        public async Task<TrackCleanupAudioInspection> GetTrackCleanupAudioInspectionAsync(WorkflowInstance workflow, CancellationToken cancellationToken)
+        {
+            var settings = await appSettingsService.LoadAsync();
+            return await BuildTrackCleanupAudioInspectionAsync(settings, workflow, cancellationToken);
+        }
 
         public async Task<WorkflowInstance> DecideTranslationAsync(WorkflowInstance workflow, bool translateRequired)
         {
@@ -296,7 +303,13 @@ namespace MediaWorkflowOrchestrator.Services
                 WorkflowStepKey.CleanTracks => new ProcessExecutionRequest
                 {
                     FileName = settings.PythonPath,
-                    Arguments = BuildTrackCleanupArgs(settings, ResolveTrackCleanupInputPath(workflow), settings.TrackCleanupDeleteOriginals).ToArray(),
+                    Arguments = BuildTrackCleanupArgs(
+                        settings,
+                        ResolveTrackCleanupInputPath(workflow),
+                        settings.TrackCleanupDeleteOriginals,
+                        Array.Empty<string>(),
+                        false,
+                        Array.Empty<string>()).ToArray(),
                     WorkingDirectory = Path.GetDirectoryName(settings.TrackCleanupScriptPath) ?? workflow.RootPath,
                 },
                 WorkflowStepKey.TagAndRename => new ProcessExecutionRequest
@@ -378,11 +391,54 @@ namespace MediaWorkflowOrchestrator.Services
         {
             var cleanupInputPath = ResolveTrackCleanupInputPath(workflow);
             var deleteOriginals = settings.TrackCleanupDeleteOriginals;
-            var targetVideoPath = ResolveTrackCleanupTargetVideo(workflow, cleanupInputPath);
+            var targetContext = ResolveTrackCleanupTargetContext(workflow, cleanupInputPath);
+            IReadOnlyList<string> selectedAudioTrackIds = Array.Empty<string>();
+            IReadOnlyList<string> selectedSubtitleTrackIds = Array.Empty<string>();
+            var applyManualSubtitleSelection = false;
 
-            if (deleteOriginals && !string.IsNullOrWhiteSpace(targetVideoPath))
+            if (targetContext.CanManuallySelectAudio)
             {
-                var audioTrackCount = await GetAudioTrackCountAsync(targetVideoPath, settings, cancellationToken);
+                var inspection = await BuildTrackCleanupAudioInspectionAsync(settings, workflow, cancellationToken);
+                ApplyTrackCleanupAudioInspection(workflow, inspection);
+
+                if (inspection.CanManuallySelectAudio)
+                {
+                    selectedAudioTrackIds = workflow.TrackCleanupAudioOptions
+                        .Where(option => option.IsSelected)
+                        .Select(option => option.TrackId)
+                        .ToList();
+
+                    if (selectedAudioTrackIds.Count == 0)
+                    {
+                        throw new InvalidOperationException("Selecciona al menos un audio para conservar antes de ejecutar Limpiar tracks.");
+                    }
+
+                    selectedSubtitleTrackIds = workflow.TrackCleanupSubtitleOptions
+                        .Where(option => option.IsSelected)
+                        .Select(option => option.TrackId)
+                        .ToList();
+                    applyManualSubtitleSelection = true;
+                }
+                else
+                {
+                    onOutput?.Invoke(inspection.Message);
+                    if (deleteOriginals)
+                    {
+                        deleteOriginals = false;
+                        onOutput?.Invoke("Se omitió --delete-originals porque no se pudo cargar una selección manual segura de tracks.");
+                    }
+                }
+            }
+            else if (deleteOriginals)
+            {
+                deleteOriginals = false;
+                onOutput?.Invoke(targetContext.Message);
+                onOutput?.Invoke("Se omitió --delete-originals porque este paso procesa más de un video y la selección manual de tracks no aplica.");
+            }
+
+            if (deleteOriginals && !string.IsNullOrWhiteSpace(targetContext.TargetVideoPath))
+            {
+                var audioTrackCount = await GetAudioTrackCountAsync(targetContext.TargetVideoPath, settings, cancellationToken);
                 if (audioTrackCount == 1)
                 {
                     deleteOriginals = false;
@@ -393,12 +449,24 @@ namespace MediaWorkflowOrchestrator.Services
             return new ProcessExecutionRequest
             {
                 FileName = settings.PythonPath,
-                Arguments = BuildTrackCleanupArgs(settings, cleanupInputPath, deleteOriginals).ToArray(),
+                Arguments = BuildTrackCleanupArgs(
+                    settings,
+                    cleanupInputPath,
+                    deleteOriginals,
+                    selectedAudioTrackIds,
+                    applyManualSubtitleSelection,
+                    selectedSubtitleTrackIds).ToArray(),
                 WorkingDirectory = Path.GetDirectoryName(settings.TrackCleanupScriptPath) ?? workflow.RootPath,
             };
         }
 
-        private static IEnumerable<string> BuildTrackCleanupArgs(AppSettings settings, string cleanupInputPath, bool deleteOriginals)
+        private static IEnumerable<string> BuildTrackCleanupArgs(
+            AppSettings settings,
+            string cleanupInputPath,
+            bool deleteOriginals,
+            IReadOnlyList<string> selectedAudioTrackIds,
+            bool applyManualSubtitleSelection,
+            IReadOnlyList<string> selectedSubtitleTrackIds)
         {
             var args = new List<string>
             {
@@ -419,10 +487,80 @@ namespace MediaWorkflowOrchestrator.Services
                 args.Add("--delete-originals");
             }
 
+            if (selectedAudioTrackIds.Count > 0)
+            {
+                args.Add("--keep-audio-ids");
+                args.Add(string.Join(",", selectedAudioTrackIds));
+            }
+
+            if (applyManualSubtitleSelection)
+            {
+                args.Add("--keep-subtitle-ids");
+                args.Add(selectedSubtitleTrackIds.Count > 0
+                    ? string.Join(",", selectedSubtitleTrackIds)
+                    : EmptyTrackSelectionToken);
+            }
+
             return args;
         }
 
         private async Task<int?> GetAudioTrackCountAsync(string videoPath, AppSettings settings, CancellationToken cancellationToken)
+        {
+            var trackOptions = await GetTrackCleanupOptionsAsync(videoPath, settings, cancellationToken);
+            return trackOptions?.AudioOptions.Count;
+        }
+
+        private async Task<TrackCleanupAudioInspection> BuildTrackCleanupAudioInspectionAsync(
+            AppSettings settings,
+            WorkflowInstance workflow,
+            CancellationToken cancellationToken)
+        {
+            var targetContext = ResolveTrackCleanupTargetContext(workflow, ResolveTrackCleanupInputPath(workflow));
+            if (!targetContext.CanManuallySelectAudio || string.IsNullOrWhiteSpace(targetContext.TargetVideoPath))
+            {
+                return new TrackCleanupAudioInspection
+                {
+                    CanManuallySelectAudio = false,
+                    Message = targetContext.Message,
+                    TargetVideoPath = targetContext.TargetVideoPath ?? string.Empty,
+                };
+            }
+
+            var trackOptions = await GetTrackCleanupOptionsAsync(targetContext.TargetVideoPath, settings, cancellationToken);
+            if (trackOptions is null)
+            {
+                return new TrackCleanupAudioInspection
+                {
+                    CanManuallySelectAudio = false,
+                    Message = "No se pudieron inspeccionar los tracks del video objetivo. El paso seguirá en modo seguro sin borrar originales.",
+                    TargetVideoPath = targetContext.TargetVideoPath,
+                };
+            }
+
+            if (trackOptions.AudioOptions.Count == 0)
+            {
+                return new TrackCleanupAudioInspection
+                {
+                    CanManuallySelectAudio = false,
+                    Message = "No se detectaron pistas de audio en el video objetivo.",
+                    TargetVideoPath = targetContext.TargetVideoPath,
+                };
+            }
+
+            var preferredLanguages = BuildTrackCleanupPreferredLanguages(trackOptions.AudioOptions, trackOptions.SubtitleOptions);
+            var mergedAudioOptions = MergeTrackCleanupAudioOptions(workflow, targetContext.TargetVideoPath, trackOptions.AudioOptions, preferredLanguages);
+            var mergedSubtitleOptions = MergeTrackCleanupSubtitleOptions(workflow, targetContext.TargetVideoPath, trackOptions.SubtitleOptions, preferredLanguages);
+            return new TrackCleanupAudioInspection
+            {
+                CanManuallySelectAudio = true,
+                Message = "Selecciona exactamente qué audios y subtítulos se conservarán.",
+                TargetVideoPath = targetContext.TargetVideoPath,
+                AudioOptions = mergedAudioOptions,
+                SubtitleOptions = mergedSubtitleOptions,
+            };
+        }
+
+        private async Task<TrackCleanupInspectedTracks?> GetTrackCleanupOptionsAsync(string videoPath, AppSettings settings, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath) || !File.Exists(settings.MkvmergePath))
             {
@@ -452,14 +590,273 @@ namespace MediaWorkflowOrchestrator.Services
                     return null;
                 }
 
-                return tracks.EnumerateArray()
-                    .Count(track => track.TryGetProperty("type", out var typeElement)
-                        && string.Equals(typeElement.GetString(), "audio", StringComparison.OrdinalIgnoreCase));
+                var audioOptions = new List<TrackCleanupAudioOption>();
+                var subtitleOptions = new List<TrackCleanupSubtitleOption>();
+
+                foreach (var track in tracks.EnumerateArray())
+                {
+                    if (!track.TryGetProperty("type", out var typeElement))
+                    {
+                        continue;
+                    }
+
+                    var trackType = typeElement.GetString();
+                    if (string.Equals(trackType, "audio", StringComparison.OrdinalIgnoreCase))
+                    {
+                        audioOptions.Add(BuildTrackCleanupAudioOption(track));
+                    }
+                    else if (string.Equals(trackType, "subtitles", StringComparison.OrdinalIgnoreCase))
+                    {
+                        subtitleOptions.Add(BuildTrackCleanupSubtitleOption(track));
+                    }
+                }
+
+                return new TrackCleanupInspectedTracks(audioOptions, subtitleOptions);
             }
             catch (JsonException)
             {
                 return null;
             }
+        }
+
+        private static TrackCleanupAudioOption BuildTrackCleanupAudioOption(JsonElement track)
+        {
+            var properties = track.TryGetProperty("properties", out var propertiesElement) && propertiesElement.ValueKind == JsonValueKind.Object
+                ? propertiesElement
+                : default;
+
+            var languageRaw = TryGetJsonString(properties, "language");
+            var languageIetf = TryGetJsonString(properties, "language_ietf") ?? TryGetJsonString(properties, "language-ietf");
+            var normalizedLanguage = NormalizeTrackLanguage(languageRaw, languageIetf);
+            var codec = TryGetJsonString(track, "codec");
+            var name = TryGetJsonString(properties, "track_name");
+
+            return new TrackCleanupAudioOption
+            {
+                TrackId = TryGetJsonString(track, "id") ?? string.Empty,
+                LanguageCode = string.IsNullOrWhiteSpace(languageRaw) ? "und" : languageRaw!,
+                LanguageLabel = normalizedLanguage,
+                Codec = string.IsNullOrWhiteSpace(codec)
+                    ? string.Empty
+                    : codec.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? codec,
+                Name = name ?? string.Empty,
+                IsDefault = TryGetJsonBoolean(properties, "default_track"),
+                IsSelected = true,
+            };
+        }
+
+        private static TrackCleanupSubtitleOption BuildTrackCleanupSubtitleOption(JsonElement track)
+        {
+            var properties = track.TryGetProperty("properties", out var propertiesElement) && propertiesElement.ValueKind == JsonValueKind.Object
+                ? propertiesElement
+                : default;
+
+            var languageRaw = TryGetJsonString(properties, "language");
+            var languageIetf = TryGetJsonString(properties, "language_ietf") ?? TryGetJsonString(properties, "language-ietf");
+            var normalizedLanguage = NormalizeTrackLanguage(languageRaw, languageIetf);
+            var name = TryGetJsonString(properties, "track_name");
+
+            return new TrackCleanupSubtitleOption
+            {
+                TrackId = TryGetJsonString(track, "id") ?? string.Empty,
+                LanguageCode = string.IsNullOrWhiteSpace(languageRaw) ? "und" : languageRaw!,
+                LanguageLabel = normalizedLanguage,
+                Name = name ?? string.Empty,
+                IsDefault = TryGetJsonBoolean(properties, "default_track"),
+                IsForced = TryGetJsonBoolean(properties, "forced_track"),
+                IsSelected = true,
+            };
+        }
+
+        private static string NormalizeTrackLanguage(string? languageRaw, string? languageIetf)
+        {
+            var candidate = !string.IsNullOrWhiteSpace(languageIetf)
+                ? languageIetf
+                : languageRaw;
+
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                return "UND";
+            }
+
+            var normalized = candidate.Trim().ToLowerInvariant();
+            var baseCode = normalized.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? normalized;
+            return baseCode switch
+            {
+                "es" or "spa" => "SPA",
+                "en" or "eng" => "ENG",
+                "ja" or "jpn" => "JPN",
+                "ko" or "kor" => "KOR",
+                "zh" or "zho" => "ZHO",
+                _ => baseCode.Length >= 3
+                    ? baseCode[..3].ToUpperInvariant()
+                    : baseCode.ToUpperInvariant(),
+            };
+        }
+
+        private static string NormalizeTrackLanguageCode(string? languageCode)
+        {
+            if (string.IsNullOrWhiteSpace(languageCode))
+            {
+                return "und";
+            }
+
+            var normalized = languageCode.Trim().ToLowerInvariant();
+            var baseCode = normalized.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? normalized;
+            return baseCode switch
+            {
+                "es" or "spa" => "spa",
+                "en" or "eng" => "eng",
+                "ja" or "jpn" => "jpn",
+                "ko" or "kor" => "kor",
+                "zh" or "zho" => "zho",
+                _ => baseCode,
+            };
+        }
+
+        private static string? TryGetJsonString(JsonElement element, string propertyName)
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            if (!element.TryGetProperty(propertyName, out var value))
+            {
+                return null;
+            }
+
+            return value.ValueKind switch
+            {
+                JsonValueKind.String => value.GetString(),
+                JsonValueKind.Number => value.GetRawText(),
+                _ => null,
+            };
+        }
+
+        private static bool TryGetJsonBoolean(JsonElement element, string propertyName)
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (!element.TryGetProperty(propertyName, out var value))
+            {
+                return false;
+            }
+
+            return value.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.Number => value.TryGetInt32(out var number) && number != 0,
+                _ => false,
+            };
+        }
+
+        private static HashSet<string> BuildTrackCleanupPreferredLanguages(
+            IReadOnlyList<TrackCleanupAudioOption> audioOptions,
+            IReadOnlyList<TrackCleanupSubtitleOption> subtitleOptions)
+        {
+            var preferredLanguages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "spa",
+                "eng",
+            };
+
+            foreach (var option in audioOptions.Where(option => option.IsDefault))
+            {
+                var normalized = NormalizeTrackLanguageCode(option.LanguageCode);
+                if (!string.Equals(normalized, "und", StringComparison.OrdinalIgnoreCase))
+                {
+                    preferredLanguages.Add(normalized);
+                }
+            }
+
+            foreach (var option in subtitleOptions.Where(option => option.IsDefault))
+            {
+                var normalized = NormalizeTrackLanguageCode(option.LanguageCode);
+                if (!string.Equals(normalized, "und", StringComparison.OrdinalIgnoreCase))
+                {
+                    preferredLanguages.Add(normalized);
+                }
+            }
+
+            return preferredLanguages;
+        }
+
+        private static List<TrackCleanupAudioOption> MergeTrackCleanupAudioOptions(
+            WorkflowInstance workflow,
+            string targetVideoPath,
+            IReadOnlyList<TrackCleanupAudioOption> inspectedOptions,
+            ISet<string> preferredLanguages)
+        {
+            var hasMatchingSelection = string.Equals(
+                workflow.TrackCleanupSelectionVideoPath,
+                targetVideoPath,
+                StringComparison.OrdinalIgnoreCase);
+
+            var selectedMap = hasMatchingSelection
+                ? workflow.TrackCleanupAudioOptions.ToDictionary(option => option.TrackId, option => option.IsSelected, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var option in inspectedOptions)
+            {
+                if (selectedMap.TryGetValue(option.TrackId, out var isSelected))
+                {
+                    option.IsSelected = isSelected;
+                }
+                else
+                {
+                    option.IsSelected = option.IsDefault
+                        || preferredLanguages.Contains(NormalizeTrackLanguageCode(option.LanguageCode));
+                }
+            }
+
+            return inspectedOptions.ToList();
+        }
+
+        private static List<TrackCleanupSubtitleOption> MergeTrackCleanupSubtitleOptions(
+            WorkflowInstance workflow,
+            string targetVideoPath,
+            IReadOnlyList<TrackCleanupSubtitleOption> inspectedOptions,
+            ISet<string> preferredLanguages)
+        {
+            var hasMatchingSelection = string.Equals(
+                workflow.TrackCleanupSelectionVideoPath,
+                targetVideoPath,
+                StringComparison.OrdinalIgnoreCase);
+
+            var selectedMap = hasMatchingSelection
+                ? workflow.TrackCleanupSubtitleOptions.ToDictionary(option => option.TrackId, option => option.IsSelected, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var option in inspectedOptions)
+            {
+                if (selectedMap.TryGetValue(option.TrackId, out var isSelected))
+                {
+                    option.IsSelected = isSelected;
+                }
+                else
+                {
+                    option.IsSelected = option.IsDefault
+                        || preferredLanguages.Contains(NormalizeTrackLanguageCode(option.LanguageCode));
+                }
+            }
+
+            return inspectedOptions.ToList();
+        }
+
+        private static void ApplyTrackCleanupAudioInspection(WorkflowInstance workflow, TrackCleanupAudioInspection inspection)
+        {
+            workflow.TrackCleanupSelectionVideoPath = inspection.TargetVideoPath;
+            workflow.TrackCleanupAudioOptions = inspection.CanManuallySelectAudio
+                ? inspection.AudioOptions.ToList()
+                : new List<TrackCleanupAudioOption>();
+            workflow.TrackCleanupSubtitleOptions = inspection.CanManuallySelectAudio
+                ? inspection.SubtitleOptions.ToList()
+                : new List<TrackCleanupSubtitleOption>();
         }
 
         private static string ResolveTrackCleanupInputPath(WorkflowInstance workflow)
@@ -486,32 +883,45 @@ namespace MediaWorkflowOrchestrator.Services
             return workflow.RootPath;
         }
 
-        private static string? ResolveTrackCleanupTargetVideo(WorkflowInstance workflow, string cleanupInputPath)
+        private static TrackCleanupTargetContext ResolveTrackCleanupTargetContext(WorkflowInstance workflow, string cleanupInputPath)
         {
             if (File.Exists(cleanupInputPath) && IsVideoFile(cleanupInputPath))
             {
-                return cleanupInputPath;
+                return new TrackCleanupTargetContext(cleanupInputPath, true, "Selecciona exactamente qué audios y subtítulos se conservarán.");
             }
 
-            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) && File.Exists(workflow.PrimaryVideoPath))
+            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                && File.Exists(workflow.PrimaryVideoPath)
+                && string.Equals(cleanupInputPath, workflow.PrimaryVideoPath, StringComparison.OrdinalIgnoreCase))
             {
-                return workflow.PrimaryVideoPath;
+                return new TrackCleanupTargetContext(workflow.PrimaryVideoPath, true, "Selecciona exactamente qué audios y subtítulos se conservarán.");
             }
 
             if (Directory.Exists(cleanupInputPath))
             {
-                var videos = Directory.EnumerateFiles(cleanupInputPath, "*.*", SearchOption.TopDirectoryOnly)
+                var videos = Directory.EnumerateFiles(cleanupInputPath, "*.*", SearchOption.AllDirectories)
                     .Where(IsVideoFile)
                     .Take(2)
                     .ToList();
 
                 if (videos.Count == 1)
                 {
-                    return videos[0];
+                    return new TrackCleanupTargetContext(videos[0], true, "Selecciona exactamente qué audios y subtítulos se conservarán.");
+                }
+
+                if (videos.Count > 1)
+                {
+                    return new TrackCleanupTargetContext(
+                        null,
+                        false,
+                        "La selección manual de audios y subtítulos solo está disponible cuando Limpiar tracks apunta a un único video. En carpetas con varios videos el paso seguirá en modo batch.");
                 }
             }
 
-            return null;
+            return new TrackCleanupTargetContext(
+                null,
+                false,
+                "No se encontró un video único para inspeccionar audios y subtítulos antes de Limpiar tracks.");
         }
 
         private static int CountVideoFiles(string directoryPath)
@@ -842,10 +1252,10 @@ namespace MediaWorkflowOrchestrator.Services
                     step.OutputHints[PackageRarCleanNameHintKey] = string.Join(Environment.NewLine, cleanNames);
                 }
 
-                var seriesName = BuildPackageRarSeriesName(rawRows, weightSummary, workflow);
-                if (!string.IsNullOrWhiteSpace(seriesName))
+                var shortName = BuildPackageRarShortName(rawRows, weightSummary, workflow);
+                if (!string.IsNullOrWhiteSpace(shortName))
                 {
-                    step.OutputHints[PackageRarSeriesNameHintKey] = seriesName;
+                    step.OutputHints[PackageRarSeriesNameHintKey] = shortName;
                 }
             }
 
@@ -890,6 +1300,7 @@ namespace MediaWorkflowOrchestrator.Services
                 originalName,
                 string.Join('\t', parts.Skip(1).Take(5)),
                 parts[6].Trim(),
+                parts.Length >= 8 ? parts[7].Trim() : string.Empty,
                 resolution,
                 weight,
                 audio,
@@ -914,6 +1325,32 @@ namespace MediaWorkflowOrchestrator.Services
 
             summary = $"{parts[1].Trim()} - Promedio {parts[2].Trim()}";
             return true;
+        }
+
+        private static string BuildPackageRarShortName(
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            string? weightSummary,
+            WorkflowInstance workflow)
+        {
+            if (rows.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            if (rows.Any(row => GetEpisodeSortKey(row.OriginalName).Season != int.MaxValue))
+            {
+                return BuildPackageRarSeriesName(rows, weightSummary, workflow);
+            }
+
+            var movieNames = rows
+                .Select(row => row.ShortName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return movieNames.Count > 0
+                ? string.Join(Environment.NewLine, movieNames)
+                : string.Empty;
         }
 
         private static string BuildPackageRarSeriesName(
@@ -1293,10 +1730,20 @@ namespace MediaWorkflowOrchestrator.Services
             string OriginalName,
             string RawRow,
             string CleanName,
+            string ShortName,
             string Resolution,
             string Weight,
             string Audio,
             string Subtitles);
+
+        private readonly record struct TrackCleanupTargetContext(
+            string? TargetVideoPath,
+            bool CanManuallySelectAudio,
+            string Message);
+
+        private sealed record TrackCleanupInspectedTracks(
+            List<TrackCleanupAudioOption> AudioOptions,
+            List<TrackCleanupSubtitleOption> SubtitleOptions);
 
         private sealed record TagAndRenamePreparation(string WorkingDirectory, string ShortcutPath, bool LaunchRenamerOnly, string StagedVideoPath);
     }

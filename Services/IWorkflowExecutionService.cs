@@ -11,6 +11,7 @@ namespace MediaWorkflowOrchestrator.Services
         Task<WorkflowInstance?> LoadLatestWorkflowAsync();
         Task<IReadOnlyList<WorkflowInstance>> LoadHistoryAsync();
         Task<WorkflowInstance?> LoadWorkflowAsync(string workflowId);
+        Task<TrackCleanupAudioInspection> GetTrackCleanupAudioInspectionAsync(WorkflowInstance workflow, CancellationToken cancellationToken);
         Task<WorkflowInstance> DecideTranslationAsync(WorkflowInstance workflow, bool translateRequired);
         Task<ExecutionRecord?> ExecuteStepAsync(WorkflowInstance workflow, WorkflowStepKey stepKey, Action<string>? onOutput, CancellationToken cancellationToken, bool forceExecution = false);
         Task<ExecutionRecord?> ExecuteNextReadyStepAsync(WorkflowInstance workflow, Action<string>? onOutput, CancellationToken cancellationToken);

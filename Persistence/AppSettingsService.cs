@@ -5,11 +5,6 @@ namespace MediaWorkflowOrchestrator.Persistence
 {
     public sealed class AppSettingsService : IAppSettingsService
     {
-        private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-        {
-            WriteIndented = true
-        };
-
         public async Task<AppSettings> LoadAsync()
         {
             AppDataPaths.EnsureAll();
@@ -21,7 +16,9 @@ namespace MediaWorkflowOrchestrator.Persistence
             }
 
             await using var stream = File.OpenRead(AppDataPaths.SettingsPath);
-            var settingsFromDisk = await JsonSerializer.DeserializeAsync<AppSettings>(stream, SerializerOptions);
+            var settingsFromDisk = await JsonSerializer.DeserializeAsync(
+                stream,
+                AppJsonSerializerContext.Default.AppSettings);
             return settingsFromDisk ?? AppSettings.CreateDefault();
         }
 
@@ -29,7 +26,10 @@ namespace MediaWorkflowOrchestrator.Persistence
         {
             AppDataPaths.EnsureAll();
             await using var stream = File.Create(AppDataPaths.SettingsPath);
-            await JsonSerializer.SerializeAsync(stream, settings, SerializerOptions);
+            await JsonSerializer.SerializeAsync(
+                stream,
+                settings,
+                AppJsonSerializerContext.Default.AppSettings);
         }
 
         public async Task<AppSettings> RestoreDefaultsAsync()

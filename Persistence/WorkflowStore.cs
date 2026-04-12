@@ -5,11 +5,6 @@ namespace MediaWorkflowOrchestrator.Persistence
 {
     public sealed class WorkflowStore : IWorkflowStore
     {
-        private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-        {
-            WriteIndented = true
-        };
-
         public async Task SaveAsync(WorkflowInstance workflow)
         {
             AppDataPaths.EnsureAll();
@@ -18,7 +13,10 @@ namespace MediaWorkflowOrchestrator.Persistence
             var tempPath = $"{path}.tmp";
             await using (var stream = File.Create(tempPath))
             {
-                await JsonSerializer.SerializeAsync(stream, workflow, SerializerOptions);
+                await JsonSerializer.SerializeAsync(
+                    stream,
+                    workflow,
+                    AppJsonSerializerContext.Default.WorkflowInstance);
             }
 
             File.Move(tempPath, path, overwrite: true);
@@ -42,7 +40,9 @@ namespace MediaWorkflowOrchestrator.Persistence
                 }
 
                 await using var stream = File.OpenRead(path);
-                return await JsonSerializer.DeserializeAsync<WorkflowInstance>(stream, SerializerOptions);
+                return await JsonSerializer.DeserializeAsync(
+                    stream,
+                    AppJsonSerializerContext.Default.WorkflowInstance);
             }
             catch (Exception ex)
             {
@@ -69,7 +69,9 @@ namespace MediaWorkflowOrchestrator.Persistence
                     }
 
                     await using var stream = File.OpenRead(file);
-                    var workflow = await JsonSerializer.DeserializeAsync<WorkflowInstance>(stream, SerializerOptions);
+                    var workflow = await JsonSerializer.DeserializeAsync(
+                        stream,
+                        AppJsonSerializerContext.Default.WorkflowInstance);
                     if (workflow is not null)
                     {
                         results.Add(workflow);

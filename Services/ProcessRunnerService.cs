@@ -7,6 +7,7 @@ namespace MediaWorkflowOrchestrator.Services
     {
         private const string DefaultTerminalColumns = "180";
         private const string DefaultTerminalLines = "48";
+        private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
         public async Task<ProcessExecutionResult> RunAsync(ProcessExecutionRequest request, Action<string>? onOutput, CancellationToken cancellationToken)
         {
@@ -23,10 +24,14 @@ namespace MediaWorkflowOrchestrator.Services
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
+                StandardOutputEncoding = Utf8NoBom,
+                StandardErrorEncoding = Utf8NoBom,
             };
             psi.Environment["COLUMNS"] = DefaultTerminalColumns;
             psi.Environment["LINES"] = DefaultTerminalLines;
             psi.Environment["TERM"] = "xterm";
+            psi.Environment["PYTHONUTF8"] = "1";
+            psi.Environment["PYTHONIOENCODING"] = "utf-8";
 
             foreach (var arg in request.Arguments)
             {

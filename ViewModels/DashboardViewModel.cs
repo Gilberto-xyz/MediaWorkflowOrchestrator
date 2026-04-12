@@ -32,11 +32,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private AppSettings quickSettings = AppSettings.CreateDefault();
         private readonly List<string> liveOutputDisplayLines = new();
         private readonly Dictionary<string, int> liveOutputReplaceableIndexes = new(StringComparer.OrdinalIgnoreCase);
+        private int cleanupAudioInspectionVersion;
+        private string cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
 
         public DashboardViewModel()
         {
             Title = "Dashboard";
             StepItems = new ObservableCollection<WorkflowStepState>();
+            CleanupAudioOptions = new ObservableCollection<TrackCleanupAudioOption>();
+            CleanupSubtitleOptions = new ObservableCollection<TrackCleanupSubtitleOption>();
             ResetWorkflowState("La descarga Nyaa se ejecuta como utilidad global; el workflow real empieza cuando eliges el archivo o carpeta.");
             WeakReferenceMessenger.Default.Register(this);
             _ = LoadQuickSettingsAsync();
@@ -47,6 +51,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
         }
 
         public ObservableCollection<WorkflowStepState> StepItems { get; }
+        public ObservableCollection<TrackCleanupAudioOption> CleanupAudioOptions { get; }
+        public ObservableCollection<TrackCleanupSubtitleOption> CleanupSubtitleOptions { get; }
 
         [ObservableProperty]
         private WorkflowStepState? _selectedStep;
@@ -157,6 +163,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _cleanupDeleteOriginalsEnabled;
 
         [ObservableProperty]
+        private bool _cleanupAudioSelectionBusy;
+
+        [ObservableProperty]
+        private string _cleanupAudioSelectionMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+
+        [ObservableProperty]
+        private string _cleanupSubtitleSelectionMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+
+        [ObservableProperty]
         private bool _rarSkipImagesEnabled;
 
         [ObservableProperty]
@@ -184,6 +199,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
+            _ = EnsureCleanupAudioSelectionForCurrentStepAsync(value);
         }
 
         public string DownloadDryRunButtonLabel => $"Dry-run: {(DownloadDryRunEnabled ? "ON" : "OFF")}";
@@ -192,10 +208,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string TranslateSkipSummaryButtonLabel => $"Omitir resumen: {(TranslateSkipSummaryEnabled ? "ON" : "OFF")}";
         public string CleanupCloseQbittorrentButtonLabel => $"Cerrar qBittorrent: {(CleanupCloseQbittorrentEnabled ? "ON" : "OFF")}";
         public string CleanupDeleteOriginalsButtonLabel => $"Eliminar originales: {(CleanupDeleteOriginalsEnabled ? "ON" : "OFF")}";
+        public string CleanupAudioRefreshButtonLabel => CleanupAudioSelectionBusy ? "Cargando tracks..." : "Recargar tracks";
         public string PackageRarRawDataButtonLabel => "Raw Data";
         public string PackageRarWeightSummaryButtonLabel => "Peso completo";
         public string PackageRarCleanNameButtonLabel => "Nombre limpio";
-        public string PackageRarSeriesTitleButtonLabel => "Nombre serie";
+        public string PackageRarSeriesTitleButtonLabel => "Nombre corto";
+        public bool HasCleanupAudioOptions => CleanupAudioOptions.Count > 0;
+        public bool HasCleanupSubtitleOptions => CleanupSubtitleOptions.Count > 0;
         public bool CanOpenSelectedLog => SelectedStep is not null
             && !string.IsNullOrWhiteSpace(SelectedStep.StdoutLogPath)
             && File.Exists(SelectedStep.StdoutLogPath);
@@ -258,6 +277,11 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
 
             SelectStep(nextStep.StepKey);
+            if (!await EnsureStepPreconditionsAsync(nextStep.StepKey))
+            {
+                return;
+            }
+
             await ExecuteAsync(
                 () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, nextStep.StepKey, AppendOutput, CancellationToken),
                 nextStep.StepKey);
@@ -272,6 +296,11 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
 
             SelectStep(SelectedStep.StepKey);
+            if (!await EnsureStepPreconditionsAsync(SelectedStep.StepKey))
+            {
+                return;
+            }
+
             await ExecuteAsync(
                 () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, SelectedStep.StepKey, AppendOutput, CancellationToken, forceExecution: true),
                 SelectedStep.StepKey);
@@ -369,6 +398,106 @@ namespace MediaWorkflowOrchestrator.ViewModels
             CleanupDeleteOriginalsEnabled = !CleanupDeleteOriginalsEnabled;
             OnPropertyChanged(nameof(CleanupDeleteOriginalsButtonLabel));
             await PersistQuickSettingsAsync();
+        }
+
+        [RelayCommand]
+        private async Task RefreshCleanupAudioOptionsAsync()
+        {
+            await RefreshCleanupAudioSelectionAsync(forceReload: true);
+        }
+
+        [RelayCommand]
+        private async Task ToggleCleanupAudioSelectionAsync(TrackCleanupAudioOption? option)
+        {
+            if (option is null || currentWorkflow is null)
+            {
+                return;
+            }
+
+            option.IsSelected = !option.IsSelected;
+            UpdateCleanupAudioSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        [RelayCommand]
+        private async Task SelectAllCleanupAudiosAsync()
+        {
+            if (CleanupAudioOptions.Count == 0 || currentWorkflow is null)
+            {
+                return;
+            }
+
+            foreach (var option in CleanupAudioOptions)
+            {
+                option.IsSelected = true;
+            }
+
+            UpdateCleanupAudioSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        [RelayCommand]
+        private async Task ClearCleanupAudioSelectionAsync()
+        {
+            if (CleanupAudioOptions.Count == 0 || currentWorkflow is null)
+            {
+                return;
+            }
+
+            foreach (var option in CleanupAudioOptions)
+            {
+                option.IsSelected = false;
+            }
+
+            UpdateCleanupAudioSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        [RelayCommand]
+        private async Task ToggleCleanupSubtitleSelectionAsync(TrackCleanupSubtitleOption? option)
+        {
+            if (option is null || currentWorkflow is null)
+            {
+                return;
+            }
+
+            option.IsSelected = !option.IsSelected;
+            UpdateCleanupSubtitleSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        [RelayCommand]
+        private async Task SelectAllCleanupSubtitlesAsync()
+        {
+            if (CleanupSubtitleOptions.Count == 0 || currentWorkflow is null)
+            {
+                return;
+            }
+
+            foreach (var option in CleanupSubtitleOptions)
+            {
+                option.IsSelected = true;
+            }
+
+            UpdateCleanupSubtitleSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        [RelayCommand]
+        private async Task ClearCleanupSubtitleSelectionAsync()
+        {
+            if (CleanupSubtitleOptions.Count == 0 || currentWorkflow is null)
+            {
+                return;
+            }
+
+            foreach (var option in CleanupSubtitleOptions)
+            {
+                option.IsSelected = false;
+            }
+
+            UpdateCleanupSubtitleSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
         }
 
         [RelayCommand]
@@ -569,8 +698,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             CopyPackageRarHint(
                 WorkflowExecutionService.PackageRarSeriesNameHintKey,
-                "No hay nombre de serie disponible para copiar.",
-                "Se copió el nombre de la serie.");
+                "No hay nombre corto disponible para copiar.",
+                "Se copió el nombre corto.");
         }
 
         public async Task CreateWorkflowFromPathAsync(string path, bool isFile)
@@ -643,6 +772,266 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             quickSettings = await workflowExecutionService.GetSettingsAsync();
             SyncQuickOptionsFromSettings();
+        }
+
+        private async Task<bool> EnsureStepPreconditionsAsync(WorkflowStepKey stepKey)
+        {
+            if (stepKey != WorkflowStepKey.CleanTracks)
+            {
+                return true;
+            }
+
+            var inspection = await RefreshCleanupAudioSelectionAsync(forceReload: false);
+            if (inspection?.CanManuallySelectAudio == true && CleanupAudioOptions.All(option => !option.IsSelected))
+            {
+                ShowStatus(InfoBarSeverity.Warning, "Selecciona al menos un audio para conservar antes de ejecutar Limpiar tracks.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task EnsureCleanupAudioSelectionForCurrentStepAsync(WorkflowStepState? step)
+        {
+            if (step?.StepKey != WorkflowStepKey.CleanTracks)
+            {
+                return;
+            }
+
+            await RefreshCleanupAudioSelectionAsync(forceReload: false);
+        }
+
+        private async Task<TrackCleanupAudioInspection?> RefreshCleanupAudioSelectionAsync(bool forceReload)
+        {
+            if (currentWorkflow is null)
+            {
+                CleanupAudioOptions.Clear();
+                CleanupSubtitleOptions.Clear();
+                cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+                UpdateCleanupAudioSelectionMessage();
+                UpdateCleanupSubtitleSelectionMessage();
+                OnPropertyChanged(nameof(HasCleanupAudioOptions));
+                OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
+                return null;
+            }
+
+            var requestVersion = Interlocked.Increment(ref cleanupAudioInspectionVersion);
+            CleanupAudioSelectionBusy = true;
+            OnPropertyChanged(nameof(CleanupAudioRefreshButtonLabel));
+
+            try
+            {
+                var inspection = await workflowExecutionService.GetTrackCleanupAudioInspectionAsync(currentWorkflow, CancellationToken.None);
+                if (requestVersion != cleanupAudioInspectionVersion || currentWorkflow is null)
+                {
+                    return inspection;
+                }
+
+                cleanupAudioSelectionContextMessage = inspection.Message;
+                var changed = ApplyCleanupAudioInspectionToWorkflow(currentWorkflow, inspection);
+                SyncCleanupAudioOptionsFromWorkflow();
+                SyncCleanupSubtitleOptionsFromWorkflow();
+                UpdateCleanupAudioSelectionMessage();
+                UpdateCleanupSubtitleSelectionMessage();
+
+                if (changed)
+                {
+                    await workflowStore.SaveAsync(currentWorkflow);
+                }
+
+                return inspection;
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsTrace.Write($"RefreshCleanupAudioSelectionAsync failed: {ex}");
+                cleanupAudioSelectionContextMessage = $"No se pudieron cargar los tracks: {ex.Message}";
+                CleanupAudioOptions.Clear();
+                CleanupSubtitleOptions.Clear();
+                OnPropertyChanged(nameof(HasCleanupAudioOptions));
+                OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
+                UpdateCleanupAudioSelectionMessage();
+                UpdateCleanupSubtitleSelectionMessage();
+                return null;
+            }
+            finally
+            {
+                if (requestVersion == cleanupAudioInspectionVersion)
+                {
+                    CleanupAudioSelectionBusy = false;
+                    OnPropertyChanged(nameof(CleanupAudioRefreshButtonLabel));
+                    UpdateCleanupAudioSelectionMessage();
+                    UpdateCleanupSubtitleSelectionMessage();
+                }
+            }
+        }
+
+        private bool ApplyCleanupAudioInspectionToWorkflow(WorkflowInstance workflow, TrackCleanupAudioInspection inspection)
+        {
+            var targetVideoPath = inspection.TargetVideoPath ?? string.Empty;
+            var updatedAudioOptions = inspection.CanManuallySelectAudio
+                ? inspection.AudioOptions.ToList()
+                : new List<TrackCleanupAudioOption>();
+            var updatedSubtitleOptions = inspection.CanManuallySelectAudio
+                ? inspection.SubtitleOptions.ToList()
+                : new List<TrackCleanupSubtitleOption>();
+
+            var changed = !string.Equals(
+                workflow.TrackCleanupSelectionVideoPath,
+                targetVideoPath,
+                StringComparison.OrdinalIgnoreCase)
+                || !AreCleanupAudioOptionsEquivalent(workflow.TrackCleanupAudioOptions, updatedAudioOptions)
+                || !AreCleanupSubtitleOptionsEquivalent(workflow.TrackCleanupSubtitleOptions, updatedSubtitleOptions);
+
+            workflow.TrackCleanupSelectionVideoPath = targetVideoPath;
+            workflow.TrackCleanupAudioOptions = updatedAudioOptions;
+            workflow.TrackCleanupSubtitleOptions = updatedSubtitleOptions;
+            return changed;
+        }
+
+        private void SyncCleanupAudioOptionsFromWorkflow()
+        {
+            CleanupAudioOptions.Clear();
+            if (currentWorkflow is not null)
+            {
+                foreach (var option in currentWorkflow.TrackCleanupAudioOptions)
+                {
+                    CleanupAudioOptions.Add(option);
+                }
+            }
+
+            OnPropertyChanged(nameof(HasCleanupAudioOptions));
+        }
+
+        private void SyncCleanupSubtitleOptionsFromWorkflow()
+        {
+            CleanupSubtitleOptions.Clear();
+            if (currentWorkflow is not null)
+            {
+                foreach (var option in currentWorkflow.TrackCleanupSubtitleOptions)
+                {
+                    CleanupSubtitleOptions.Add(option);
+                }
+            }
+
+            OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
+        }
+
+        private void UpdateCleanupAudioSelectionMessage()
+        {
+            if (CleanupAudioSelectionBusy)
+            {
+                CleanupAudioSelectionMessage = "Inspeccionando audios del archivo objetivo...";
+                return;
+            }
+
+            if (CleanupAudioOptions.Count > 0)
+            {
+                var selectedCount = CleanupAudioOptions.Count(option => option.IsSelected);
+                CleanupAudioSelectionMessage = $"Se conservarán {selectedCount} de {CleanupAudioOptions.Count} audios. Desactiva solo los que realmente quieras eliminar.";
+                return;
+            }
+
+            CleanupAudioSelectionMessage = cleanupAudioSelectionContextMessage;
+        }
+
+        private void UpdateCleanupSubtitleSelectionMessage()
+        {
+            if (CleanupAudioSelectionBusy)
+            {
+                CleanupSubtitleSelectionMessage = "Inspeccionando subtítulos del archivo objetivo...";
+                return;
+            }
+
+            if (CleanupSubtitleOptions.Count > 0)
+            {
+                var selectedCount = CleanupSubtitleOptions.Count(option => option.IsSelected);
+                CleanupSubtitleSelectionMessage = $"Se conservarán {selectedCount} de {CleanupSubtitleOptions.Count} subtítulos. Desactiva solo los que realmente quieras eliminar.";
+                return;
+            }
+
+            if (currentWorkflow is not null
+                && !string.IsNullOrWhiteSpace(currentWorkflow.TrackCleanupSelectionVideoPath)
+                && CleanupAudioOptions.Count > 0)
+            {
+                CleanupSubtitleSelectionMessage = "No se detectaron subtítulos en el video objetivo.";
+                return;
+            }
+
+            CleanupSubtitleSelectionMessage = cleanupAudioSelectionContextMessage;
+        }
+
+        private static bool AreCleanupAudioOptionsEquivalent(
+            IReadOnlyList<TrackCleanupAudioOption> current,
+            IReadOnlyList<TrackCleanupAudioOption> updated)
+        {
+            if (current.Count != updated.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < current.Count; index++)
+            {
+                var left = current[index];
+                var right = updated[index];
+                if (!string.Equals(left.TrackId, right.TrackId, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.LanguageCode, right.LanguageCode, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.LanguageLabel, right.LanguageLabel, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.Codec, right.Codec, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.Name, right.Name, StringComparison.Ordinal)
+                    || left.IsDefault != right.IsDefault
+                    || left.IsSelected != right.IsSelected)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool AreCleanupSubtitleOptionsEquivalent(
+            IReadOnlyList<TrackCleanupSubtitleOption> current,
+            IReadOnlyList<TrackCleanupSubtitleOption> updated)
+        {
+            if (current.Count != updated.Count)
+            {
+                return false;
+            }
+
+            for (var index = 0; index < current.Count; index++)
+            {
+                var left = current[index];
+                var right = updated[index];
+                if (!string.Equals(left.TrackId, right.TrackId, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.LanguageCode, right.LanguageCode, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.LanguageLabel, right.LanguageLabel, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(left.Name, right.Name, StringComparison.Ordinal)
+                    || left.IsDefault != right.IsDefault
+                    || left.IsForced != right.IsForced
+                    || left.IsSelected != right.IsSelected)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private async Task PersistCleanupAudioSelectionAsync()
+        {
+            if (currentWorkflow is null)
+            {
+                return;
+            }
+
+            try
+            {
+                await workflowStore.SaveAsync(currentWorkflow);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsTrace.Write($"PersistCleanupAudioSelectionAsync failed: {ex}");
+                ShowStatus(InfoBarSeverity.Error, $"No se pudo guardar la selección de tracks: {ex.Message}");
+            }
         }
 
         private static bool TryResolveWorkflowReloadSource(WorkflowInstance workflow, out string sourcePath, out bool isFile)
@@ -883,6 +1272,11 @@ namespace MediaWorkflowOrchestrator.ViewModels
             StatusSeverity = workflow.Steps.Any(step => step.Status == WorkflowStepStatus.Failed)
                 ? InfoBarSeverity.Error
                 : InfoBarSeverity.Informational;
+            cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+            SyncCleanupAudioOptionsFromWorkflow();
+            SyncCleanupSubtitleOptionsFromWorkflow();
+            UpdateCleanupAudioSelectionMessage();
+            UpdateCleanupSubtitleSelectionMessage();
             UpdateTranslationDecisionVisibility(workflow);
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
@@ -1078,6 +1472,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
             StatusSeverity = InfoBarSeverity.Informational;
             StatusMessage = message;
             IsStatusInfoOpen = true;
+            cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+            CleanupAudioSelectionBusy = false;
+            CleanupAudioOptions.Clear();
+            CleanupSubtitleOptions.Clear();
+            OnPropertyChanged(nameof(HasCleanupAudioOptions));
+            OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
+            OnPropertyChanged(nameof(CleanupAudioRefreshButtonLabel));
+            UpdateCleanupAudioSelectionMessage();
+            UpdateCleanupSubtitleSelectionMessage();
             ShowTranslationDecisionActions = false;
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
@@ -1113,7 +1516,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 WorkflowStepKey.Download => "Ajusta cómo se lanzan las descargas de Nyaa desde el panel lateral.",
                 WorkflowStepKey.TranslateSubs => "Controla los flags rápidos del traductor antes de ejecutarlo.",
-                WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso y si conserva la carpeta ORIGINAL.",
+                WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso y marca exactamente qué audios y subtítulos deben sobrevivir al filtrado.",
                 WorkflowStepKey.PackageRar => "Puedes saltar pasos previos y empaquetar de inmediato si tu release ya está lista.",
                 _ => "Este paso no tiene flags rápidos expuestos en el dashboard."
             };
