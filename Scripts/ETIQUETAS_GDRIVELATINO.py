@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import json
 import os
 import re
 import shutil
@@ -33,12 +34,12 @@ ID_CLUSTER = 0x1F43B675
 TRACK_TYPE_MAP = {1: "video", 2: "audio", 17: "subtitles"}
 SPECIAL_RE = re.compile(r"[<>'\"\s\[\],]+")
 
-LANG_NAMES = {
+FALLBACK_LANG_NAMES = {
     "video": "Video",
     "und": "Indefinido",
     "es": "Español",
     "es-419": "Español Latino",
-    "es-es": "Español",
+    "es-es": "Español (España)",
     "es-la": "Español Latino",
     "spa": "Español",
     "en": "Inglés",
@@ -64,6 +65,49 @@ LANG_NAMES = {
     "chi": "Chino",
     "ko": "Coreano",
     "kor": "Coreano",
+    "fa": "Persa",
+    "fas": "Persa",
+    "per": "Persa",
+    "th": "Tailandés",
+    "tha": "Tailandés",
+}
+
+FALLBACK_CANONICAL_CODES = {
+    "video": "video",
+    "und": "und",
+    "es": "es",
+    "spa": "es",
+    "es-419": "es-419",
+    "es-la": "es-419",
+    "es-es": "es-es",
+    "en": "en",
+    "eng": "en",
+    "en-us": "en",
+    "en-gb": "en",
+    "pt": "pt",
+    "por": "pt",
+    "it": "it",
+    "ita": "it",
+    "fr": "fr",
+    "fra": "fr",
+    "fre": "fr",
+    "ja": "ja",
+    "jpn": "ja",
+    "de": "de",
+    "deu": "de",
+    "ger": "de",
+    "ru": "ru",
+    "rus": "ru",
+    "zh": "zh",
+    "zho": "zh",
+    "chi": "zh",
+    "ko": "ko",
+    "kor": "ko",
+    "fa": "fa",
+    "fas": "fa",
+    "per": "fa",
+    "th": "th",
+    "tha": "th",
 }
 
 BENIGN_OUTPUT_LINES = {
@@ -137,6 +181,69 @@ def sanitize_name(name: str) -> str:
     cleaned = SPECIAL_RE.sub("_", name)
     cleaned = re.sub(r"_+", "_", cleaned).strip("._")
     return cleaned or "archivo"
+
+
+def normalize_lang(code: str) -> str:
+    c = code.strip().lower().replace("_", "-")
+    return c or "und"
+
+
+def load_language_catalog() -> tuple[dict[str, str], dict[str, str]]:
+    catalog_path = Path(__file__).with_name("track_languages.json")
+    language_names = dict(FALLBACK_LANG_NAMES)
+    canonical_codes = dict(FALLBACK_CANONICAL_CODES)
+
+    if not catalog_path.exists():
+        return language_names, canonical_codes
+
+    try:
+        raw = json.loads(catalog_path.read_text(encoding="utf-8"))
+        display_names = raw.get("displayNames", {})
+        if isinstance(display_names, dict):
+            for code, label in display_names.items():
+                if not isinstance(code, str) or not isinstance(label, str):
+                    continue
+                normalized = normalize_lang(code)
+                clean_label = label.strip()
+                if normalized and clean_label:
+                    language_names[normalized] = clean_label
+
+        raw_canonical_codes = raw.get("canonicalBaseCodes", {})
+        if isinstance(raw_canonical_codes, dict):
+            for code, canonical in raw_canonical_codes.items():
+                if not isinstance(code, str) or not isinstance(canonical, str):
+                    continue
+                normalized = normalize_lang(code)
+                normalized_canonical = normalize_lang(canonical)
+                if normalized and normalized_canonical:
+                    canonical_codes[normalized] = normalized_canonical
+    except Exception:
+        return language_names, canonical_codes
+
+    return language_names, canonical_codes
+
+
+LANG_NAMES, LANG_CANONICAL_CODES = load_language_catalog()
+
+
+def resolve_lang_code(code: str) -> str | None:
+    normalized = normalize_lang(code)
+    if normalized in LANG_NAMES:
+        return normalized
+
+    canonical = LANG_CANONICAL_CODES.get(normalized)
+    if canonical and canonical in LANG_NAMES:
+        return canonical
+
+    base = normalized.split("-")[0]
+    if base in LANG_NAMES:
+        return base
+
+    canonical_base = LANG_CANONICAL_CODES.get(base)
+    if canonical_base and canonical_base in LANG_NAMES:
+        return canonical_base
+
+    return None
 
 
 def unique_path(path: Path) -> Path:
@@ -359,18 +466,10 @@ def parse_mkv_header(path: Path, max_scan_bytes: int = 64 * 1024 * 1024) -> tupl
     return tracks, attachments
 
 
-def normalize_lang(code: str) -> str:
-    c = code.strip().lower().replace("_", "-")
-    return c or "und"
-
-
 def pretty_lang(code: str) -> str:
-    c = normalize_lang(code)
-    if c in LANG_NAMES:
-        return LANG_NAMES[c]
-    base = c.split("-")[0]
-    if base in LANG_NAMES:
-        return LANG_NAMES[base]
+    resolved = resolve_lang_code(code)
+    if resolved:
+        return LANG_NAMES[resolved]
     return code
 
 

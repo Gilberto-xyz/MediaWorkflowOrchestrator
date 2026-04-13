@@ -634,7 +634,7 @@ namespace MediaWorkflowOrchestrator.Services
             return new TrackCleanupAudioOption
             {
                 TrackId = TryGetJsonString(track, "id") ?? string.Empty,
-                LanguageCode = string.IsNullOrWhiteSpace(languageRaw) ? "und" : languageRaw!,
+                LanguageCode = TrackLanguageCatalog.GetLookupCode(languageRaw, languageIetf),
                 LanguageLabel = normalizedLanguage,
                 Codec = string.IsNullOrWhiteSpace(codec)
                     ? string.Empty
@@ -659,7 +659,7 @@ namespace MediaWorkflowOrchestrator.Services
             return new TrackCleanupSubtitleOption
             {
                 TrackId = TryGetJsonString(track, "id") ?? string.Empty,
-                LanguageCode = string.IsNullOrWhiteSpace(languageRaw) ? "und" : languageRaw!,
+                LanguageCode = TrackLanguageCatalog.GetLookupCode(languageRaw, languageIetf),
                 LanguageLabel = normalizedLanguage,
                 Name = name ?? string.Empty,
                 IsDefault = TryGetJsonBoolean(properties, "default_track"),
@@ -668,51 +668,11 @@ namespace MediaWorkflowOrchestrator.Services
             };
         }
 
-        private static string NormalizeTrackLanguage(string? languageRaw, string? languageIetf)
-        {
-            var candidate = !string.IsNullOrWhiteSpace(languageIetf)
-                ? languageIetf
-                : languageRaw;
+        private static string NormalizeTrackLanguage(string? languageRaw, string? languageIetf) =>
+            TrackLanguageCatalog.GetDisplayName(languageRaw, languageIetf);
 
-            if (string.IsNullOrWhiteSpace(candidate))
-            {
-                return "UND";
-            }
-
-            var normalized = candidate.Trim().ToLowerInvariant();
-            var baseCode = normalized.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? normalized;
-            return baseCode switch
-            {
-                "es" or "spa" => "SPA",
-                "en" or "eng" => "ENG",
-                "ja" or "jpn" => "JPN",
-                "ko" or "kor" => "KOR",
-                "zh" or "zho" => "ZHO",
-                _ => baseCode.Length >= 3
-                    ? baseCode[..3].ToUpperInvariant()
-                    : baseCode.ToUpperInvariant(),
-            };
-        }
-
-        private static string NormalizeTrackLanguageCode(string? languageCode)
-        {
-            if (string.IsNullOrWhiteSpace(languageCode))
-            {
-                return "und";
-            }
-
-            var normalized = languageCode.Trim().ToLowerInvariant();
-            var baseCode = normalized.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? normalized;
-            return baseCode switch
-            {
-                "es" or "spa" => "spa",
-                "en" or "eng" => "eng",
-                "ja" or "jpn" => "jpn",
-                "ko" or "kor" => "kor",
-                "zh" or "zho" => "zho",
-                _ => baseCode,
-            };
-        }
+        private static string NormalizeTrackLanguageCode(string? languageCode) =>
+            TrackLanguageCatalog.GetCanonicalBaseCode(languageCode);
 
         private static string? TryGetJsonString(JsonElement element, string propertyName)
         {
@@ -761,8 +721,10 @@ namespace MediaWorkflowOrchestrator.Services
         {
             var preferredLanguages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "spa",
-                "eng",
+                NormalizeTrackLanguageCode("es"),
+                NormalizeTrackLanguageCode("es-419"),
+                NormalizeTrackLanguageCode("es-es"),
+                NormalizeTrackLanguageCode("en"),
             };
 
             foreach (var option in audioOptions.Where(option => option.IsDefault))
@@ -800,6 +762,9 @@ namespace MediaWorkflowOrchestrator.Services
             var selectedMap = hasMatchingSelection
                 ? workflow.TrackCleanupAudioOptions.ToDictionary(option => option.TrackId, option => option.IsSelected, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var primaryTrackId = hasMatchingSelection
+                ? workflow.TrackCleanupAudioOptions.FirstOrDefault(option => option.IsPrimary)?.TrackId
+                : null;
 
             foreach (var option in inspectedOptions)
             {
@@ -813,6 +778,8 @@ namespace MediaWorkflowOrchestrator.Services
                         || preferredLanguages.Contains(NormalizeTrackLanguageCode(option.LanguageCode));
                 }
             }
+
+            ApplyPrimaryAudioTrack(inspectedOptions, primaryTrackId);
 
             return inspectedOptions.ToList();
         }
@@ -831,6 +798,9 @@ namespace MediaWorkflowOrchestrator.Services
             var selectedMap = hasMatchingSelection
                 ? workflow.TrackCleanupSubtitleOptions.ToDictionary(option => option.TrackId, option => option.IsSelected, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var primaryTrackId = hasMatchingSelection
+                ? workflow.TrackCleanupSubtitleOptions.FirstOrDefault(option => option.IsPrimary)?.TrackId
+                : null;
 
             foreach (var option in inspectedOptions)
             {
@@ -845,7 +815,47 @@ namespace MediaWorkflowOrchestrator.Services
                 }
             }
 
+            ApplyPrimarySubtitleTrack(inspectedOptions, primaryTrackId);
+
             return inspectedOptions.ToList();
+        }
+
+        private static void ApplyPrimaryAudioTrack(IReadOnlyList<TrackCleanupAudioOption> options, string? preferredTrackId)
+        {
+            TrackCleanupAudioOption? primaryOption = null;
+            if (!string.IsNullOrWhiteSpace(preferredTrackId))
+            {
+                primaryOption = options.FirstOrDefault(option =>
+                    option.IsSelected
+                    && string.Equals(option.TrackId, preferredTrackId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            primaryOption ??= options.FirstOrDefault(option => option.IsSelected && option.IsDefault);
+            primaryOption ??= options.FirstOrDefault(option => option.IsSelected);
+
+            foreach (var option in options)
+            {
+                option.IsPrimary = ReferenceEquals(option, primaryOption);
+            }
+        }
+
+        private static void ApplyPrimarySubtitleTrack(IReadOnlyList<TrackCleanupSubtitleOption> options, string? preferredTrackId)
+        {
+            TrackCleanupSubtitleOption? primaryOption = null;
+            if (!string.IsNullOrWhiteSpace(preferredTrackId))
+            {
+                primaryOption = options.FirstOrDefault(option =>
+                    option.IsSelected
+                    && string.Equals(option.TrackId, preferredTrackId, StringComparison.OrdinalIgnoreCase));
+            }
+
+            primaryOption ??= options.FirstOrDefault(option => option.IsSelected && option.IsDefault);
+            primaryOption ??= options.FirstOrDefault(option => option.IsSelected);
+
+            foreach (var option in options)
+            {
+                option.IsPrimary = ReferenceEquals(option, primaryOption);
+            }
         }
 
         private static void ApplyTrackCleanupAudioInspection(WorkflowInstance workflow, TrackCleanupAudioInspection inspection)

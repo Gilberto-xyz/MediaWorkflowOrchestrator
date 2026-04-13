@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.UI.Xaml.Media;
 
 namespace MediaWorkflowOrchestrator.Models
 {
@@ -10,12 +11,19 @@ namespace MediaWorkflowOrchestrator.Models
         private string codec = string.Empty;
         private string name = string.Empty;
         private bool isDefault;
+        private bool isPrimary;
         private bool isSelected = true;
 
         public string TrackId
         {
             get => trackId;
-            set => SetProperty(ref trackId, value);
+            set
+            {
+                if (SetProperty(ref trackId, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         public string LanguageCode
@@ -27,37 +35,99 @@ namespace MediaWorkflowOrchestrator.Models
         public string LanguageLabel
         {
             get => languageLabel;
-            set => SetProperty(ref languageLabel, value);
+            set
+            {
+                if (SetProperty(ref languageLabel, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         public string Codec
         {
             get => codec;
-            set => SetProperty(ref codec, value);
+            set
+            {
+                if (SetProperty(ref codec, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         public string Name
         {
             get => name;
-            set => SetProperty(ref name, value);
+            set
+            {
+                if (SetProperty(ref name, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         public bool IsDefault
         {
             get => isDefault;
-            set => SetProperty(ref isDefault, value);
+            set
+            {
+                if (SetProperty(ref isDefault, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
+        }
+
+        public bool IsPrimary
+        {
+            get => isPrimary;
+            set
+            {
+                if (SetProperty(ref isPrimary, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         public bool IsSelected
         {
             get => isSelected;
-            set => SetProperty(ref isSelected, value);
+            set
+            {
+                if (SetProperty(ref isSelected, value))
+                {
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         [JsonIgnore]
-        public string PrimaryLabel => IsDefault
-            ? $"#{TrackId} · {LanguageLabel} · Default origen"
-            : $"#{TrackId} · {LanguageLabel}";
+        public string PrimaryLabel
+        {
+            get
+            {
+                var parts = new List<string>
+                {
+                    $"#{TrackId}",
+                    LanguageLabel,
+                };
+
+                if (IsPrimary)
+                {
+                    parts.Add("Principal");
+                }
+
+                if (IsDefault)
+                {
+                    parts.Add("Default origen");
+                }
+
+                return string.Join(" · ", parts);
+            }
+        }
 
         [JsonIgnore]
         public string SecondaryLabel
@@ -77,6 +147,32 @@ namespace MediaWorkflowOrchestrator.Models
 
                 return parts.Count > 0 ? string.Join(" · ", parts) : "Pista sin nombre";
             }
+        }
+
+        [JsonIgnore]
+        public Brush CardBackgroundBrush => TrackCleanupOptionVisuals.GetBackground(IsSelected, IsPrimary);
+
+        [JsonIgnore]
+        public Brush CardBorderBrush => TrackCleanupOptionVisuals.GetBorder(IsSelected, IsPrimary);
+
+        [JsonIgnore]
+        public Brush TitleBrush => TrackCleanupOptionVisuals.GetTitleBrush(IsSelected, IsPrimary);
+
+        [JsonIgnore]
+        public Brush CaptionBrush => TrackCleanupOptionVisuals.GetCaptionBrush(IsSelected, IsPrimary);
+
+        [JsonIgnore]
+        public string PrimaryActionLabel => IsPrimary ? "Principal actual" : "Principal";
+
+        private void NotifyPresentationChanged()
+        {
+            OnPropertyChanged(nameof(PrimaryLabel));
+            OnPropertyChanged(nameof(SecondaryLabel));
+            OnPropertyChanged(nameof(CardBackgroundBrush));
+            OnPropertyChanged(nameof(CardBorderBrush));
+            OnPropertyChanged(nameof(TitleBrush));
+            OnPropertyChanged(nameof(CaptionBrush));
+            OnPropertyChanged(nameof(PrimaryActionLabel));
         }
     }
 }

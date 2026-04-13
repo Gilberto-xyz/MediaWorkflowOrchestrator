@@ -96,6 +96,10 @@
                                         Style="{StaticResource MutedCaptionTextStyle}"
                                         Text="{x:Bind ViewModel.CleanupAudioSelectionMessage, Mode=OneWay}"
                                         TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Style="{StaticResource MutedCaptionTextStyle}"
+                                        Text="Morado = se conserva · Verde = principal"
+                                        TextWrapping="Wrap" />
 
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.CleanupAudioOptions, Mode=OneWay}">
                                         <ItemsControl.ItemsPanel>
@@ -105,21 +109,52 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:TrackCleanupAudioOption">
-                                                <ToggleButton
+                                                <Border
                                                     MinWidth="220"
                                                     Margin="0,0,6,6"
-                                                    Command="{Binding ViewModel.ToggleCleanupAudioSelectionCommand, ElementName=RootPage}"
-                                                    CommandParameter="{Binding}"
-                                                    IsChecked="{x:Bind IsSelected, Mode=OneWay}"
-                                                    Style="{StaticResource QuickToggleButtonStyle}">
-                                                    <StackPanel MaxWidth="320" Spacing="2">
-                                                        <TextBlock FontWeight="SemiBold" Text="{x:Bind PrimaryLabel, Mode=OneWay}" TextWrapping="Wrap" />
-                                                        <TextBlock
-                                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                                            Text="{x:Bind SecondaryLabel, Mode=OneWay}"
-                                                            TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                </ToggleButton>
+                                                    Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
+                                                    BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                    BorderThickness="1.2"
+                                                    CornerRadius="9">
+                                                    <Grid MinHeight="82">
+                                                        <Button
+                                                            Padding="8,28,8,8"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Command="{Binding ViewModel.ToggleCleanupAudioSelectionCommand, ElementName=RootPage}"
+                                                            CommandParameter="{Binding}"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch"
+                                                            VerticalAlignment="Stretch"
+                                                            VerticalContentAlignment="Stretch">
+                                                            <StackPanel MaxWidth="320" Spacing="2">
+                                                                <TextBlock
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                                    Text="{x:Bind PrimaryLabel, Mode=OneWay}"
+                                                                    TextWrapping="Wrap" />
+                                                                <TextBlock
+                                                                    Foreground="{x:Bind CaptionBrush, Mode=OneWay}"
+                                                                    Style="{StaticResource MutedCaptionTextStyle}"
+                                                                    Text="{x:Bind SecondaryLabel, Mode=OneWay}"
+                                                                    TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0,4,4,0"
+                                                            Command="{Binding ViewModel.MarkCleanupAudioPrimaryCommand, ElementName=RootPage}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="{x:Bind PrimaryActionLabel, Mode=OneWay}"
+                                                            CornerRadius="6"
+                                                            FontSize="10"
+                                                            MinHeight="20"
+                                                            MinWidth="0"
+                                                            Padding="4,1"
+                                                            Style="{StaticResource DenseActionButtonStyle}" />
+                                                    </Grid>
+                                                </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -143,6 +178,10 @@
                                         Style="{StaticResource MutedCaptionTextStyle}"
                                         Text="{x:Bind ViewModel.CleanupSubtitleSelectionMessage, Mode=OneWay}"
                                         TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Style="{StaticResource MutedCaptionTextStyle}"
+                                        Text="Morado = se conserva · Verde = principal"
+                                        TextWrapping="Wrap" />
 
                                     <ItemsControl ItemsSource="{x:Bind ViewModel.CleanupSubtitleOptions, Mode=OneWay}">
                                         <ItemsControl.ItemsPanel>
@@ -152,21 +191,52 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:TrackCleanupSubtitleOption">
-                                                <ToggleButton
+                                                <Border
                                                     MinWidth="220"
                                                     Margin="0,0,6,6"
-                                                    Command="{Binding ViewModel.ToggleCleanupSubtitleSelectionCommand, ElementName=RootPage}"
-                                                    CommandParameter="{Binding}"
-                                                    IsChecked="{x:Bind IsSelected, Mode=OneWay}"
-                                                    Style="{StaticResource QuickToggleButtonStyle}">
-                                                    <StackPanel MaxWidth="320" Spacing="2">
-                                                        <TextBlock FontWeight="SemiBold" Text="{x:Bind PrimaryLabel, Mode=OneWay}" TextWrapping="Wrap" />
-                                                        <TextBlock
-                                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                                            Text="{x:Bind SecondaryLabel, Mode=OneWay}"
-                                                            TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                </ToggleButton>
+                                                    Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
+                                                    BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                    BorderThickness="1.2"
+                                                    CornerRadius="9">
+                                                    <Grid MinHeight="82">
+                                                        <Button
+                                                            Padding="8,28,8,8"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Command="{Binding ViewModel.ToggleCleanupSubtitleSelectionCommand, ElementName=RootPage}"
+                                                            CommandParameter="{Binding}"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch"
+                                                            VerticalAlignment="Stretch"
+                                                            VerticalContentAlignment="Stretch">
+                                                            <StackPanel MaxWidth="320" Spacing="2">
+                                                                <TextBlock
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                                    Text="{x:Bind PrimaryLabel, Mode=OneWay}"
+                                                                    TextWrapping="Wrap" />
+                                                                <TextBlock
+                                                                    Foreground="{x:Bind CaptionBrush, Mode=OneWay}"
+                                                                    Style="{StaticResource MutedCaptionTextStyle}"
+                                                                    Text="{x:Bind SecondaryLabel, Mode=OneWay}"
+                                                                    TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0,4,4,0"
+                                                            Command="{Binding ViewModel.MarkCleanupSubtitlePrimaryCommand, ElementName=RootPage}"
+                                                            CommandParameter="{Binding}"
+                                                            Content="{x:Bind PrimaryActionLabel, Mode=OneWay}"
+                                                            CornerRadius="6"
+                                                            FontSize="10"
+                                                            MinHeight="20"
+                                                            MinWidth="0"
+                                                            Padding="4,1"
+                                                            Style="{StaticResource DenseActionButtonStyle}" />
+                                                    </Grid>
+                                                </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>

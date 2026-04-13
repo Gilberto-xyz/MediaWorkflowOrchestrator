@@ -415,6 +415,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
 
             option.IsSelected = !option.IsSelected;
+            EnsurePrimaryCleanupAudioSelection();
             UpdateCleanupAudioSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
         }
@@ -432,6 +433,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 option.IsSelected = true;
             }
 
+            EnsurePrimaryCleanupAudioSelection();
             UpdateCleanupAudioSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
         }
@@ -449,6 +451,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 option.IsSelected = false;
             }
 
+            EnsurePrimaryCleanupAudioSelection();
             UpdateCleanupAudioSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
         }
@@ -462,6 +465,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
 
             option.IsSelected = !option.IsSelected;
+            EnsurePrimaryCleanupSubtitleSelection();
             UpdateCleanupSubtitleSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
         }
@@ -479,6 +483,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 option.IsSelected = true;
             }
 
+            EnsurePrimaryCleanupSubtitleSelection();
             UpdateCleanupSubtitleSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
         }
@@ -496,8 +501,61 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 option.IsSelected = false;
             }
 
+            EnsurePrimaryCleanupSubtitleSelection();
             UpdateCleanupSubtitleSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
+        }
+
+        public async Task SetCleanupAudioPrimaryAsync(TrackCleanupAudioOption? option)
+        {
+            if (option is null || currentWorkflow is null)
+            {
+                return;
+            }
+
+            foreach (var candidate in CleanupAudioOptions)
+            {
+                candidate.IsPrimary = ReferenceEquals(candidate, option);
+                if (ReferenceEquals(candidate, option))
+                {
+                    candidate.IsSelected = true;
+                }
+            }
+
+            UpdateCleanupAudioSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        public async Task SetCleanupSubtitlePrimaryAsync(TrackCleanupSubtitleOption? option)
+        {
+            if (option is null || currentWorkflow is null)
+            {
+                return;
+            }
+
+            foreach (var candidate in CleanupSubtitleOptions)
+            {
+                candidate.IsPrimary = ReferenceEquals(candidate, option);
+                if (ReferenceEquals(candidate, option))
+                {
+                    candidate.IsSelected = true;
+                }
+            }
+
+            UpdateCleanupSubtitleSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+        }
+
+        [RelayCommand]
+        private async Task MarkCleanupAudioPrimaryAsync(TrackCleanupAudioOption? option)
+        {
+            await SetCleanupAudioPrimaryAsync(option);
+        }
+
+        [RelayCommand]
+        private async Task MarkCleanupSubtitlePrimaryAsync(TrackCleanupSubtitleOption? option)
+        {
+            await SetCleanupSubtitlePrimaryAsync(option);
         }
 
         [RelayCommand]
@@ -885,6 +943,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             workflow.TrackCleanupSelectionVideoPath = targetVideoPath;
             workflow.TrackCleanupAudioOptions = updatedAudioOptions;
             workflow.TrackCleanupSubtitleOptions = updatedSubtitleOptions;
+            EnsurePrimaryCleanupSelections(workflow);
             return changed;
         }
 
@@ -927,7 +986,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             if (CleanupAudioOptions.Count > 0)
             {
                 var selectedCount = CleanupAudioOptions.Count(option => option.IsSelected);
-                CleanupAudioSelectionMessage = $"Se conservarán {selectedCount} de {CleanupAudioOptions.Count} audios. Desactiva solo los que realmente quieras eliminar.";
+                CleanupAudioSelectionMessage = $"Se conservarán {selectedCount} de {CleanupAudioOptions.Count} audios. Clic para conservar/quitar; usa el botón Principal para fijar la pista principal.";
                 return;
             }
 
@@ -945,7 +1004,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             if (CleanupSubtitleOptions.Count > 0)
             {
                 var selectedCount = CleanupSubtitleOptions.Count(option => option.IsSelected);
-                CleanupSubtitleSelectionMessage = $"Se conservarán {selectedCount} de {CleanupSubtitleOptions.Count} subtítulos. Desactiva solo los que realmente quieras eliminar.";
+                CleanupSubtitleSelectionMessage = $"Se conservarán {selectedCount} de {CleanupSubtitleOptions.Count} subtítulos. Clic para conservar/quitar; usa el botón Principal para fijar la pista principal.";
                 return;
             }
 
@@ -979,6 +1038,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                     || !string.Equals(left.Codec, right.Codec, StringComparison.OrdinalIgnoreCase)
                     || !string.Equals(left.Name, right.Name, StringComparison.Ordinal)
                     || left.IsDefault != right.IsDefault
+                    || left.IsPrimary != right.IsPrimary
                     || left.IsSelected != right.IsSelected)
                 {
                     return false;
@@ -1007,6 +1067,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                     || !string.Equals(left.Name, right.Name, StringComparison.Ordinal)
                     || left.IsDefault != right.IsDefault
                     || left.IsForced != right.IsForced
+                    || left.IsPrimary != right.IsPrimary
                     || left.IsSelected != right.IsSelected)
                 {
                     return false;
@@ -1273,6 +1334,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 ? InfoBarSeverity.Error
                 : InfoBarSeverity.Informational;
             cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+            EnsurePrimaryCleanupSelections(workflow);
             SyncCleanupAudioOptionsFromWorkflow();
             SyncCleanupSubtitleOptionsFromWorkflow();
             UpdateCleanupAudioSelectionMessage();
@@ -1485,6 +1547,68 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
+        }
+
+        private void EnsurePrimaryCleanupSelections(WorkflowInstance workflow)
+        {
+            EnsurePrimaryCleanupAudioSelection(workflow.TrackCleanupAudioOptions);
+            EnsurePrimaryCleanupSubtitleSelection(workflow.TrackCleanupSubtitleOptions);
+        }
+
+        private void EnsurePrimaryCleanupAudioSelection()
+        {
+            EnsurePrimaryCleanupAudioSelection(CleanupAudioOptions);
+        }
+
+        private static void EnsurePrimaryCleanupAudioSelection(IEnumerable<TrackCleanupAudioOption> options)
+        {
+            var selected = options.Where(option => option.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                foreach (var option in options)
+                {
+                    option.IsPrimary = false;
+                }
+
+                return;
+            }
+
+            var primary = selected.FirstOrDefault(option => option.IsPrimary)
+                ?? selected.FirstOrDefault(option => option.IsDefault)
+                ?? selected.First();
+
+            foreach (var option in options)
+            {
+                option.IsPrimary = ReferenceEquals(option, primary);
+            }
+        }
+
+        private void EnsurePrimaryCleanupSubtitleSelection()
+        {
+            EnsurePrimaryCleanupSubtitleSelection(CleanupSubtitleOptions);
+        }
+
+        private static void EnsurePrimaryCleanupSubtitleSelection(IEnumerable<TrackCleanupSubtitleOption> options)
+        {
+            var selected = options.Where(option => option.IsSelected).ToList();
+            if (selected.Count == 0)
+            {
+                foreach (var option in options)
+                {
+                    option.IsPrimary = false;
+                }
+
+                return;
+            }
+
+            var primary = selected.FirstOrDefault(option => option.IsPrimary)
+                ?? selected.FirstOrDefault(option => option.IsDefault)
+                ?? selected.First();
+
+            foreach (var option in options)
+            {
+                option.IsPrimary = ReferenceEquals(option, primary);
+            }
         }
 
         private void UpdateTranslationDecisionVisibility(WorkflowInstance? workflow)
