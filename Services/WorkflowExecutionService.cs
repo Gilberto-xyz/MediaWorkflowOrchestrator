@@ -12,6 +12,10 @@ namespace MediaWorkflowOrchestrator.Services
         public const string PackageRarWeightSummaryHintKey = "package_rar_weight_summary";
         public const string PackageRarCleanNameHintKey = "package_rar_clean_name";
         public const string PackageRarSeriesNameHintKey = "package_rar_series_name";
+        private static readonly JsonSerializerOptions TrackSelectionSignatureJsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        };
         private const string EmptyTrackSelectionToken = "__none__";
 
         private readonly IAppSettingsService appSettingsService;
@@ -1056,7 +1060,7 @@ namespace MediaWorkflowOrchestrator.Services
                 return null;
             }
 
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload)));
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, TrackSelectionSignatureJsonOptions)));
         }
 
         private static string? EncodeTrackSelectionSignature(TrackSelectionSignature? signature)
@@ -1066,7 +1070,7 @@ namespace MediaWorkflowOrchestrator.Services
                 return null;
             }
 
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(signature)));
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(signature, TrackSelectionSignatureJsonOptions)));
         }
 
         private static string NormalizeTrackSelectionLanguageCode(string? languageCode)
