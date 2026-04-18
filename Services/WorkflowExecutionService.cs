@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -308,8 +309,14 @@ namespace MediaWorkflowOrchestrator.Services
                         ResolveTrackCleanupInputPath(workflow),
                         settings.TrackCleanupDeleteOriginals,
                         Array.Empty<string>(),
+                        null,
+                        null,
+                        null,
                         false,
-                        Array.Empty<string>()).ToArray(),
+                        Array.Empty<string>(),
+                        null,
+                        null,
+                        null).ToArray(),
                     WorkingDirectory = Path.GetDirectoryName(settings.TrackCleanupScriptPath) ?? workflow.RootPath,
                 },
                 WorkflowStepKey.TagAndRename => new ProcessExecutionRequest
@@ -394,6 +401,12 @@ namespace MediaWorkflowOrchestrator.Services
             var targetContext = ResolveTrackCleanupTargetContext(workflow, cleanupInputPath);
             IReadOnlyList<string> selectedAudioTrackIds = Array.Empty<string>();
             IReadOnlyList<string> selectedSubtitleTrackIds = Array.Empty<string>();
+            string? selectedPrimaryAudioTrackId = null;
+            string? selectedPrimarySubtitleTrackId = null;
+            string? selectedAudioSignaturePayload = null;
+            string? selectedPrimaryAudioSignaturePayload = null;
+            string? selectedSubtitleSignaturePayload = null;
+            string? selectedPrimarySubtitleSignaturePayload = null;
             var applyManualSubtitleSelection = false;
 
             if (targetContext.CanManuallySelectAudio)
@@ -407,6 +420,13 @@ namespace MediaWorkflowOrchestrator.Services
                         .Where(option => option.IsSelected)
                         .Select(option => option.TrackId)
                         .ToList();
+                    selectedPrimaryAudioTrackId = workflow.TrackCleanupAudioOptions
+                        .FirstOrDefault(option => option.IsSelected && option.IsPrimary)
+                        ?.TrackId;
+                    selectedAudioSignaturePayload = EncodeTrackSelectionSignatures(
+                        BuildTrackSelectionSignatures(workflow.TrackCleanupAudioOptions));
+                    selectedPrimaryAudioSignaturePayload = EncodeTrackSelectionSignature(
+                        BuildTrackSelectionSignature(workflow.TrackCleanupAudioOptions.FirstOrDefault(option => option.IsSelected && option.IsPrimary), 0));
 
                     if (selectedAudioTrackIds.Count == 0)
                     {
@@ -417,7 +437,19 @@ namespace MediaWorkflowOrchestrator.Services
                         .Where(option => option.IsSelected)
                         .Select(option => option.TrackId)
                         .ToList();
+                    selectedPrimarySubtitleTrackId = workflow.TrackCleanupSubtitleOptions
+                        .FirstOrDefault(option => option.IsSelected && option.IsPrimary)
+                        ?.TrackId;
+                    selectedSubtitleSignaturePayload = EncodeTrackSelectionSignatures(
+                        BuildTrackSelectionSignatures(workflow.TrackCleanupSubtitleOptions));
+                    selectedPrimarySubtitleSignaturePayload = EncodeTrackSelectionSignature(
+                        BuildTrackSelectionSignature(workflow.TrackCleanupSubtitleOptions.FirstOrDefault(option => option.IsSelected && option.IsPrimary), 0));
                     applyManualSubtitleSelection = true;
+
+                    if (inspection.SpecialCases.Count > 0)
+                    {
+                        onOutput?.Invoke(inspection.SpecialCasesMessage);
+                    }
                 }
                 else
                 {
@@ -454,8 +486,14 @@ namespace MediaWorkflowOrchestrator.Services
                     cleanupInputPath,
                     deleteOriginals,
                     selectedAudioTrackIds,
+                    selectedPrimaryAudioTrackId,
+                    selectedAudioSignaturePayload,
+                    selectedPrimaryAudioSignaturePayload,
                     applyManualSubtitleSelection,
-                    selectedSubtitleTrackIds).ToArray(),
+                    selectedSubtitleTrackIds,
+                    selectedPrimarySubtitleTrackId,
+                    selectedSubtitleSignaturePayload,
+                    selectedPrimarySubtitleSignaturePayload).ToArray(),
                 WorkingDirectory = Path.GetDirectoryName(settings.TrackCleanupScriptPath) ?? workflow.RootPath,
             };
         }
@@ -465,8 +503,14 @@ namespace MediaWorkflowOrchestrator.Services
             string cleanupInputPath,
             bool deleteOriginals,
             IReadOnlyList<string> selectedAudioTrackIds,
+            string? selectedPrimaryAudioTrackId,
+            string? selectedAudioSignaturePayload,
+            string? selectedPrimaryAudioSignaturePayload,
             bool applyManualSubtitleSelection,
-            IReadOnlyList<string> selectedSubtitleTrackIds)
+            IReadOnlyList<string> selectedSubtitleTrackIds,
+            string? selectedPrimarySubtitleTrackId,
+            string? selectedSubtitleSignaturePayload,
+            string? selectedPrimarySubtitleSignaturePayload)
         {
             var args = new List<string>
             {
@@ -493,12 +537,48 @@ namespace MediaWorkflowOrchestrator.Services
                 args.Add(string.Join(",", selectedAudioTrackIds));
             }
 
+            if (!string.IsNullOrWhiteSpace(selectedPrimaryAudioTrackId))
+            {
+                args.Add("--audio-default-id");
+                args.Add(selectedPrimaryAudioTrackId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedAudioSignaturePayload))
+            {
+                args.Add("--keep-audio-signatures");
+                args.Add(selectedAudioSignaturePayload);
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedPrimaryAudioSignaturePayload))
+            {
+                args.Add("--audio-default-signature");
+                args.Add(selectedPrimaryAudioSignaturePayload);
+            }
+
             if (applyManualSubtitleSelection)
             {
                 args.Add("--keep-subtitle-ids");
                 args.Add(selectedSubtitleTrackIds.Count > 0
                     ? string.Join(",", selectedSubtitleTrackIds)
                     : EmptyTrackSelectionToken);
+
+                if (!string.IsNullOrWhiteSpace(selectedPrimarySubtitleTrackId))
+                {
+                    args.Add("--subtitle-default-id");
+                    args.Add(selectedPrimarySubtitleTrackId);
+                }
+
+                if (!string.IsNullOrWhiteSpace(selectedSubtitleSignaturePayload))
+                {
+                    args.Add("--keep-subtitle-signatures");
+                    args.Add(selectedSubtitleSignaturePayload);
+                }
+
+                if (!string.IsNullOrWhiteSpace(selectedPrimarySubtitleSignaturePayload))
+                {
+                    args.Add("--subtitle-default-signature");
+                    args.Add(selectedPrimarySubtitleSignaturePayload);
+                }
             }
 
             return args;
@@ -515,7 +595,8 @@ namespace MediaWorkflowOrchestrator.Services
             WorkflowInstance workflow,
             CancellationToken cancellationToken)
         {
-            var targetContext = ResolveTrackCleanupTargetContext(workflow, ResolveTrackCleanupInputPath(workflow));
+            var cleanupInputPath = ResolveTrackCleanupInputPath(workflow);
+            var targetContext = ResolveTrackCleanupTargetContext(workflow, cleanupInputPath);
             if (!targetContext.CanManuallySelectAudio || string.IsNullOrWhiteSpace(targetContext.TargetVideoPath))
             {
                 return new TrackCleanupAudioInspection
@@ -550,13 +631,21 @@ namespace MediaWorkflowOrchestrator.Services
             var preferredLanguages = BuildTrackCleanupPreferredLanguages(trackOptions.AudioOptions, trackOptions.SubtitleOptions);
             var mergedAudioOptions = MergeTrackCleanupAudioOptions(workflow, targetContext.TargetVideoPath, trackOptions.AudioOptions, preferredLanguages);
             var mergedSubtitleOptions = MergeTrackCleanupSubtitleOptions(workflow, targetContext.TargetVideoPath, trackOptions.SubtitleOptions, preferredLanguages);
+            var specialCaseReport = await BuildTrackCleanupSpecialCaseReportAsync(
+                cleanupInputPath,
+                targetContext.TargetVideoPath,
+                trackOptions,
+                settings,
+                cancellationToken);
             return new TrackCleanupAudioInspection
             {
                 CanManuallySelectAudio = true,
-                Message = "Selecciona exactamente qué audios y subtítulos se conservarán.",
+                Message = targetContext.Message,
                 TargetVideoPath = targetContext.TargetVideoPath,
+                SpecialCasesMessage = specialCaseReport.Message,
                 AudioOptions = mergedAudioOptions,
                 SubtitleOptions = mergedSubtitleOptions,
+                SpecialCases = specialCaseReport.Items,
             };
         }
 
@@ -713,6 +802,303 @@ namespace MediaWorkflowOrchestrator.Services
                 JsonValueKind.Number => value.TryGetInt32(out var number) && number != 0,
                 _ => false,
             };
+        }
+
+        private async Task<TrackCleanupSpecialCaseReport> BuildTrackCleanupSpecialCaseReportAsync(
+            string cleanupInputPath,
+            string representativeVideoPath,
+            TrackCleanupInspectedTracks representativeTracks,
+            AppSettings settings,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(cleanupInputPath) || !Directory.Exists(cleanupInputPath))
+            {
+                return TrackCleanupSpecialCaseReport.Empty;
+            }
+
+            var representativeAudioFingerprint = CreateTrackLayoutFingerprint(representativeTracks.AudioOptions);
+            var representativeSubtitleFingerprint = CreateTrackLayoutFingerprint(representativeTracks.SubtitleOptions);
+            var representativeAudioSummary = BuildCompactTrackLayoutSummary(representativeTracks.AudioOptions);
+            var representativeSubtitleSummary = BuildCompactTrackLayoutSummary(representativeTracks.SubtitleOptions);
+            var items = new List<TrackCleanupSpecialCaseItem>();
+
+            foreach (var videoPath in EnumerateTrackCleanupInspectionVideos(cleanupInputPath))
+            {
+                if (PathsEqual(videoPath, representativeVideoPath))
+                {
+                    continue;
+                }
+
+                var inspectedTracks = await GetTrackCleanupOptionsAsync(videoPath, settings, cancellationToken);
+                if (inspectedTracks is null)
+                {
+                    items.Add(new TrackCleanupSpecialCaseItem
+                    {
+                        FileName = Path.GetFileName(videoPath),
+                        Reason = "No se pudieron inspeccionar sus tracks para verificar compatibilidad batch.",
+                    });
+                    continue;
+                }
+
+                var reasons = new List<string>();
+                var currentAudioFingerprint = CreateTrackLayoutFingerprint(inspectedTracks.AudioOptions);
+                if (!string.Equals(representativeAudioFingerprint, currentAudioFingerprint, StringComparison.Ordinal))
+                {
+                    reasons.Add($"Audio base [{representativeAudioSummary}] -> [{BuildCompactTrackLayoutSummary(inspectedTracks.AudioOptions)}]");
+                }
+
+                var currentSubtitleFingerprint = CreateTrackLayoutFingerprint(inspectedTracks.SubtitleOptions);
+                if (!string.Equals(representativeSubtitleFingerprint, currentSubtitleFingerprint, StringComparison.Ordinal))
+                {
+                    reasons.Add($"Subs base [{representativeSubtitleSummary}] -> [{BuildCompactTrackLayoutSummary(inspectedTracks.SubtitleOptions)}]");
+                }
+
+                if (reasons.Count == 0)
+                {
+                    continue;
+                }
+
+                items.Add(new TrackCleanupSpecialCaseItem
+                {
+                    FileName = Path.GetFileName(videoPath),
+                    Reason = string.Join(" | ", reasons),
+                });
+            }
+
+            if (items.Count == 0)
+            {
+                return TrackCleanupSpecialCaseReport.Empty;
+            }
+
+            var message = items.Count == 1
+                ? "Caso especial detectado: 1 archivo del lote tiene un layout distinto. Limpiar tracks aplicará la selección manual por firma compatible y no solo por IDs."
+                : $"Caso especial detectado: {items.Count} archivos del lote tienen layouts distintos. Limpiar tracks aplicará la selección manual por firma compatible y no solo por IDs.";
+            return new TrackCleanupSpecialCaseReport(message, items);
+        }
+
+        private static IEnumerable<string> EnumerateTrackCleanupInspectionVideos(string cleanupInputPath)
+        {
+            if (string.IsNullOrWhiteSpace(cleanupInputPath) || !Directory.Exists(cleanupInputPath))
+            {
+                yield break;
+            }
+
+            foreach (var path in Directory.EnumerateFiles(cleanupInputPath, "*.*", SearchOption.AllDirectories)
+                .Where(IsVideoFile)
+                .OrderBy(static path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                if (IsIgnoredTrackCleanupInspectionPath(path, cleanupInputPath))
+                {
+                    continue;
+                }
+
+                yield return path;
+            }
+        }
+
+        private static bool IsIgnoredTrackCleanupInspectionPath(string candidatePath, string cleanupRootPath)
+        {
+            if (string.IsNullOrWhiteSpace(candidatePath) || string.IsNullOrWhiteSpace(cleanupRootPath))
+            {
+                return false;
+            }
+
+            var relativePath = Path.GetRelativePath(cleanupRootPath, candidatePath);
+            if (string.IsNullOrWhiteSpace(relativePath) || relativePath.StartsWith("..", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var fileName = Path.GetFileName(relativePath);
+            if (!string.IsNullOrWhiteSpace(fileName)
+                && fileName.Contains(" (filtered)", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+            return relativePath.Split(separators, StringSplitOptions.RemoveEmptyEntries)
+                .Any(part =>
+                    part.Equals("filtrados", StringComparison.OrdinalIgnoreCase)
+                    || part.Equals("ORIGINAL", StringComparison.OrdinalIgnoreCase)
+                    || part.Equals("capturas", StringComparison.OrdinalIgnoreCase)
+                    || part.Equals("RARs", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string CreateTrackLayoutFingerprint(IReadOnlyList<TrackCleanupAudioOption> options) =>
+            string.Join("||", options.Select(static option => CreateTrackLayoutToken(option)));
+
+        private static string CreateTrackLayoutFingerprint(IReadOnlyList<TrackCleanupSubtitleOption> options) =>
+            string.Join("||", options.Select(static option => CreateTrackLayoutToken(option)));
+
+        private static string CreateTrackLayoutToken(TrackCleanupAudioOption option)
+        {
+            var name = NormalizeTrackSelectionName(option.Name);
+            return $"{NormalizeTrackSelectionLanguageCode(option.LanguageCode)}|{(option.IsDefault ? 'd' : 'n')}|{name}";
+        }
+
+        private static string CreateTrackLayoutToken(TrackCleanupSubtitleOption option)
+        {
+            var name = NormalizeTrackSelectionName(option.Name);
+            return $"{NormalizeTrackSelectionLanguageCode(option.LanguageCode)}|{(option.IsForced ? 'f' : 'n')}|{(option.IsDefault ? 'd' : 'n')}|{name}";
+        }
+
+        private static string BuildCompactTrackLayoutSummary(IReadOnlyList<TrackCleanupAudioOption> options) =>
+            BuildCompactTrackLayoutSummaryCore(options.Select(static option =>
+            {
+                var token = NormalizeTrackSelectionLanguageCode(option.LanguageCode);
+                return option.IsDefault ? $"{token}*" : token;
+            }));
+
+        private static string BuildCompactTrackLayoutSummary(IReadOnlyList<TrackCleanupSubtitleOption> options) =>
+            BuildCompactTrackLayoutSummaryCore(options.Select(static option =>
+            {
+                var token = NormalizeTrackSelectionLanguageCode(option.LanguageCode);
+                if (option.IsForced)
+                {
+                    token += " forced";
+                }
+
+                if (option.IsDefault)
+                {
+                    token += "*";
+                }
+
+                return token;
+            }));
+
+        private static string BuildCompactTrackLayoutSummaryCore(IEnumerable<string> values)
+        {
+            var items = values
+                .Where(static value => !string.IsNullOrWhiteSpace(value))
+                .ToList();
+            if (items.Count == 0)
+            {
+                return "sin pistas";
+            }
+
+            const int maxItems = 7;
+            var visible = items.Take(maxItems).ToList();
+            var summary = string.Join(", ", visible);
+            if (items.Count > maxItems)
+            {
+                summary += $", +{items.Count - maxItems} más";
+            }
+
+            return summary;
+        }
+
+        private static IEnumerable<TrackSelectionSignature> BuildTrackSelectionSignatures(IReadOnlyList<TrackCleanupAudioOption> options)
+        {
+            var order = 0;
+            foreach (var option in options.Where(static option => option.IsSelected))
+            {
+                var signature = BuildTrackSelectionSignature(option, order++);
+                if (signature is not null)
+                {
+                    yield return signature;
+                }
+            }
+        }
+
+        private static IEnumerable<TrackSelectionSignature> BuildTrackSelectionSignatures(IReadOnlyList<TrackCleanupSubtitleOption> options)
+        {
+            var order = 0;
+            foreach (var option in options.Where(static option => option.IsSelected))
+            {
+                var signature = BuildTrackSelectionSignature(option, order++);
+                if (signature is not null)
+                {
+                    yield return signature;
+                }
+            }
+        }
+
+        private static TrackSelectionSignature? BuildTrackSelectionSignature(TrackCleanupAudioOption? option, int order)
+        {
+            if (option is null)
+            {
+                return null;
+            }
+
+            return new TrackSelectionSignature(
+                option.TrackId,
+                NormalizeTrackSelectionLanguageCode(option.LanguageCode),
+                NormalizeTrackLanguageCode(option.LanguageCode),
+                option.Name ?? string.Empty,
+                option.IsDefault,
+                false,
+                order);
+        }
+
+        private static TrackSelectionSignature? BuildTrackSelectionSignature(TrackCleanupSubtitleOption? option, int order)
+        {
+            if (option is null)
+            {
+                return null;
+            }
+
+            return new TrackSelectionSignature(
+                option.TrackId,
+                NormalizeTrackSelectionLanguageCode(option.LanguageCode),
+                NormalizeTrackLanguageCode(option.LanguageCode),
+                option.Name ?? string.Empty,
+                option.IsDefault,
+                option.IsForced,
+                order);
+        }
+
+        private static string? EncodeTrackSelectionSignatures(IEnumerable<TrackSelectionSignature> signatures)
+        {
+            var payload = signatures.ToList();
+            if (payload.Count == 0)
+            {
+                return null;
+            }
+
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload)));
+        }
+
+        private static string? EncodeTrackSelectionSignature(TrackSelectionSignature? signature)
+        {
+            if (signature is null)
+            {
+                return null;
+            }
+
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(signature)));
+        }
+
+        private static string NormalizeTrackSelectionLanguageCode(string? languageCode)
+        {
+            if (string.IsNullOrWhiteSpace(languageCode))
+            {
+                return "und";
+            }
+
+            return languageCode.Trim().Replace('_', '-').ToLowerInvariant();
+        }
+
+        private static string NormalizeTrackSelectionName(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return string.Empty;
+            }
+
+            var normalized = name.Trim().ToLowerInvariant();
+            while (normalized.EndsWith("]", StringComparison.Ordinal))
+            {
+                var openingBracket = normalized.LastIndexOf('[');
+                if (openingBracket < 0)
+                {
+                    break;
+                }
+
+                normalized = normalized[..openingBracket].TrimEnd();
+            }
+
+            return Regex.Replace(normalized, "\\s+", " ").Trim();
         }
 
         private static HashSet<string> BuildTrackCleanupPreferredLanguages(
@@ -909,8 +1295,7 @@ namespace MediaWorkflowOrchestrator.Services
 
             if (Directory.Exists(cleanupInputPath))
             {
-                var videos = Directory.EnumerateFiles(cleanupInputPath, "*.*", SearchOption.AllDirectories)
-                    .Where(IsVideoFile)
+                var videos = EnumerateTrackCleanupInspectionVideos(cleanupInputPath)
                     .Take(2)
                     .ToList();
 
@@ -921,10 +1306,11 @@ namespace MediaWorkflowOrchestrator.Services
 
                 if (videos.Count > 1)
                 {
+                    var representativeVideoPath = ResolveTrackCleanupRepresentativeVideoPath(workflow, cleanupInputPath, videos[0]);
                     return new TrackCleanupTargetContext(
-                        null,
-                        false,
-                        "La selección manual de audios y subtítulos solo está disponible cuando Limpiar tracks apunta a un único video. En carpetas con varios videos el paso seguirá en modo batch.");
+                        representativeVideoPath,
+                        true,
+                        $"Selecciona los audios y subtítulos desde '{Path.GetFileName(representativeVideoPath)}'. La selección se aplicará a todos los videos del release.");
                 }
             }
 
@@ -932,6 +1318,37 @@ namespace MediaWorkflowOrchestrator.Services
                 null,
                 false,
                 "No se encontró un video único para inspeccionar audios y subtítulos antes de Limpiar tracks.");
+        }
+
+        private static string ResolveTrackCleanupRepresentativeVideoPath(WorkflowInstance workflow, string cleanupInputPath, string fallbackVideoPath)
+        {
+            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                && File.Exists(workflow.PrimaryVideoPath)
+                && IsVideoFile(workflow.PrimaryVideoPath)
+                && IsPathWithinDirectory(workflow.PrimaryVideoPath, cleanupInputPath)
+                && !IsIgnoredTrackCleanupInspectionPath(workflow.PrimaryVideoPath, cleanupInputPath))
+            {
+                return workflow.PrimaryVideoPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.TrackCleanupSelectionVideoPath)
+                && File.Exists(workflow.TrackCleanupSelectionVideoPath)
+                && IsVideoFile(workflow.TrackCleanupSelectionVideoPath)
+                && IsPathWithinDirectory(workflow.TrackCleanupSelectionVideoPath, cleanupInputPath)
+                && !IsIgnoredTrackCleanupInspectionPath(workflow.TrackCleanupSelectionVideoPath, cleanupInputPath))
+            {
+                return workflow.TrackCleanupSelectionVideoPath;
+            }
+
+            return fallbackVideoPath;
+        }
+
+        private static bool IsPathWithinDirectory(string candidatePath, string directoryPath)
+        {
+            var fullCandidate = Path.GetFullPath(candidatePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var fullDirectory = Path.GetFullPath(directoryPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return fullCandidate.StartsWith(fullDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fullCandidate, fullDirectory, StringComparison.OrdinalIgnoreCase);
         }
 
         private static int CountVideoFiles(string directoryPath)
@@ -1751,9 +2168,25 @@ namespace MediaWorkflowOrchestrator.Services
             bool CanManuallySelectAudio,
             string Message);
 
+        private sealed record TrackCleanupSpecialCaseReport(
+            string Message,
+            List<TrackCleanupSpecialCaseItem> Items)
+        {
+            public static TrackCleanupSpecialCaseReport Empty { get; } = new(string.Empty, new List<TrackCleanupSpecialCaseItem>());
+        }
+
         private sealed record TrackCleanupInspectedTracks(
             List<TrackCleanupAudioOption> AudioOptions,
             List<TrackCleanupSubtitleOption> SubtitleOptions);
+
+        private sealed record TrackSelectionSignature(
+            string TrackId,
+            string LanguageCode,
+            string CanonicalLanguageCode,
+            string Name,
+            bool IsDefault,
+            bool IsForced,
+            int Order);
 
         private sealed record TagAndRenamePreparation(string WorkingDirectory, string ShortcutPath, bool LaunchRenamerOnly, string StagedVideoPath);
     }

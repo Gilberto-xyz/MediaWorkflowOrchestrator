@@ -80,6 +80,26 @@
 
                             <Border
                                 Padding="10"
+                                Background="#2A3C2710"
+                                BorderBrush="#D9F5B942"
+                                BorderThickness="1"
+                                CornerRadius="12">
+                                <StackPanel Spacing="8">
+                                    <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.CleanupSpecialCasesPanelTitle, Mode=OneWay}" />
+                                    <TextBlock
+                                        Style="{StaticResource MutedCaptionTextStyle}"
+                                        Text="{x:Bind ViewModel.CleanupSpecialCasesPanelMessage, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        FontFamily="Consolas"
+                                        Style="{StaticResource MutedCaptionTextStyle}"
+                                        Text="{x:Bind ViewModel.CleanupSpecialCasesListText, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border
+                                Padding="10"
                                 Background="#22141822"
                                 BorderBrush="#4094A3B8"
                                 BorderThickness="1"

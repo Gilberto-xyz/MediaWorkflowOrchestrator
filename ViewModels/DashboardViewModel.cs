@@ -41,6 +41,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             StepItems = new ObservableCollection<WorkflowStepState>();
             CleanupAudioOptions = new ObservableCollection<TrackCleanupAudioOption>();
             CleanupSubtitleOptions = new ObservableCollection<TrackCleanupSubtitleOption>();
+            CleanupSpecialCases = new ObservableCollection<TrackCleanupSpecialCaseItem>();
             ResetWorkflowState("La descarga Nyaa se ejecuta como utilidad global; el workflow real empieza cuando eliges el archivo o carpeta.");
             WeakReferenceMessenger.Default.Register(this);
             _ = LoadQuickSettingsAsync();
@@ -53,6 +54,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public ObservableCollection<WorkflowStepState> StepItems { get; }
         public ObservableCollection<TrackCleanupAudioOption> CleanupAudioOptions { get; }
         public ObservableCollection<TrackCleanupSubtitleOption> CleanupSubtitleOptions { get; }
+        public ObservableCollection<TrackCleanupSpecialCaseItem> CleanupSpecialCases { get; }
 
         [ObservableProperty]
         private WorkflowStepState? _selectedStep;
@@ -172,6 +174,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private string _cleanupSubtitleSelectionMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
 
         [ObservableProperty]
+        private string _cleanupSpecialCasesMessage = string.Empty;
+
+        [ObservableProperty]
         private bool _rarSkipImagesEnabled;
 
         [ObservableProperty]
@@ -215,6 +220,16 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string PackageRarSeriesTitleButtonLabel => "Nombre corto";
         public bool HasCleanupAudioOptions => CleanupAudioOptions.Count > 0;
         public bool HasCleanupSubtitleOptions => CleanupSubtitleOptions.Count > 0;
+        public bool HasCleanupSpecialCases => CleanupSpecialCases.Count > 0;
+        public string CleanupSpecialCasesPanelTitle => HasCleanupSpecialCases ? "Casos especiales detectados" : "Revision de layouts";
+        public string CleanupSpecialCasesPanelMessage => HasCleanupSpecialCases
+            ? CleanupSpecialCasesMessage
+            : "Si el lote mezcla fuentes con otro orden de audios o subtitulos, aqui se enlistaran para que Limpiar tracks los trate como caso especial.";
+        public string CleanupSpecialCasesListText => HasCleanupSpecialCases
+            ? string.Join(
+                Environment.NewLine,
+                CleanupSpecialCases.Select(item => $"- {item.FileName}: {item.Reason}"))
+            : "Sin diferencias detectadas en la inspeccion actual.";
         public bool CanOpenSelectedLog => SelectedStep is not null
             && !string.IsNullOrWhiteSpace(SelectedStep.StdoutLogPath)
             && File.Exists(SelectedStep.StdoutLogPath);
@@ -865,6 +880,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 CleanupAudioOptions.Clear();
                 CleanupSubtitleOptions.Clear();
+                ClearCleanupSpecialCases();
                 cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
                 UpdateCleanupAudioSelectionMessage();
                 UpdateCleanupSubtitleSelectionMessage();
@@ -889,6 +905,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 var changed = ApplyCleanupAudioInspectionToWorkflow(currentWorkflow, inspection);
                 SyncCleanupAudioOptionsFromWorkflow();
                 SyncCleanupSubtitleOptionsFromWorkflow();
+                SyncCleanupSpecialCases(inspection);
                 UpdateCleanupAudioSelectionMessage();
                 UpdateCleanupSubtitleSelectionMessage();
 
@@ -905,6 +922,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 cleanupAudioSelectionContextMessage = $"No se pudieron cargar los tracks: {ex.Message}";
                 CleanupAudioOptions.Clear();
                 CleanupSubtitleOptions.Clear();
+                ClearCleanupSpecialCases();
                 OnPropertyChanged(nameof(HasCleanupAudioOptions));
                 OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
                 UpdateCleanupAudioSelectionMessage();
@@ -973,6 +991,31 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
 
             OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
+        }
+
+        private void SyncCleanupSpecialCases(TrackCleanupAudioInspection inspection)
+        {
+            CleanupSpecialCasesMessage = inspection.SpecialCasesMessage ?? string.Empty;
+            CleanupSpecialCases.Clear();
+            foreach (var item in inspection.SpecialCases)
+            {
+                CleanupSpecialCases.Add(item);
+            }
+
+            OnPropertyChanged(nameof(HasCleanupSpecialCases));
+            OnPropertyChanged(nameof(CleanupSpecialCasesPanelTitle));
+            OnPropertyChanged(nameof(CleanupSpecialCasesPanelMessage));
+            OnPropertyChanged(nameof(CleanupSpecialCasesListText));
+        }
+
+        private void ClearCleanupSpecialCases()
+        {
+            CleanupSpecialCasesMessage = string.Empty;
+            CleanupSpecialCases.Clear();
+            OnPropertyChanged(nameof(HasCleanupSpecialCases));
+            OnPropertyChanged(nameof(CleanupSpecialCasesPanelTitle));
+            OnPropertyChanged(nameof(CleanupSpecialCasesPanelMessage));
+            OnPropertyChanged(nameof(CleanupSpecialCasesListText));
         }
 
         private void UpdateCleanupAudioSelectionMessage()
@@ -1337,6 +1380,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             EnsurePrimaryCleanupSelections(workflow);
             SyncCleanupAudioOptionsFromWorkflow();
             SyncCleanupSubtitleOptionsFromWorkflow();
+            ClearCleanupSpecialCases();
             UpdateCleanupAudioSelectionMessage();
             UpdateCleanupSubtitleSelectionMessage();
             UpdateTranslationDecisionVisibility(workflow);
@@ -1538,6 +1582,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             CleanupAudioSelectionBusy = false;
             CleanupAudioOptions.Clear();
             CleanupSubtitleOptions.Clear();
+            ClearCleanupSpecialCases();
             OnPropertyChanged(nameof(HasCleanupAudioOptions));
             OnPropertyChanged(nameof(HasCleanupSubtitleOptions));
             OnPropertyChanged(nameof(CleanupAudioRefreshButtonLabel));
