@@ -1517,7 +1517,25 @@ namespace MediaWorkflowOrchestrator.Services
             CancellationToken cancellationToken,
             Action<string>? onOutput)
         {
+            var scopedVideoPath = ResolveRarScopedVideoPath(workflow);
+            if (!string.IsNullOrWhiteSpace(scopedVideoPath))
+            {
+                workflow.PrimaryVideoPath = scopedVideoPath;
+                workflow.RootPath = Path.GetDirectoryName(scopedVideoPath) ?? workflow.RootPath;
+                onOutput?.Invoke($"Usando el archivo objetivo para empaquetado RAR: {scopedVideoPath}");
+                return scopedVideoPath;
+            }
+
             var targetDirectory = ResolveRarTargetDirectory(workflow);
+            var singleVideoInTree = TryResolveSingleRarTargetVideoPath(targetDirectory);
+            if (!string.IsNullOrWhiteSpace(singleVideoInTree))
+            {
+                workflow.PrimaryVideoPath = singleVideoInTree;
+                workflow.RootPath = Path.GetDirectoryName(singleVideoInTree) ?? workflow.RootPath;
+                onOutput?.Invoke($"Se detectó un único video válido dentro de la carpeta objetivo. Se empaquetará ese archivo: {singleVideoInTree}");
+                return singleVideoInTree;
+            }
+
             if (Directory.EnumerateDirectories(targetDirectory, "*", SearchOption.TopDirectoryOnly).Any())
             {
                 onOutput?.Invoke($"Usando la carpeta base existente para empaquetado RAR: {targetDirectory}");
@@ -1542,6 +1560,99 @@ namespace MediaWorkflowOrchestrator.Services
             onOutput?.Invoke($"La carpeta final contiene videos directos. Se creó un contenedor temporal para RAR: {wrapperRoot}");
             onOutput?.Invoke($"Subcarpeta enlazada para procesamiento: {junctionPath} -> {targetDirectory}");
             return wrapperRoot;
+        }
+
+        private static string? ResolveRarScopedVideoPath(WorkflowInstance workflow)
+        {
+            string? primaryVideoPath = null;
+            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) && File.Exists(workflow.PrimaryVideoPath))
+            {
+                primaryVideoPath = Path.GetFullPath(workflow.PrimaryVideoPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.RootPath)
+                && File.Exists(workflow.RootPath)
+                && IsVideoFile(workflow.RootPath))
+            {
+                return Path.GetFullPath(workflow.RootPath);
+            }
+
+            if (workflow.SourceSelectionIsFile == true)
+            {
+                if (!string.IsNullOrWhiteSpace(primaryVideoPath))
+                {
+                    return primaryVideoPath;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(workflow.RootPath) || !Directory.Exists(workflow.RootPath))
+            {
+                return null;
+            }
+
+            var rootPath = Path.GetFullPath(workflow.RootPath);
+            var directVideos = Directory.EnumerateFiles(rootPath, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(IsVideoFile)
+                .Select(Path.GetFullPath)
+                .ToList();
+
+            if (directVideos.Count == 1)
+            {
+                if (primaryVideoPath is null || string.Equals(directVideos[0], primaryVideoPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return directVideos[0];
+                }
+            }
+
+            if (workflow.SourceSelectionIsFile == true)
+            {
+                var descendantVideos = Directory.EnumerateFiles(rootPath, "*.*", SearchOption.AllDirectories)
+                    .Where(IsVideoFile)
+                    .Where(path => !IsIgnoredRarPackagingPath(path))
+                    .Select(Path.GetFullPath)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (descendantVideos.Count == 1)
+                {
+                    return descendantVideos[0];
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsIgnoredRarPackagingPath(string path)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return false;
+            }
+
+            var parts = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return parts.Any(part =>
+                part.Equals("capturas", StringComparison.OrdinalIgnoreCase)
+                || part.Equals("RARs", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string? TryResolveSingleRarTargetVideoPath(string directoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
+            {
+                return null;
+            }
+
+            var videos = Directory.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories)
+                .Where(IsVideoFile)
+                .Where(path => !IsIgnoredRarPackagingPath(path))
+                .Select(Path.GetFullPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return videos.Count == 1
+                ? videos[0]
+                : null;
         }
 
         private static string ResolveRarTargetDirectory(WorkflowInstance workflow)
