@@ -7,47 +7,114 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:MediaWorkflowOrchestrator.Models"
     mc:Ignorable="d">
-    <Grid Padding="24">
+    <Grid x:Name="HistoryLayoutRoot" Padding="24,18,24,28">
         <ScrollViewer
             HorizontalScrollMode="Disabled"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Visible"
             VerticalScrollMode="Auto">
-            <StackPanel Spacing="16">
+            <StackPanel Spacing="18">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Memoria de ejecución" />
+                    <TextBlock
+                        Style="{StaticResource SectionDescriptionTextStyle}"
+                        Text="Revisa workflows guardados, abre su contexto y retoma uno previo sin reconstruir el estado desde cero." />
+                </StackPanel>
+
                 <Border Style="{StaticResource CardContainerStyle}">
-                    <StackPanel Spacing="12">
-                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Workflows guardados" />
-                <Button Command="{x:Bind ViewModel.RefreshCommand}" Content="Actualizar" Style="{StaticResource PrimaryCommandButtonStyle}" />
-                <ListView
-                    ItemsSource="{x:Bind ViewModel.WorkflowHistory, Mode=OneWay}"
-                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                    ScrollViewer.HorizontalScrollMode="Disabled"
-                    ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                    ScrollViewer.VerticalScrollMode="Disabled"
-                    SelectedItem="{x:Bind ViewModel.SelectedWorkflow, Mode=TwoWay}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="models:WorkflowInstance">
-                            <Border Margin="0,0,0,10" Padding="12" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="12">
-                                <StackPanel Spacing="4">
-                                    <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" />
-                                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind RootPath}" />
-                                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind LastExecutionSummary}" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-                    </StackPanel>
+                    <Grid x:Name="HistoryHeaderGrid" ColumnSpacing="12" RowSpacing="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="4">
+                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Historial" />
+                            <TextBlock
+                                Style="{StaticResource SectionDescriptionTextStyle}"
+                                Text="La lista conserva workflows previos para reabrirlos rápido cuando vuelves a una serie o release." />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Command="{x:Bind ViewModel.RefreshCommand}"
+                            Content="Actualizar"
+                            Style="{StaticResource PrimaryCommandButtonStyle}" />
+                    </Grid>
                 </Border>
 
                 <Border Style="{StaticResource CardContainerStyle}">
-                    <StackPanel Spacing="12">
-                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Detalle" />
-                <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.SelectedDisplayName, Mode=OneWay}" TextWrapping="Wrap" />
-                <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind ViewModel.SelectedRootPath, Mode=OneWay}" />
-                <TextBlock Text="{x:Bind ViewModel.SelectedSummary, Mode=OneWay}" TextWrapping="Wrap" />
-                <Button Command="{x:Bind ViewModel.ContinueWorkflowCommand}" Content="Continuar workflow" Style="{StaticResource PrimaryCommandButtonStyle}" />
-                    </StackPanel>
+                    <Grid x:Name="HistoryContentGrid" ColumnSpacing="16" RowSpacing="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.15*" />
+                            <ColumnDefinition Width="0.85*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Spacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Workflows guardados" />
+                                <TextBlock
+                                    Style="{StaticResource SectionDescriptionTextStyle}"
+                                    Text="Cada tarjeta resume el nombre visible, la ruta base y la última señal operativa guardada." />
+                            </StackPanel>
+
+                            <ListView
+                                ItemsSource="{x:Bind ViewModel.WorkflowHistory, Mode=OneWay}"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                ScrollViewer.HorizontalScrollMode="Disabled"
+                                ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                ScrollViewer.VerticalScrollMode="Disabled"
+                                SelectedItem="{x:Bind ViewModel.SelectedWorkflow, Mode=TwoWay}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:WorkflowInstance">
+                                        <Border Margin="0,0,0,10" Style="{StaticResource InsetPanelBorderStyle}">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" TextWrapping="WrapWholeWords" />
+                                                <TextBlock Style="{StaticResource MonoCaptionTextStyle}" Text="{x:Bind RootPath}" TextWrapping="Wrap" />
+                                                <TextBlock
+                                                    Style="{StaticResource SectionDescriptionTextStyle}"
+                                                    Text="{x:Bind LastExecutionSummary}"
+                                                    TextWrapping="WrapWholeWords" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+
+                        <Border Grid.Column="1" Style="{StaticResource AccentPanelBorderStyle}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Detalle" />
+                                <TextBlock
+                                    Style="{StaticResource PageHeadlineTextStyle}"
+                                    Text="{x:Bind ViewModel.SelectedDisplayName, Mode=OneWay}"
+                                    TextWrapping="WrapWholeWords" />
+                                <Border Style="{StaticResource InsetPanelBorderStyle}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Ruta base" />
+                                        <TextBlock
+                                            Style="{StaticResource MonoCaptionTextStyle}"
+                                            Text="{x:Bind ViewModel.SelectedRootPath, Mode=OneWay}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                                <TextBlock
+                                    Style="{StaticResource SectionDescriptionTextStyle}"
+                                    Text="{x:Bind ViewModel.SelectedSummary, Mode=OneWay}"
+                                    TextWrapping="WrapWholeWords" />
+                                <Button
+                                    Command="{x:Bind ViewModel.ContinueWorkflowCommand}"
+                                    Content="Continuar workflow"
+                                    Style="{StaticResource PrimaryCommandButtonStyle}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Border>
             </StackPanel>
         </ScrollViewer>

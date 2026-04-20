@@ -8,6 +8,9 @@ namespace MediaWorkflowOrchestrator.Views
 {
     public sealed partial class DashboardPage : Page
     {
+        private const double WideLayoutBreakpoint = 1080;
+        private const double MediumLayoutBreakpoint = 900;
+        private const double NarrowLayoutBreakpoint = 760;
         private bool detailOutputResizeActive;
         private double lastDetailOutputPointerY;
 
@@ -30,6 +33,7 @@ namespace MediaWorkflowOrchestrator.Views
             UpdateTranslationDecisionVisibility();
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActionsVisibility();
+            UpdateResponsiveLayout(ActualWidth);
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -43,6 +47,7 @@ namespace MediaWorkflowOrchestrator.Views
         private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)
         {
             ViewModel.EnsureDetailOutputFitsViewport(e.NewSize.Height);
+            UpdateResponsiveLayout(e.NewSize.Width);
         }
 
         private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -151,6 +156,145 @@ namespace MediaWorkflowOrchestrator.Views
             }
         }
 
+        private void UpdateResponsiveLayout(double width)
+        {
+            DashboardLayoutRoot.Padding = width < NarrowLayoutBreakpoint
+                ? new Thickness(12, 10, 12, 16)
+                : width < WideLayoutBreakpoint
+                    ? new Thickness(16, 14, 16, 20)
+                    : new Thickness(24, 18, 24, 28);
+
+            ApplyResponsiveGrid(
+                WorkflowStatusGrid,
+                width < WideLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                TranslationDecisionGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                SkipAheadActionGrid,
+                width < WideLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                DownloadQuickOptionsGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                TranslateQuickOptionsGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                CleanupFlagsGrid,
+                width < WideLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                CleanupAudioActionGrid,
+                width < WideLayoutBreakpoint,
+                new[] { Star(), Star(), Star() },
+                (0, 0),
+                (0, 1),
+                (0, 2));
+
+            ApplyResponsiveGrid(
+                CleanupSubtitleActionGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1));
+
+            ApplyResponsiveGrid(
+                PackageRarQuickOptionsGrid,
+                width < WideLayoutBreakpoint,
+                new[] { Star(), Star(), Star() },
+                (0, 0),
+                (0, 1),
+                (0, 2),
+                (1, 0),
+                (1, 1));
+
+            ApplyResponsiveGrid(
+                PackageRarDetailActionsGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1));
+
+            ApplyResponsiveGrid(
+                DetailOutputToolbarGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), GridLength.Auto, GridLength.Auto },
+                (0, 0),
+                (0, 1),
+                (0, 2));
+        }
+
+        private static void ApplyResponsiveGrid(Grid grid, bool stacked, GridLength[] wideColumnWidths, params (int row, int column)[] widePositions)
+        {
+            if (grid.Children.Count < widePositions.Length)
+            {
+                return;
+            }
+
+            if (stacked)
+            {
+                grid.ColumnDefinitions[0].Width = Star();
+                for (var column = 1; column < grid.ColumnDefinitions.Count; column++)
+                {
+                    grid.ColumnDefinitions[column].Width = new GridLength(0);
+                }
+
+                for (var index = 0; index < widePositions.Length; index++)
+                {
+                    if (grid.Children[index] is FrameworkElement child)
+                    {
+                        Grid.SetColumn(child, 0);
+                        Grid.SetRow(child, index);
+                    }
+                }
+
+                return;
+            }
+
+            for (var column = 0; column < grid.ColumnDefinitions.Count; column++)
+            {
+                grid.ColumnDefinitions[column].Width = column < wideColumnWidths.Length
+                    ? wideColumnWidths[column]
+                    : GridLength.Auto;
+            }
+
+            for (var index = 0; index < widePositions.Length; index++)
+            {
+                if (grid.Children[index] is FrameworkElement child)
+                {
+                    Grid.SetRow(child, widePositions[index].row);
+                    Grid.SetColumn(child, widePositions[index].column);
+                }
+            }
+        }
+
+        private static GridLength Star(double value = 1) => new(value, GridUnitType.Star);
+
         public async Task PickFileAsync()
         {
             try
@@ -244,7 +388,7 @@ namespace MediaWorkflowOrchestrator.Views
                 Header = "Link de Nyaa",
                 PlaceholderText = "https://nyaa.si/?f=0&c=0_0&q=...",
                 TextWrapping = TextWrapping.Wrap,
-                MinWidth = 420,
+                MinWidth = ActualWidth < NarrowLayoutBreakpoint ? 280 : 420,
             };
 
             var modeComboBox = new ComboBox

@@ -198,6 +198,7 @@ namespace MediaWorkflowOrchestrator.Services
 
             var logPaths = CreateLogPaths(workflow.Id, stepKey);
             ProcessExecutionResult result;
+            string? structuredHintsInputPath = null;
             try
             {
                 if (stepKey == WorkflowStepKey.TagAndRename)
@@ -211,6 +212,7 @@ namespace MediaWorkflowOrchestrator.Services
                 else if (stepKey == WorkflowStepKey.PackageRar)
                 {
                     var rarInputPath = await PrepareRarPackagingInputAsync(workflow, cancellationToken, onOutput);
+                    structuredHintsInputPath = rarInputPath;
                     request = BuildRequest(settings, workflow, stepKey, overrideStepInputPath: rarInputPath);
                     result = await processRunnerService.RunAsync(request, onOutput, cancellationToken);
                 }
@@ -247,7 +249,7 @@ namespace MediaWorkflowOrchestrator.Services
 
             result = NormalizeProcessResult(stepKey, result, onOutput);
             step.OutputHints = new Dictionary<string, string>();
-            result = ExtractStructuredOutputHints(stepKey, workflow, step, result);
+            result = ExtractStructuredOutputHints(stepKey, workflow, step, result, structuredHintsInputPath);
 
             await File.WriteAllTextAsync(logPaths.stdout, result.StandardOutput, cancellationToken);
             await File.WriteAllTextAsync(logPaths.stderr, result.StandardError, cancellationToken);
@@ -1631,9 +1633,13 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             var parts = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return parts.Any(part =>
-                part.Equals("capturas", StringComparison.OrdinalIgnoreCase)
-                || part.Equals("RARs", StringComparison.OrdinalIgnoreCase));
+            return parts.Any(IsIgnoredRarPackagingDirectoryName);
+        }
+
+        private static bool IsIgnoredRarPackagingDirectoryName(string? directoryName)
+        {
+            return directoryName?.Equals("capturas", StringComparison.OrdinalIgnoreCase) == true
+                || directoryName?.Equals("RARs", StringComparison.OrdinalIgnoreCase) == true;
         }
 
         private static string? TryResolveSingleRarTargetVideoPath(string directoryPath)
@@ -1748,7 +1754,8 @@ namespace MediaWorkflowOrchestrator.Services
             WorkflowStepKey stepKey,
             WorkflowInstance workflow,
             WorkflowStepState step,
-            ProcessExecutionResult result)
+            ProcessExecutionResult result,
+            string? packageRarInputPath = null)
         {
             if (stepKey != WorkflowStepKey.PackageRar || string.IsNullOrWhiteSpace(result.StandardOutput))
             {
@@ -1794,7 +1801,7 @@ namespace MediaWorkflowOrchestrator.Services
                     step.OutputHints[PackageRarCleanNameHintKey] = string.Join(Environment.NewLine, cleanNames);
                 }
 
-                var shortName = BuildPackageRarShortName(rawRows, weightSummary, workflow);
+                var shortName = BuildPackageRarShortName(rawRows, weightSummary, workflow, packageRarInputPath);
                 if (!string.IsNullOrWhiteSpace(shortName))
                 {
                     step.OutputHints[PackageRarSeriesNameHintKey] = shortName;
@@ -1872,7 +1879,8 @@ namespace MediaWorkflowOrchestrator.Services
         private static string BuildPackageRarShortName(
             IReadOnlyList<PackageRarStructuredRow> rows,
             string? weightSummary,
-            WorkflowInstance workflow)
+            WorkflowInstance workflow,
+            string? packageRarInputPath)
         {
             if (rows.Count == 0)
             {
@@ -1881,7 +1889,7 @@ namespace MediaWorkflowOrchestrator.Services
 
             if (rows.Any(row => GetEpisodeSortKey(row.OriginalName).Season != int.MaxValue))
             {
-                return BuildPackageRarSeriesName(rows, weightSummary, workflow);
+                return BuildPackageRarSeriesName(rows, weightSummary, workflow, packageRarInputPath);
             }
 
             var movieNames = rows
@@ -1898,12 +1906,15 @@ namespace MediaWorkflowOrchestrator.Services
         private static string BuildPackageRarSeriesName(
             IReadOnlyList<PackageRarStructuredRow> rows,
             string? weightSummary,
-            WorkflowInstance workflow)
+            WorkflowInstance workflow,
+            string? packageRarInputPath)
         {
             if (rows.Count == 0)
             {
                 return string.Empty;
             }
+
+            var matchedVideos = ResolvePackageRarMatchedVideos(rows, workflow, packageRarInputPath);
 
             var firstEpisode = rows
                 .Select(row => new { Row = row, SortKey = GetEpisodeSortKey(row.OriginalName) })
@@ -1913,7 +1924,7 @@ namespace MediaWorkflowOrchestrator.Services
                 .Select(item => item.Row)
                 .First();
 
-            var seriesName = ResolvePackageRarSeriesName(firstEpisode, rows, workflow);
+            var seriesName = ResolvePackageRarSeriesName(firstEpisode, rows, workflow, matchedVideos);
             if (string.IsNullOrWhiteSpace(seriesName))
             {
                 return string.Empty;
@@ -1938,13 +1949,15 @@ namespace MediaWorkflowOrchestrator.Services
         private static string ResolvePackageRarSeriesName(
             PackageRarStructuredRow firstEpisode,
             IReadOnlyList<PackageRarStructuredRow> rows,
-            WorkflowInstance workflow)
+            WorkflowInstance workflow,
+            IReadOnlyList<FileInfo> matchedVideos)
         {
             foreach (var candidate in new[]
                      {
+                         BuildSeriesNameFromMatchedDirectories(rows, workflow, matchedVideos),
+                         BuildSeriesNameFromDirectoryWithTraits(workflow.RootPath, rows, workflow, matchedVideos),
                          BuildSeriesNameFromEpisode(firstEpisode.OriginalName),
                          BuildSeriesNameFromCleanNames(rows),
-                         BuildSeriesNameFromDirectory(workflow.RootPath),
                          NormalizeSeriesCandidate(workflow.DisplayName),
                      })
             {
@@ -1955,6 +1968,527 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return string.Empty;
+        }
+
+        private static string BuildSeriesNameFromMatchedDirectories(
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            WorkflowInstance workflow,
+            IReadOnlyList<FileInfo> matchedVideos)
+        {
+            var folderLabel = BuildSeriesFolderLabel(matchedVideos);
+            if (string.IsNullOrWhiteSpace(folderLabel))
+            {
+                return string.Empty;
+            }
+
+            var releaseTraits = BuildPackageRarReleaseTraits(rows, workflow, matchedVideos);
+            return AppendPackageRarReleaseTraits(folderLabel, releaseTraits);
+        }
+
+        private static string BuildSeriesNameFromDirectoryWithTraits(
+            string directoryPath,
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            WorkflowInstance workflow,
+            IReadOnlyList<FileInfo> matchedVideos)
+        {
+            var folderLabel = BuildSeriesNameFromDirectory(directoryPath);
+            if (string.IsNullOrWhiteSpace(folderLabel))
+            {
+                return string.Empty;
+            }
+
+            var releaseTraits = BuildPackageRarReleaseTraits(rows, workflow, matchedVideos);
+            return AppendPackageRarReleaseTraits(folderLabel, releaseTraits);
+        }
+
+        private static IReadOnlyList<FileInfo> ResolvePackageRarMatchedVideos(
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            WorkflowInstance workflow,
+            string? packageRarInputPath)
+        {
+            if (rows.Count == 0)
+            {
+                return Array.Empty<FileInfo>();
+            }
+
+            var pendingNames = rows
+                .Select(row => row.OriginalName)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (pendingNames.Count == 0)
+            {
+                return Array.Empty<FileInfo>();
+            }
+
+            var matchedVideos = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var root in EnumeratePackageRarSearchRoots(workflow, packageRarInputPath))
+            {
+                FindPackageRarMatchesUnderRoot(root, pendingNames, matchedVideos);
+                if (pendingNames.Count == 0)
+                {
+                    break;
+                }
+            }
+
+            return rows
+                .Select(row => matchedVideos.TryGetValue(row.OriginalName, out var file) ? file : null)
+                .Where(file => file is not null)
+                .GroupBy(file => file!.FullName, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First()!)
+                .ToList();
+        }
+
+        private static IEnumerable<string> EnumeratePackageRarSearchRoots(WorkflowInstance workflow, string? packageRarInputPath)
+        {
+            var candidates = new[]
+            {
+                NormalizePackageRarSearchRoot(workflow.PrimaryVideoPath),
+                NormalizePackageRarSearchRoot(Path.GetDirectoryName(workflow.PrimaryVideoPath)),
+                NormalizePackageRarSearchRoot(workflow.RootPath),
+                NormalizePackageRarSearchRoot(packageRarInputPath),
+            };
+
+            return candidates
+                .Where(path => !string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+                .Select(path => path!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(path => IsRarPackagingWrapperPath(path));
+        }
+
+        private static string? NormalizePackageRarSearchRoot(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            if (File.Exists(path))
+            {
+                return Path.GetDirectoryName(Path.GetFullPath(path));
+            }
+
+            return Directory.Exists(path) ? Path.GetFullPath(path) : null;
+        }
+
+        private static void FindPackageRarMatchesUnderRoot(
+            string rootPath,
+            HashSet<string> pendingNames,
+            Dictionary<string, FileInfo> matchedVideos)
+        {
+            var directories = new Queue<string>();
+            directories.Enqueue(rootPath);
+
+            while (directories.Count > 0 && pendingNames.Count > 0)
+            {
+                var currentDirectory = directories.Dequeue();
+                IEnumerable<string> files;
+                try
+                {
+                    files = Directory.EnumerateFiles(currentDirectory, "*.*", SearchOption.TopDirectoryOnly);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var filePath in files)
+                {
+                    if (!IsVideoFile(filePath))
+                    {
+                        continue;
+                    }
+
+                    var fileName = Path.GetFileName(filePath);
+                    if (!pendingNames.Remove(fileName))
+                    {
+                        continue;
+                    }
+
+                    matchedVideos[fileName] = new FileInfo(filePath);
+                    if (pendingNames.Count == 0)
+                    {
+                        return;
+                    }
+                }
+
+                IEnumerable<string> subdirectories;
+                try
+                {
+                    subdirectories = Directory.EnumerateDirectories(currentDirectory, "*", SearchOption.TopDirectoryOnly);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (var subdirectory in subdirectories.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (IsIgnoredRarPackagingDirectoryName(Path.GetFileName(subdirectory)))
+                    {
+                        continue;
+                    }
+
+                    directories.Enqueue(subdirectory);
+                }
+            }
+        }
+
+        private static string BuildSeriesFolderLabel(IReadOnlyList<FileInfo> matchedVideos)
+        {
+            var directories = matchedVideos
+                .Select(file => file.DirectoryName)
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (directories.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var commonDirectory = GetCommonDirectoryPath(directories!);
+            if (string.IsNullOrWhiteSpace(commonDirectory))
+            {
+                return string.Empty;
+            }
+
+            var folderSegments = GetSeriesFolderSegments(commonDirectory);
+            return NormalizeSeriesCandidate(string.Join(" ", folderSegments));
+        }
+
+        private static string[] GetSeriesFolderSegments(string directoryPath)
+        {
+            var normalizedPath = NormalizePackageRarSeriesDirectoryPath(directoryPath);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                return Array.Empty<string>();
+            }
+
+            var leaf = Path.GetFileName(Path.TrimEndingDirectorySeparator(normalizedPath));
+            if (string.IsNullOrWhiteSpace(leaf))
+            {
+                return Array.Empty<string>();
+            }
+
+            if (!IsSeasonFolderName(leaf))
+            {
+                return new[] { leaf };
+            }
+
+            var parent = GetNearestMeaningfulSeriesParentName(normalizedPath);
+            return string.IsNullOrWhiteSpace(parent)
+                ? new[] { leaf }
+                : new[] { parent, leaf };
+        }
+
+        private static string? NormalizePackageRarSeriesDirectoryPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            string normalizedPath;
+            try
+            {
+                normalizedPath = Path.GetFullPath(path);
+            }
+            catch
+            {
+                normalizedPath = path.Trim();
+            }
+
+            if (Path.HasExtension(normalizedPath))
+            {
+                normalizedPath = Path.GetDirectoryName(normalizedPath) ?? normalizedPath;
+            }
+
+            normalizedPath = normalizedPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            var linkTarget = TryResolveDirectoryLinkTarget(normalizedPath);
+            if (!string.IsNullOrWhiteSpace(linkTarget))
+            {
+                return NormalizePackageRarSeriesDirectoryPath(linkTarget);
+            }
+
+            return normalizedPath;
+        }
+
+        private static string? TryResolveDirectoryLinkTarget(string directoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                var directoryInfo = new DirectoryInfo(directoryPath);
+                var linkTarget = directoryInfo.LinkTarget;
+                if (string.IsNullOrWhiteSpace(linkTarget))
+                {
+                    return null;
+                }
+
+                return Path.IsPathRooted(linkTarget)
+                    ? linkTarget
+                    : Path.GetFullPath(Path.Combine(directoryInfo.Parent?.FullName ?? directoryPath, linkTarget));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string? GetNearestMeaningfulSeriesParentName(string directoryPath)
+        {
+            var current = Directory.GetParent(directoryPath);
+            while (current is not null)
+            {
+                if (IsMeaningfulSeriesDirectoryName(current.Name))
+                {
+                    return current.Name;
+                }
+
+                current = current.Parent;
+            }
+
+            return null;
+        }
+
+        private static bool IsMeaningfulSeriesDirectoryName(string? directoryName)
+        {
+            if (string.IsNullOrWhiteSpace(directoryName))
+            {
+                return false;
+            }
+
+            return !IsIgnoredRarPackagingDirectoryName(directoryName)
+                && !directoryName.Equals("rar-input", StringComparison.OrdinalIgnoreCase)
+                && !directoryName.Equals("MediaWorkflowOrchestrator", StringComparison.OrdinalIgnoreCase)
+                && !IsWorkflowLikeDirectoryName(directoryName)
+                && !IsGenericSeriesContainerDirectoryName(directoryName);
+        }
+
+        private static bool IsWorkflowLikeDirectoryName(string directoryName)
+        {
+            return Regex.IsMatch(directoryName, @"^[0-9a-f]{32}$", RegexOptions.IgnoreCase);
+        }
+
+        private static bool IsGenericSeriesContainerDirectoryName(string directoryName)
+        {
+            return directoryName.Equals("Completado", StringComparison.OrdinalIgnoreCase)
+                || directoryName.Equals("Originales", StringComparison.OrdinalIgnoreCase)
+                || directoryName.Equals("Videos", StringComparison.OrdinalIgnoreCase)
+                || directoryName.Equals("Subs", StringComparison.OrdinalIgnoreCase)
+                || directoryName.Equals("Audios", StringComparison.OrdinalIgnoreCase)
+                || directoryName.Equals("Temp", StringComparison.OrdinalIgnoreCase)
+                || directoryName.Equals("Tmp", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsRarPackagingWrapperPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            var normalizedPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var wrapperRoot = Path.GetFullPath(Path.Combine(AppDataPaths.RootDirectory, "rar-input"))
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            return normalizedPath.Equals(wrapperRoot, StringComparison.OrdinalIgnoreCase)
+                || normalizedPath.StartsWith(wrapperRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || normalizedPath.StartsWith(wrapperRoot + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetCommonDirectoryPath(IReadOnlyList<string> directories)
+        {
+            if (directories.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var splitPaths = directories
+                .Select(path => Path.GetFullPath(path)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+                .ToArray();
+            if (splitPaths.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var commonLength = 0;
+            var maxLength = splitPaths.Min(parts => parts.Length);
+            while (commonLength < maxLength)
+            {
+                var currentSegment = splitPaths[0][commonLength];
+                if (splitPaths.Any(parts => !string.Equals(parts[commonLength], currentSegment, StringComparison.OrdinalIgnoreCase)))
+                {
+                    break;
+                }
+
+                commonLength++;
+            }
+
+            return commonLength == 0
+                ? string.Empty
+                : string.Join(Path.DirectorySeparatorChar, splitPaths[0].Take(commonLength));
+        }
+
+        private static string BuildPackageRarReleaseTraits(
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            WorkflowInstance workflow,
+            IReadOnlyList<FileInfo> matchedVideos)
+        {
+            var metadataCandidates = BuildPackageRarMetadataCandidates(rows, workflow, matchedVideos);
+            var codec = DetectPackageRarCodec(metadataCandidates);
+            var source = DetectPackageRarSource(metadataCandidates);
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                source = InferPackageRarSource(rows);
+            }
+
+            return string.Join(" ", new[] { codec, source }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        }
+
+        private static IReadOnlyList<string> BuildPackageRarMetadataCandidates(
+            IReadOnlyList<PackageRarStructuredRow> rows,
+            WorkflowInstance workflow,
+            IReadOnlyList<FileInfo> matchedVideos)
+        {
+            var candidates = new List<string>();
+
+            void AddCandidate(string? value)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    candidates.Add(value);
+                }
+            }
+
+            foreach (var row in rows)
+            {
+                AddCandidate(row.OriginalName);
+                AddCandidate(row.CleanName);
+                AddCandidate(row.ShortName);
+            }
+
+            foreach (var file in matchedVideos)
+            {
+                AddCandidate(file.Name);
+                AddCandidate(file.DirectoryName);
+            }
+
+            AddCandidate(workflow.PrimaryVideoPath);
+            AddCandidate(workflow.DisplayName);
+
+            return candidates
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static string DetectPackageRarCodec(IReadOnlyList<string> metadataCandidates)
+        {
+            var codecPatterns = new (string Pattern, string Label)[]
+            {
+                (@"\bx265\b", "x265"),
+                (@"\bx264\b", "x264"),
+                (@"\bHEVC\b", "HEVC"),
+                (@"\bH[\.\- ]?265\b", "H.265"),
+                (@"\bAVC\b", "AVC"),
+                (@"\bH[\.\- ]?264\b", "H.264"),
+            };
+
+            foreach (var candidate in metadataCandidates)
+            {
+                foreach (var (pattern, label) in codecPatterns)
+                {
+                    if (Regex.IsMatch(candidate, pattern, RegexOptions.IgnoreCase))
+                    {
+                        return label;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string DetectPackageRarSource(IReadOnlyList<string> metadataCandidates)
+        {
+            var sourcePatterns = new (string Pattern, string Label)[]
+            {
+                (@"\b(?:BD|BLURAY)\s*REMUX\b|\bBDREMUX\b", "Bd-remux"),
+                (@"\bWEB[- ]?DL\b|\bWEBDL\b", "Web-dl"),
+                (@"\bWEBRIP\b", "Webrip"),
+                (@"\bWEBCAP\b", "Webcap"),
+                (@"\bBDRIP\b", "Bd-rip"),
+                (@"\bBRRIP\b", "Br-rip"),
+                (@"\bBLURAY\b", "Blu-ray"),
+                (@"\bHDTV\b", "Hdtv"),
+                (@"\bREMUX\b", "Remux"),
+            };
+
+            foreach (var candidate in metadataCandidates)
+            {
+                foreach (var (pattern, label) in sourcePatterns)
+                {
+                    if (Regex.IsMatch(candidate, pattern, RegexOptions.IgnoreCase))
+                    {
+                        return label;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string InferPackageRarSource(IReadOnlyList<PackageRarStructuredRow> rows)
+        {
+            if (rows.Count == 0 || rows.Any(row => GetEpisodeSortKey(row.OriginalName).Season == int.MaxValue))
+            {
+                return string.Empty;
+            }
+
+            var audioProfile = string.Join(" ", rows.Select(row => row.Audio));
+            var subtitleProfile = string.Join(" ", rows.Select(row => row.Subtitles));
+            if (Regex.IsMatch(audioProfile, @"\b(?:DTS(?:-HD)?|TRUE-?HD|MLP|FLAC|PCM|LPCM)\b", RegexOptions.IgnoreCase)
+                || subtitleProfile.Contains("PGS", StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Empty;
+            }
+
+            return Regex.IsMatch(audioProfile, @"\b(?:E-?AC-?3|AAC)\b", RegexOptions.IgnoreCase)
+                ? "Web-dl"
+                : string.Empty;
+        }
+
+        private static string AppendPackageRarReleaseTraits(string baseName, string releaseTraits)
+        {
+            if (string.IsNullOrWhiteSpace(baseName) || string.IsNullOrWhiteSpace(releaseTraits))
+            {
+                return baseName;
+            }
+
+            var result = baseName;
+            foreach (var trait in releaseTraits.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (Regex.IsMatch(result, $@"\b{Regex.Escape(trait)}\b", RegexOptions.IgnoreCase))
+                {
+                    continue;
+                }
+
+                result = $"{result} {trait}";
+            }
+
+            return NormalizeSeriesCandidate(result);
+        }
+
+        private static bool IsSeasonFolderName(string value)
+        {
+            return Regex.IsMatch(value, @"^S\d{1,2}$|^Season\s*\d{1,2}$|^Temporada\s*\d{1,2}$", RegexOptions.IgnoreCase);
         }
 
         private static string BuildSeriesNameFromCleanNames(IReadOnlyList<PackageRarStructuredRow> rows)
@@ -1976,8 +2510,8 @@ namespace MediaWorkflowOrchestrator.Services
                 return string.Empty;
             }
 
-            var directoryName = Path.GetFileName(Path.TrimEndingDirectorySeparator(rootPath));
-            return NormalizeSeriesCandidate(directoryName);
+            var directorySegments = GetSeriesFolderSegments(rootPath);
+            return NormalizeSeriesCandidate(string.Join(" ", directorySegments));
         }
 
         private static string BuildSeriesNameFromEpisode(string originalName)

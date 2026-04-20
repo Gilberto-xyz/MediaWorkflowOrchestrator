@@ -14,12 +14,12 @@ namespace MediaWorkflowOrchestrator
 {
     public sealed partial class MainWindow : Window, IRecipient<WorkflowSelectedMessage>
     {
-        private static readonly SolidColorBrush ActiveQuickRunSelectedBackgroundBrush = CreateBrush(0xCC, 0x0F, 0x76, 0x6E);
-        private static readonly SolidColorBrush ActiveQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0x2A, 0xF5, 0x98);
-        private static readonly SolidColorBrush ActiveQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
+        private const double ShellHeaderStackBreakpoint = 1180;
+        private const double ShellCompactSpacingBreakpoint = 900;
+        private static readonly SolidColorBrush FallbackQuickRunSelectedBackgroundBrush = CreateBrush(0xFF, 0xE5, 0xA3, 0x4F);
+        private static readonly SolidColorBrush FallbackQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0xF5, 0xC3, 0x72);
+        private static readonly SolidColorBrush FallbackQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0x17, 0x11, 0x0A);
         private static readonly Thickness ExpandedQuickActionsPaneMargin = new(6, 3, 6, 6);
-        private static readonly Thickness CompactOverlayQuickActionsPaneMargin = new(12, 3, 12, 6);
-        private static readonly Thickness CompactStripQuickActionsPaneMargin = new(0, 3, 0, 6);
         private DashboardPage? trackedDashboardPage;
         private bool rootShellInitialized;
 
@@ -45,12 +45,14 @@ namespace MediaWorkflowOrchestrator
 
             RootShell.SizeChanged += OnRootShellSizeChanged;
             UpdateQuickActionsPaneState();
+            UpdateShellResponsiveLayout();
             rootShellInitialized = true;
         }
 
         private void OnRootShellSizeChanged(object sender, SizeChangedEventArgs e)
         {
             UpdateQuickActionsPaneState();
+            UpdateShellResponsiveLayout();
         }
 
         private void OnNavigationSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -116,31 +118,51 @@ namespace MediaWorkflowOrchestrator
         private void UpdateQuickActionsPaneState(bool? paneOpenOverride = null)
         {
             var isPaneOpen = paneOpenOverride ?? AppNavigationView.IsPaneOpen;
-            var isExpandedPane = AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded && isPaneOpen;
-            var isCompactOverlayPane = AppNavigationView.DisplayMode != NavigationViewDisplayMode.Expanded && isPaneOpen;
+            var showQuickActions = AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded && isPaneOpen;
 
-            UpdateQuickActionsPaneCompactMode(!isExpandedPane);
-            QuickActionsPaneScrollViewer.Margin = isExpandedPane
-                ? ExpandedQuickActionsPaneMargin
-                : isCompactOverlayPane
-                    ? CompactOverlayQuickActionsPaneMargin
-                    : CompactStripQuickActionsPaneMargin;
-            QuickActionsPaneScrollViewer.HorizontalAlignment =
-                isExpandedPane || isCompactOverlayPane
-                    ? HorizontalAlignment.Stretch
-                    : HorizontalAlignment.Center;
-            QuickActionsPaneScrollViewer.Width = isExpandedPane || isCompactOverlayPane
-                ? double.NaN
-                : AppNavigationView.CompactPaneLength;
-            QuickActionsCompactRoot.HorizontalAlignment = isCompactOverlayPane
-                ? HorizontalAlignment.Left
-                : HorizontalAlignment.Center;
+            QuickActionsPaneScrollViewer.Visibility = showQuickActions ? Visibility.Visible : Visibility.Collapsed;
+            QuickActionsFooterBorder.Visibility = showQuickActions ? Visibility.Visible : Visibility.Collapsed;
+            UpdateQuickActionsPaneCompactMode(false);
+
+            if (!showQuickActions)
+            {
+                return;
+            }
+
+            QuickActionsPaneScrollViewer.Margin = ExpandedQuickActionsPaneMargin;
+            QuickActionsPaneScrollViewer.HorizontalAlignment = HorizontalAlignment.Stretch;
+            QuickActionsPaneScrollViewer.Width = double.NaN;
+            QuickActionsCompactRoot.HorizontalAlignment = HorizontalAlignment.Left;
         }
 
         private void UpdateQuickActionsPaneCompactMode(bool compactMode)
         {
             QuickActionsExpandedRoot.Visibility = compactMode ? Visibility.Collapsed : Visibility.Visible;
             QuickActionsCompactRoot.Visibility = compactMode ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void UpdateShellResponsiveLayout()
+        {
+            var width = RootShell.ActualWidth;
+            var stackHeader = width < ShellHeaderStackBreakpoint;
+            var compactShell = width < ShellCompactSpacingBreakpoint;
+            var tightenSummaryCard = width < 1460;
+
+            ShellHeaderLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+            ShellHeaderLayout.ColumnDefinitions[1].Width = stackHeader ? new GridLength(0) : GridLength.Auto;
+            Grid.SetColumn(ShellHeaderSummaryCard, stackHeader ? 0 : 1);
+            Grid.SetRow(ShellHeaderSummaryCard, stackHeader ? 1 : 0);
+            ShellHeaderSummaryCard.MaxWidth = stackHeader ? double.NaN : tightenSummaryCard ? 256 : 284;
+            ShellHeaderSummaryCard.Padding = compactShell ? new Thickness(14) : new Thickness(16);
+            ShellHeaderSummaryContent.Spacing = compactShell ? 3 : 4;
+            ShellHeaderSummaryText.FontSize = compactShell ? 14 : 15;
+            ShellHeaderSummaryText.LineHeight = compactShell ? 21 : 23;
+            ShellHeaderLayout.ColumnSpacing = stackHeader ? 0 : 18;
+            ShellHeaderLayout.RowSpacing = compactShell ? 10 : 12;
+
+            QuickActionsFooterHintText.Visibility = compactShell ? Visibility.Collapsed : Visibility.Visible;
+            ContentFrame.Margin = compactShell ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 14, 12);
+            AppNavigationView.OpenPaneLength = compactShell ? 288 : 320;
         }
 
         public void Receive(WorkflowSelectedMessage message)
@@ -216,12 +238,16 @@ namespace MediaWorkflowOrchestrator
             var isActive = trackedDashboardPage?.ViewModel.HasExplicitStepSelection == true;
             if (isActive)
             {
-                QuickRunSelectedButton.Background = ActiveQuickRunSelectedBackgroundBrush;
-                QuickRunSelectedButton.BorderBrush = ActiveQuickRunSelectedBorderBrush;
-                QuickRunSelectedButton.Foreground = ActiveQuickRunSelectedForegroundBrush;
-                CompactQuickRunSelectedButton.Background = ActiveQuickRunSelectedBackgroundBrush;
-                CompactQuickRunSelectedButton.BorderBrush = ActiveQuickRunSelectedBorderBrush;
-                CompactQuickRunSelectedButton.Foreground = ActiveQuickRunSelectedForegroundBrush;
+                var background = GetApplicationBrush("AccentPrimaryBrush", FallbackQuickRunSelectedBackgroundBrush);
+                var border = GetApplicationBrush("OverlayStrokeBrush", FallbackQuickRunSelectedBorderBrush);
+                var foreground = GetApplicationBrush("AccentForegroundBrush", FallbackQuickRunSelectedForegroundBrush);
+
+                QuickRunSelectedButton.Background = background;
+                QuickRunSelectedButton.BorderBrush = border;
+                QuickRunSelectedButton.Foreground = foreground;
+                CompactQuickRunSelectedButton.Background = background;
+                CompactQuickRunSelectedButton.BorderBrush = border;
+                CompactQuickRunSelectedButton.Foreground = foreground;
                 return;
             }
 
@@ -390,5 +416,16 @@ namespace MediaWorkflowOrchestrator
 
         private static SolidColorBrush CreateBrush(byte a, byte r, byte g, byte b) =>
             new(Microsoft.UI.ColorHelper.FromArgb(a, r, g, b));
+
+        private static Brush GetApplicationBrush(string resourceKey, Brush fallback)
+        {
+            if (Application.Current?.Resources.TryGetValue(resourceKey, out var resource) == true
+                && resource is Brush brush)
+            {
+                return brush;
+            }
+
+            return fallback;
+        }
     }
 }

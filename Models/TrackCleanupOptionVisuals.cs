@@ -5,16 +5,16 @@ namespace MediaWorkflowOrchestrator.Models
 {
     internal static class TrackCleanupOptionVisuals
     {
-        public static SolidColorBrush DefaultBackground { get; } = CreateBrush(0x22, 0x14, 0x18, 0x22);
-        public static SolidColorBrush DefaultBorder { get; } = CreateBrush(0x70, 0x94, 0xA3, 0xB8);
+        public static SolidColorBrush DefaultBackground { get; } = CreateBrush(0x30, 0x1B, 0x20, 0x2A);
+        public static SolidColorBrush DefaultBorder { get; } = CreateBrush(0x78, 0x90, 0x9D, 0xAE);
         public static SolidColorBrush DefaultTitle { get; } = CreateBrush(0xFF, 0xF8, 0xFA, 0xFF);
         public static SolidColorBrush DefaultCaption { get; } = CreateBrush(0xCC, 0xD5, 0xDF, 0xEE);
 
-        public static SolidColorBrush SelectedBackground { get; } = CreateBrush(0xCC, 0x54, 0x2A, 0x8C);
-        public static SolidColorBrush SelectedBorder { get; } = CreateBrush(0xFF, 0xD2, 0xA8, 0xFF);
+        public static SolidColorBrush SelectedBackground { get; } = CreateBrush(0xC4, 0x59, 0x3A, 0x16);
+        public static SolidColorBrush SelectedBorder { get; } = CreateBrush(0xFF, 0xE5, 0xA3, 0x4F);
 
-        public static SolidColorBrush PrimaryBackground { get; } = CreateBrush(0xCC, 0x1B, 0x6A, 0x43);
-        public static SolidColorBrush PrimaryBorder { get; } = CreateBrush(0xFF, 0x73, 0xF0, 0xA3);
+        public static SolidColorBrush PrimaryBackground { get; } = CreateBrush(0xC8, 0x1D, 0x63, 0x44);
+        public static SolidColorBrush PrimaryBorder { get; } = CreateBrush(0xFF, 0x6B, 0xD2, 0x96);
 
         public static SolidColorBrush Foreground { get; } = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
         public static SolidColorBrush CaptionForeground { get; } = CreateBrush(0xE6, 0xEF, 0xFF, 0xF7);

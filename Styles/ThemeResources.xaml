@@ -2,109 +2,262 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="AccentPrimaryColor">#D97706</Color>
-    <Color x:Key="AccentSecondaryColor">#0F766E</Color>
-    <Color x:Key="SurfaceMutedColor">#13202C</Color>
-    <Color x:Key="BackdropNightColor">#050814</Color>
-    <Color x:Key="BackdropDeepTealColor">#0A1B26</Color>
-    <Color x:Key="BackdropCinemaColor">#1A0F12</Color>
-    <Color x:Key="MatrixGlowColor">#2AF598</Color>
-    <Color x:Key="AnimeSkyColor">#5ED3FF</Color>
-    <Color x:Key="CinemaGlowColor">#FF9F43</Color>
-    <Color x:Key="SuccessColor">#2E8B57</Color>
-    <Color x:Key="WarningColor">#C97A00</Color>
-    <Color x:Key="DangerColor">#B42318</Color>
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Default">
+            <Color x:Key="WindowBackdropStartColor">#FF0B0F16</Color>
+            <Color x:Key="WindowBackdropMidColor">#FF121926</Color>
+            <Color x:Key="WindowBackdropEndColor">#FF1B1713</Color>
+            <Color x:Key="HeroVeilStartColor">#14000000</Color>
+            <Color x:Key="HeroVeilEndColor">#240E1218</Color>
+            <Color x:Key="BackdropGlowColor">#52E5A34F</Color>
+            <Color x:Key="AccentSweepStartColor">#00E5A34F</Color>
+            <Color x:Key="AccentSweepMidColor">#74E5A34F</Color>
+            <Color x:Key="AccentSweepEndColor">#00F5C372</Color>
+            <Color x:Key="AccentPrimaryColor">#FFE5A34F</Color>
+            <Color x:Key="AccentSecondaryColor">#FF8C5A1E</Color>
+            <Color x:Key="AccentForegroundColor">#FF17110A</Color>
+            <Color x:Key="TextPrimaryColor">#FFF5F7FA</Color>
+            <Color x:Key="TextSecondaryColor">#FFAFBAC8</Color>
+            <Color x:Key="TextTertiaryColor">#FF8C98A8</Color>
+            <Color x:Key="CardSurfaceColor">#D9161B23</Color>
+            <Color x:Key="CardSurfaceStrongColor">#F01D2430</Color>
+            <Color x:Key="PaneSurfaceColor">#D4121720</Color>
+            <Color x:Key="InsetSurfaceColor">#DB1B202A</Color>
+            <Color x:Key="SoftAccentSurfaceColor">#302F2112</Color>
+            <Color x:Key="OutlineColor">#1FFFFFFF</Color>
+            <Color x:Key="OutlineStrongColor">#40E5A34F</Color>
+            <Color x:Key="SuccessColor">#FF5EC38A</Color>
+            <Color x:Key="WarningColor">#FFF0C56A</Color>
+            <Color x:Key="DangerColor">#FFF27C82</Color>
+        </ResourceDictionary>
 
-    <SolidColorBrush x:Key="AccentPrimaryBrush" Color="{StaticResource AccentPrimaryColor}" />
-    <SolidColorBrush x:Key="AccentSecondaryBrush" Color="{StaticResource AccentSecondaryColor}" />
-    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="{StaticResource SurfaceMutedColor}" />
-    <SolidColorBrush x:Key="CardGlassBrush" Color="#AA131A24" />
-    <SolidColorBrush x:Key="PaneGlassBrush" Color="#B2141822" />
-    <SolidColorBrush x:Key="OverlayStrokeBrush" Color="#44F8FAFF" />
-    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
-    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
-    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="WindowBackdropStartColor">#FFF8F3EA</Color>
+            <Color x:Key="WindowBackdropMidColor">#FFF3EEE6</Color>
+            <Color x:Key="WindowBackdropEndColor">#FFEAE3D8</Color>
+            <Color x:Key="HeroVeilStartColor">#08FFFFFF</Color>
+            <Color x:Key="HeroVeilEndColor">#12D1C1A8</Color>
+            <Color x:Key="BackdropGlowColor">#3AB86618</Color>
+            <Color x:Key="AccentSweepStartColor">#00B86618</Color>
+            <Color x:Key="AccentSweepMidColor">#66B86618</Color>
+            <Color x:Key="AccentSweepEndColor">#00D8922D</Color>
+            <Color x:Key="AccentPrimaryColor">#FFB86618</Color>
+            <Color x:Key="AccentSecondaryColor">#FF8E4E12</Color>
+            <Color x:Key="AccentForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="TextPrimaryColor">#FF17191E</Color>
+            <Color x:Key="TextSecondaryColor">#FF5E6875</Color>
+            <Color x:Key="TextTertiaryColor">#FF7F8791</Color>
+            <Color x:Key="CardSurfaceColor">#F6FFFCF8</Color>
+            <Color x:Key="CardSurfaceStrongColor">#FFFFFFFF</Color>
+            <Color x:Key="PaneSurfaceColor">#EEFFFFFF</Color>
+            <Color x:Key="InsetSurfaceColor">#FFF6EFE5</Color>
+            <Color x:Key="SoftAccentSurfaceColor">#FFF8EBD8</Color>
+            <Color x:Key="OutlineColor">#180F172A</Color>
+            <Color x:Key="OutlineStrongColor">#26B86618</Color>
+            <Color x:Key="SuccessColor">#FF2E8F57</Color>
+            <Color x:Key="WarningColor">#FFBD7A00</Color>
+            <Color x:Key="DangerColor">#FFD95C63</Color>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Dark">
+            <Color x:Key="WindowBackdropStartColor">#FF0B0F16</Color>
+            <Color x:Key="WindowBackdropMidColor">#FF121926</Color>
+            <Color x:Key="WindowBackdropEndColor">#FF1B1713</Color>
+            <Color x:Key="HeroVeilStartColor">#14000000</Color>
+            <Color x:Key="HeroVeilEndColor">#240E1218</Color>
+            <Color x:Key="BackdropGlowColor">#52E5A34F</Color>
+            <Color x:Key="AccentSweepStartColor">#00E5A34F</Color>
+            <Color x:Key="AccentSweepMidColor">#74E5A34F</Color>
+            <Color x:Key="AccentSweepEndColor">#00F5C372</Color>
+            <Color x:Key="AccentPrimaryColor">#FFE5A34F</Color>
+            <Color x:Key="AccentSecondaryColor">#FF8C5A1E</Color>
+            <Color x:Key="AccentForegroundColor">#FF17110A</Color>
+            <Color x:Key="TextPrimaryColor">#FFF5F7FA</Color>
+            <Color x:Key="TextSecondaryColor">#FFAFBAC8</Color>
+            <Color x:Key="TextTertiaryColor">#FF8C98A8</Color>
+            <Color x:Key="CardSurfaceColor">#D9161B23</Color>
+            <Color x:Key="CardSurfaceStrongColor">#F01D2430</Color>
+            <Color x:Key="PaneSurfaceColor">#D4121720</Color>
+            <Color x:Key="InsetSurfaceColor">#DB1B202A</Color>
+            <Color x:Key="SoftAccentSurfaceColor">#302F2112</Color>
+            <Color x:Key="OutlineColor">#1FFFFFFF</Color>
+            <Color x:Key="OutlineStrongColor">#40E5A34F</Color>
+            <Color x:Key="SuccessColor">#FF5EC38A</Color>
+            <Color x:Key="WarningColor">#FFF0C56A</Color>
+            <Color x:Key="DangerColor">#FFF27C82</Color>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <SolidColorBrush x:Key="AccentPrimaryBrush" Color="{ThemeResource AccentPrimaryColor}" />
+    <SolidColorBrush x:Key="AccentSecondaryBrush" Color="{ThemeResource AccentSecondaryColor}" />
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="{ThemeResource AccentForegroundColor}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{ThemeResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{ThemeResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="{ThemeResource TextTertiaryColor}" />
+    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="{ThemeResource InsetSurfaceColor}" />
+    <SolidColorBrush x:Key="CardGlassBrush" Color="{ThemeResource CardSurfaceColor}" />
+    <SolidColorBrush x:Key="CardGlassStrongBrush" Color="{ThemeResource CardSurfaceStrongColor}" />
+    <SolidColorBrush x:Key="PaneGlassBrush" Color="{ThemeResource PaneSurfaceColor}" />
+    <SolidColorBrush x:Key="InsetSurfaceBrush" Color="{ThemeResource InsetSurfaceColor}" />
+    <SolidColorBrush x:Key="SoftAccentSurfaceBrush" Color="{ThemeResource SoftAccentSurfaceColor}" />
+    <SolidColorBrush x:Key="OverlayStrokeBrush" Color="{ThemeResource OutlineStrongColor}" />
+    <SolidColorBrush x:Key="HairlineBrush" Color="{ThemeResource OutlineColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{ThemeResource SuccessColor}" />
+    <SolidColorBrush x:Key="WarningBrush" Color="{ThemeResource WarningColor}" />
+    <SolidColorBrush x:Key="DangerBrush" Color="{ThemeResource DangerColor}" />
 
     <LinearGradientBrush x:Key="WindowBackdropBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="{StaticResource BackdropNightColor}" Offset="0" />
-        <GradientStop Color="{StaticResource BackdropDeepTealColor}" Offset="0.45" />
-        <GradientStop Color="{StaticResource BackdropCinemaColor}" Offset="1" />
+        <GradientStop Color="{ThemeResource WindowBackdropStartColor}" Offset="0" />
+        <GradientStop Color="{ThemeResource WindowBackdropMidColor}" Offset="0.52" />
+        <GradientStop Color="{ThemeResource WindowBackdropEndColor}" Offset="1" />
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="CinematicVeilBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#2208F7D0" Offset="0" />
+        <GradientStop Color="{ThemeResource HeroVeilStartColor}" Offset="0" />
         <GradientStop Color="#00000000" Offset="0.4" />
-        <GradientStop Color="#1FAA6B11" Offset="1" />
+        <GradientStop Color="{ThemeResource HeroVeilEndColor}" Offset="1" />
     </LinearGradientBrush>
 
-    <RadialGradientBrush x:Key="MatrixGlowBrush" RadiusX="0.7" RadiusY="0.7">
-        <GradientStop Color="#A02AF598" Offset="0" />
-        <GradientStop Color="#402AF598" Offset="0.55" />
+    <RadialGradientBrush x:Key="MatrixGlowBrush" RadiusX="0.76" RadiusY="0.76">
+        <GradientStop Color="{ThemeResource BackdropGlowColor}" Offset="0" />
+        <GradientStop Color="#12E5A34F" Offset="0.58" />
         <GradientStop Color="#00000000" Offset="1" />
     </RadialGradientBrush>
 
-    <RadialGradientBrush x:Key="AnimeGlowBrush" RadiusX="0.7" RadiusY="0.7">
-        <GradientStop Color="#905ED3FF" Offset="0" />
-        <GradientStop Color="#305ED3FF" Offset="0.6" />
+    <RadialGradientBrush x:Key="AnimeGlowBrush" RadiusX="0.72" RadiusY="0.72">
+        <GradientStop Color="#38F0C56A" Offset="0" />
+        <GradientStop Color="#10F0C56A" Offset="0.62" />
         <GradientStop Color="#00000000" Offset="1" />
     </RadialGradientBrush>
 
-    <RadialGradientBrush x:Key="CinemaGlowBrush" RadiusX="0.75" RadiusY="0.75">
-        <GradientStop Color="#90FF9F43" Offset="0" />
-        <GradientStop Color="#25FF9F43" Offset="0.55" />
+    <RadialGradientBrush x:Key="CinemaGlowBrush" RadiusX="0.82" RadiusY="0.82">
+        <GradientStop Color="#2EDB8B39" Offset="0" />
+        <GradientStop Color="#10DB8B39" Offset="0.62" />
         <GradientStop Color="#00000000" Offset="1" />
     </RadialGradientBrush>
 
     <LinearGradientBrush x:Key="SweepAccentBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#0037E3A5" Offset="0" />
-        <GradientStop Color="#66D97706" Offset="0.48" />
-        <GradientStop Color="#002BE9FF" Offset="1" />
+        <GradientStop Color="{ThemeResource AccentSweepStartColor}" Offset="0" />
+        <GradientStop Color="{ThemeResource AccentSweepMidColor}" Offset="0.52" />
+        <GradientStop Color="{ThemeResource AccentSweepEndColor}" Offset="1" />
     </LinearGradientBrush>
 
     <Style x:Key="HeroTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontSize" Value="30" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="CharacterSpacing" Value="-24" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="PageHeadlineTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="23" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="CharacterSpacing" Value="-12" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="MetricValueTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
 
     <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="CharacterSpacing" Value="90" />
+        <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="SectionDescriptionTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="HeaderInsightTextStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionDescriptionTextStyle}">
         <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="CharacterSpacing" Value="-8" />
+        <Setter Property="LineHeight" Value="23" />
+        <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     </Style>
 
     <Style x:Key="MutedCaptionTextStyle" TargetType="TextBlock">
-        <Setter Property="Opacity" Value="0.72" />
-        <Setter Property="FontSize" Value="10" />
-        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Opacity" Value="0.94" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="MonoCaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedCaptionTextStyle}">
+        <Setter Property="FontFamily" Value="Consolas" />
+        <Setter Property="CharacterSpacing" Value="12" />
     </Style>
 
     <Style x:Key="CardContainerStyle" TargetType="Border">
-        <Setter Property="CornerRadius" Value="16" />
-        <Setter Property="Padding" Value="9" />
-        <Setter Property="Margin" Value="0,0,0,8" />
-        <Setter Property="Background" Value="{StaticResource CardGlassBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource OverlayStrokeBrush}" />
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="Margin" Value="0,0,0,18" />
+        <Setter Property="Background" Value="{ThemeResource CardGlassBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="InsetPanelBorderStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Background" Value="{ThemeResource InsetSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="AccentPanelBorderStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="Background" Value="{ThemeResource SoftAccentSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource OverlayStrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="PaneSectionBorderStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="Background" Value="{ThemeResource PaneGlassBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="DenseActionButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="8,5" />
-        <Setter Property="CornerRadius" Value="9" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{ThemeResource CardGlassStrongBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
     </Style>
 
     <Style x:Key="PrimaryCommandButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="8,5" />
-        <Setter Property="CornerRadius" Value="9" />
-        <Setter Property="MinHeight" Value="30" />
-        <Setter Property="Background" Value="{StaticResource AccentPrimaryBrush}" />
-        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{ThemeResource AccentPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource AccentPrimaryBrush}" />
+        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <Style x:Key="QuickToggleButtonStyle" TargetType="ToggleButton">
-        <Setter Property="Padding" Value="8,5" />
-        <Setter Property="CornerRadius" Value="9" />
-        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{ThemeResource CardGlassStrongBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
     </Style>
 </ResourceDictionary>
