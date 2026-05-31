@@ -39,30 +39,10 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
-            process.OutputDataReceived += (_, args) =>
-            {
-                if (args.Data is null)
-                {
-                    return;
-                }
-
-                stdout.AppendLine(args.Data);
-                onOutput?.Invoke(args.Data);
-            };
-            process.ErrorDataReceived += (_, args) =>
-            {
-                if (args.Data is null)
-                {
-                    return;
-                }
-
-                stderr.AppendLine(args.Data);
-                onOutput?.Invoke(args.Data);
-            };
 
             process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            var stdoutTask = PumpProcessStreamAsync(process.StandardOutput, stdout, onOutput, cancellationToken);
+            var stderrTask = PumpProcessStreamAsync(process.StandardError, stderr, onOutput, cancellationToken);
 
             using var registration = cancellationToken.Register(() =>
             {
@@ -79,6 +59,7 @@ namespace MediaWorkflowOrchestrator.Services
             });
 
             await process.WaitForExitAsync(cancellationToken);
+            await Task.WhenAll(stdoutTask, stderrTask);
             var finishedAt = DateTimeOffset.UtcNow;
             var commandDisplay = string.Join(" ", new[] { request.FileName }.Concat(request.Arguments.Select(EscapeArgument)));
 
@@ -92,6 +73,43 @@ namespace MediaWorkflowOrchestrator.Services
                 CommandDisplay = commandDisplay,
                 Success = request.SuccessExitCodes.Contains(process.ExitCode),
             };
+        }
+
+        private static async Task PumpProcessStreamAsync(
+            TextReader reader,
+            StringBuilder capturedOutput,
+            Action<string>? onOutput,
+            CancellationToken cancellationToken)
+        {
+            var lineBuffer = new StringBuilder();
+            var readBuffer = new char[1];
+
+            while (await reader.ReadAsync(readBuffer.AsMemory(0, 1), cancellationToken) > 0)
+            {
+                var value = readBuffer[0];
+                if (value is '\r' or '\n')
+                {
+                    FlushBufferedLine(lineBuffer, capturedOutput, onOutput);
+                    continue;
+                }
+
+                lineBuffer.Append(value);
+            }
+
+            FlushBufferedLine(lineBuffer, capturedOutput, onOutput);
+        }
+
+        private static void FlushBufferedLine(StringBuilder lineBuffer, StringBuilder capturedOutput, Action<string>? onOutput)
+        {
+            if (lineBuffer.Length == 0)
+            {
+                return;
+            }
+
+            var line = lineBuffer.ToString();
+            lineBuffer.Clear();
+            capturedOutput.AppendLine(line);
+            onOutput?.Invoke(line);
         }
 
         private static string EscapeArgument(string value) =>

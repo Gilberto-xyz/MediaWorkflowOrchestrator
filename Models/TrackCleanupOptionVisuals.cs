@@ -18,6 +18,12 @@ namespace MediaWorkflowOrchestrator.Models
 
         public static SolidColorBrush Foreground { get; } = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
         public static SolidColorBrush CaptionForeground { get; } = CreateBrush(0xE6, 0xEF, 0xFF, 0xF7);
+        public static SolidColorBrush SelectorBackground { get; } = CreateBrush(0xFF, 0xB7, 0xA1, 0xFF);
+        public static SolidColorBrush SelectorBorder { get; } = CreateBrush(0xFF, 0xC9, 0xBA, 0xFF);
+        public static SolidColorBrush SelectorGlyph { get; } = CreateBrush(0xFF, 0x3C, 0x1D, 0x68);
+        public static SolidColorBrush SelectorMutedBackground { get; } = CreateBrush(0x22, 0xFF, 0xFF, 0xFF);
+        public static SolidColorBrush SelectorMutedBorder { get; } = CreateBrush(0x70, 0x8A, 0x93, 0xA2);
+        public static SolidColorBrush SelectorMutedGlyph { get; } = CreateBrush(0x00, 0xFF, 0xFF, 0xFF);
 
         public static Brush GetBackground(bool isSelected, bool isPrimary) =>
             isPrimary ? PrimaryBackground : isSelected ? SelectedBackground : DefaultBackground;
@@ -30,6 +36,15 @@ namespace MediaWorkflowOrchestrator.Models
 
         public static Brush GetCaptionBrush(bool isSelected, bool isPrimary) =>
             isPrimary || isSelected ? CaptionForeground : DefaultCaption;
+
+        public static Brush GetSelectorBackground(bool isSelected) =>
+            isSelected ? SelectorBackground : SelectorMutedBackground;
+
+        public static Brush GetSelectorBorder(bool isSelected) =>
+            isSelected ? SelectorBorder : SelectorMutedBorder;
+
+        public static Brush GetSelectorGlyph(bool isSelected) =>
+            isSelected ? SelectorGlyph : SelectorMutedGlyph;
 
         private static SolidColorBrush CreateBrush(byte a, byte r, byte g, byte b) =>
             new(Color.FromArgb(a, r, g, b));

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using MediaWorkflowOrchestrator.Messages;
 using Windows.ApplicationModel.DataTransfer;
@@ -16,6 +17,27 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private static readonly Regex CompactGlobalProgressRegex = new(
             @"^\[Global\]\s+.+$",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex StructuredProgressRegex = new(
+            @"^MWO_PROGRESS\t(?<percent>\d{1,3}(?:[.,]\d+)?)\t(?<label>.*)$",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex GenericPercentRegex = new(
+            @"(?<!\d)(?<percent>100(?:[.,]0+)?|\d{1,2}(?:[.,]\d+)?)\s*%",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex FractionProgressRegex = new(
+            @"(?<!\d)(?<current>\d{1,5})\s*/\s*(?<total>\d{1,5})(?!\d)",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mkv",
+            ".mp4",
+            ".webm",
+            ".avi",
+            ".mov",
+            ".wmv",
+            ".flv",
+            ".mpeg",
+            ".mpg"
+        };
 
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBackgroundBrush = CreateBrush(0x26, 0x14, 0x18, 0x22);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingButtonBorderBrush = CreateBrush(0x66, 0xF8, 0xFA, 0xFF);
@@ -33,12 +55,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private readonly List<string> liveOutputDisplayLines = new();
         private readonly Dictionary<string, int> liveOutputReplaceableIndexes = new(StringComparer.OrdinalIgnoreCase);
         private int cleanupAudioInspectionVersion;
+        private bool syncingQuickSettings;
         private string cleanupAudioSelectionContextMessage = "Selecciona Limpiar tracks para revisar audios y subtítulos antes de filtrar.";
+        private WorkflowProgressSnapshot? currentProgressSnapshot;
 
         public DashboardViewModel()
         {
             Title = "Dashboard";
             StepItems = new ObservableCollection<WorkflowStepState>();
+            VisibleStepItems = new ObservableCollection<WorkflowStepState>();
             CleanupAudioOptions = new ObservableCollection<TrackCleanupAudioOption>();
             CleanupSubtitleOptions = new ObservableCollection<TrackCleanupSubtitleOption>();
             CleanupSpecialCases = new ObservableCollection<TrackCleanupSpecialCaseItem>();
@@ -52,6 +77,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         }
 
         public ObservableCollection<WorkflowStepState> StepItems { get; }
+        public ObservableCollection<WorkflowStepState> VisibleStepItems { get; }
         public ObservableCollection<TrackCleanupAudioOption> CleanupAudioOptions { get; }
         public ObservableCollection<TrackCleanupSubtitleOption> CleanupSubtitleOptions { get; }
         public ObservableCollection<TrackCleanupSpecialCaseItem> CleanupSpecialCases { get; }
@@ -90,6 +116,27 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private double _detailOutputHeight = 420;
 
         [ObservableProperty]
+        private bool _showDetailOutputTerminal = true;
+
+        [ObservableProperty]
+        private bool _showDetailProgress;
+
+        [ObservableProperty]
+        private bool _detailProgressIsIndeterminate = true;
+
+        [ObservableProperty]
+        private double _detailProgressValue;
+
+        [ObservableProperty]
+        private string _detailProgressTitle = "Progreso del paso";
+
+        [ObservableProperty]
+        private string _detailProgressMessage = "Esperando señales del proceso...";
+
+        [ObservableProperty]
+        private string _detailProgressPercentLabel = "En curso";
+
+        [ObservableProperty]
         private bool _detailOutputHeightWasResized;
 
         [ObservableProperty]
@@ -115,6 +162,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
         [ObservableProperty]
         private bool _showCleanTracksQuickOptions;
+
+        [ObservableProperty]
+        private bool _showTagAndRenameQuickOptions;
 
         [ObservableProperty]
         private bool _showPackageRarQuickOptions;
@@ -165,6 +215,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _cleanupDeleteOriginalsEnabled;
 
         [ObservableProperty]
+        private bool _tagAndRenameAttachCoverEnabled = true;
+
+        [ObservableProperty]
         private bool _cleanupAudioSelectionBusy;
 
         [ObservableProperty]
@@ -191,6 +244,23 @@ namespace MediaWorkflowOrchestrator.ViewModels
         [ObservableProperty]
         private string _rarImageFormatQuick = "jpg";
 
+        [ObservableProperty]
+        private string _rarCaptureCountQuick = string.Empty;
+
+        partial void OnRarCaptureCountQuickChanged(string value)
+        {
+            OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
+            if (syncingQuickSettings)
+            {
+                return;
+            }
+
+            if (TryNormalizeRarCaptureCount(value, out _))
+            {
+                _ = PersistQuickSettingsAsync();
+            }
+        }
+
         partial void OnSelectedStepChanged(WorkflowStepState? value)
         {
             foreach (var step in StepItems)
@@ -213,6 +283,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string TranslateSkipSummaryButtonLabel => $"Omitir resumen: {(TranslateSkipSummaryEnabled ? "ON" : "OFF")}";
         public string CleanupCloseQbittorrentButtonLabel => $"Cerrar qBittorrent: {(CleanupCloseQbittorrentEnabled ? "ON" : "OFF")}";
         public string CleanupDeleteOriginalsButtonLabel => $"Eliminar originales: {(CleanupDeleteOriginalsEnabled ? "ON" : "OFF")}";
+        public string TagAndRenameAttachCoverButtonLabel => $"Cover/poster: {(TagAndRenameAttachCoverEnabled ? "ON" : "OFF")}";
         public string CleanupAudioRefreshButtonLabel => CleanupAudioSelectionBusy ? "Cargando tracks..." : "Recargar tracks";
         public string PackageRarRawDataButtonLabel => "Raw Data";
         public string PackageRarWeightSummaryButtonLabel => "Peso completo";
@@ -238,6 +309,11 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "Comprimir" : "Contenedor fast")}";
         public string RarVerboseButtonLabel => $"Verbose: {(RarVerboseEnabled ? "ON" : "OFF")}";
         public string RarImageFormatButtonLabel => $"Formato imagen: {RarImageFormatQuick.ToUpperInvariant()}";
+        public string RarCaptureCountButtonLabel => BuildRarCaptureCountButtonLabel();
+        public string DetailOutputTerminalToggleLabel => ShowDetailOutputTerminal ? "Ocultar terminal" : "Mostrar terminal";
+        public Microsoft.UI.Xaml.Controls.Symbol DetailOutputTerminalToggleSymbol => ShowDetailOutputTerminal
+            ? Microsoft.UI.Xaml.Controls.Symbol.Remove
+            : Microsoft.UI.Xaml.Controls.Symbol.OpenPane;
         public Microsoft.UI.Xaml.Media.Brush PackageRarRawDataButtonBackground => PackageRarRawDataCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarWeightSummaryButtonBackground => PackageRarWeightSummaryCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
         public Microsoft.UI.Xaml.Media.Brush PackageRarCleanNameButtonBackground => PackageRarCleanNameCopied ? CopiedButtonBackgroundBrush : PendingButtonBackgroundBrush;
@@ -278,6 +354,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
         }
 
         [RelayCommand]
+        private void ToggleDetailOutputTerminal()
+        {
+            ShowDetailOutputTerminal = !ShowDetailOutputTerminal;
+            OnPropertyChanged(nameof(DetailOutputTerminalToggleLabel));
+            OnPropertyChanged(nameof(DetailOutputTerminalToggleSymbol));
+        }
+
+        [RelayCommand]
         private async Task RunNextAsync()
         {
             if (currentWorkflow is null)
@@ -297,6 +381,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 return;
             }
 
+            await PersistQuickSettingsAsync();
             await ExecuteAsync(
                 () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, nextStep.StepKey, AppendOutput, CancellationToken),
                 nextStep.StepKey);
@@ -316,6 +401,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 return;
             }
 
+            await PersistQuickSettingsAsync();
             await ExecuteAsync(
                 () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, SelectedStep.StepKey, AppendOutput, CancellationToken, forceExecution: true),
                 SelectedStep.StepKey);
@@ -574,10 +660,34 @@ namespace MediaWorkflowOrchestrator.ViewModels
         }
 
         [RelayCommand]
+        private async Task SaveCleanupMetadataAsync()
+        {
+            if (currentWorkflow is null)
+            {
+                ShowStatus(InfoBarSeverity.Warning, "No hay workflow activo para guardar metadata de tracks.");
+                return;
+            }
+
+            UpdateCleanupAudioSelectionMessage();
+            UpdateCleanupSubtitleSelectionMessage();
+            await PersistCleanupAudioSelectionAsync();
+            ShowStatus(InfoBarSeverity.Success, "Metadata manual de tracks guardada para Limpiar tracks y pasos siguientes.");
+        }
+
+        [RelayCommand]
         private async Task ToggleRarSkipImagesAsync()
         {
             RarSkipImagesEnabled = !RarSkipImagesEnabled;
             OnPropertyChanged(nameof(RarSkipImagesButtonLabel));
+            OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
+            await PersistQuickSettingsAsync();
+        }
+
+        [RelayCommand]
+        private async Task ToggleTagAndRenameAttachCoverAsync()
+        {
+            TagAndRenameAttachCoverEnabled = !TagAndRenameAttachCoverEnabled;
+            OnPropertyChanged(nameof(TagAndRenameAttachCoverButtonLabel));
             await PersistQuickSettingsAsync();
         }
 
@@ -610,6 +720,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             RarImageFormatQuick = string.Equals(RarImageFormatQuick, "png", StringComparison.OrdinalIgnoreCase) ? "jpg" : "png";
             OnPropertyChanged(nameof(RarImageFormatButtonLabel));
+            await PersistQuickSettingsAsync();
+        }
+
+        [RelayCommand]
+        private async Task ClearRarCaptureCountAsync()
+        {
+            RarCaptureCountQuick = string.Empty;
             await PersistQuickSettingsAsync();
         }
 
@@ -1029,7 +1146,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             if (CleanupAudioOptions.Count > 0)
             {
                 var selectedCount = CleanupAudioOptions.Count(option => option.IsSelected);
-                CleanupAudioSelectionMessage = $"Se conservarán {selectedCount} de {CleanupAudioOptions.Count} audios. Clic para conservar/quitar; usa el botón Principal para fijar la pista principal.";
+                CleanupAudioSelectionMessage = $"Se conservarán {selectedCount} de {CleanupAudioOptions.Count} audios. Marca Conservar para incluir una pista; usa Principal para fijar la pista principal o Editar para ajustar metadata.";
                 return;
             }
 
@@ -1047,7 +1164,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             if (CleanupSubtitleOptions.Count > 0)
             {
                 var selectedCount = CleanupSubtitleOptions.Count(option => option.IsSelected);
-                CleanupSubtitleSelectionMessage = $"Se conservarán {selectedCount} de {CleanupSubtitleOptions.Count} subtítulos. Clic para conservar/quitar; usa el botón Principal para fijar la pista principal.";
+                CleanupSubtitleSelectionMessage = $"Se conservarán {selectedCount} de {CleanupSubtitleOptions.Count} subtítulos. Marca Conservar para incluir una pista; usa Principal para fijar la pista principal o Editar para ajustar metadata.";
                 return;
             }
 
@@ -1142,14 +1259,18 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             var sourceSelectionIsFile = workflow.SourceSelectionIsFile == true;
             var candidatePath = sourceSelectionIsFile
-                ? workflow.PrimaryVideoPath
-                : workflow.RootPath;
+                ? FirstExistingPath(workflow.SourcePrimaryVideoPath, workflow.PrimaryVideoPath, workflow.SourceRootPath, workflow.RootPath)
+                : FirstExistingPath(workflow.SourceRootPath, workflow.RootPath, Path.GetDirectoryName(workflow.SourcePrimaryVideoPath), Path.GetDirectoryName(workflow.PrimaryVideoPath));
 
             if (string.IsNullOrWhiteSpace(candidatePath))
             {
-                candidatePath = !string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
-                    ? workflow.PrimaryVideoPath
-                    : workflow.RootPath;
+                candidatePath = !string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath)
+                    ? workflow.SourcePrimaryVideoPath
+                    : !string.IsNullOrWhiteSpace(workflow.SourceRootPath)
+                        ? workflow.SourceRootPath
+                        : !string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                            ? workflow.PrimaryVideoPath
+                            : workflow.RootPath;
             }
 
             sourcePath = candidatePath ?? string.Empty;
@@ -1157,20 +1278,43 @@ namespace MediaWorkflowOrchestrator.ViewModels
             return !string.IsNullOrWhiteSpace(sourcePath);
         }
 
+        private static string FirstExistingPath(params string?[] paths)
+        {
+            foreach (var path in paths)
+            {
+                if (!string.IsNullOrWhiteSpace(path) && (File.Exists(path) || Directory.Exists(path)))
+                {
+                    return path;
+                }
+            }
+
+            return string.Empty;
+        }
+
         private void SyncQuickOptionsFromSettings()
         {
-            DownloadDryRunEnabled = quickSettings.DownloaderDryRun;
-            DownloadForceLatestEnabled = quickSettings.DownloaderForceLatest;
-            TranslateFastModeEnabled = quickSettings.SubtitleFastMode;
-            TranslateSkipSummaryEnabled = quickSettings.SubtitleSkipSummary;
-            CleanupCloseQbittorrentEnabled = quickSettings.TrackCleanupCloseQbittorrent;
-            CleanupDeleteOriginalsEnabled = quickSettings.TrackCleanupDeleteOriginals;
-            RarSkipImagesEnabled = quickSettings.RarSkipImages;
-            RarNoCompressEnabled = quickSettings.RarNoCompress;
-            RarUseCompressionNormalEnabled = quickSettings.RarUseCompressionNormal;
-            RarVerboseEnabled = quickSettings.RarVerbose;
-            RarImageFormatQuick = string.Equals(quickSettings.RarImageFormat, "png", StringComparison.OrdinalIgnoreCase) ? "png" : "jpg";
-            NotifyQuickOptionLabelsChanged();
+            syncingQuickSettings = true;
+            try
+            {
+                DownloadDryRunEnabled = quickSettings.DownloaderDryRun;
+                DownloadForceLatestEnabled = quickSettings.DownloaderForceLatest;
+                TranslateFastModeEnabled = quickSettings.SubtitleFastMode;
+                TranslateSkipSummaryEnabled = quickSettings.SubtitleSkipSummary;
+                CleanupCloseQbittorrentEnabled = quickSettings.TrackCleanupCloseQbittorrent;
+                CleanupDeleteOriginalsEnabled = quickSettings.TrackCleanupDeleteOriginals;
+                TagAndRenameAttachCoverEnabled = quickSettings.TagAndRenameAttachCover;
+                RarSkipImagesEnabled = quickSettings.RarSkipImages;
+                RarNoCompressEnabled = quickSettings.RarNoCompress;
+                RarUseCompressionNormalEnabled = quickSettings.RarUseCompressionNormal;
+                RarVerboseEnabled = quickSettings.RarVerbose;
+                RarImageFormatQuick = string.Equals(quickSettings.RarImageFormat, "png", StringComparison.OrdinalIgnoreCase) ? "png" : "jpg";
+                RarCaptureCountQuick = quickSettings.RarCaptureCount;
+                NotifyQuickOptionLabelsChanged();
+            }
+            finally
+            {
+                syncingQuickSettings = false;
+            }
         }
 
         private void ApplyQuickOptionsToSettings()
@@ -1181,11 +1325,16 @@ namespace MediaWorkflowOrchestrator.ViewModels
             quickSettings.SubtitleSkipSummary = TranslateSkipSummaryEnabled;
             quickSettings.TrackCleanupCloseQbittorrent = CleanupCloseQbittorrentEnabled;
             quickSettings.TrackCleanupDeleteOriginals = CleanupDeleteOriginalsEnabled;
+            quickSettings.TagAndRenameAttachCover = TagAndRenameAttachCoverEnabled;
             quickSettings.RarSkipImages = RarSkipImagesEnabled;
             quickSettings.RarNoCompress = RarNoCompressEnabled;
             quickSettings.RarUseCompressionNormal = RarUseCompressionNormalEnabled;
             quickSettings.RarVerbose = RarVerboseEnabled;
             quickSettings.RarImageFormat = string.Equals(RarImageFormatQuick, "png", StringComparison.OrdinalIgnoreCase) ? "png" : "jpg";
+            if (TryNormalizeRarCaptureCount(RarCaptureCountQuick, out var normalizedCaptureCount))
+            {
+                quickSettings.RarCaptureCount = normalizedCaptureCount;
+            }
         }
 
         private async Task PersistQuickSettingsAsync()
@@ -1212,11 +1361,133 @@ namespace MediaWorkflowOrchestrator.ViewModels
             OnPropertyChanged(nameof(TranslateSkipSummaryButtonLabel));
             OnPropertyChanged(nameof(CleanupCloseQbittorrentButtonLabel));
             OnPropertyChanged(nameof(CleanupDeleteOriginalsButtonLabel));
+            OnPropertyChanged(nameof(TagAndRenameAttachCoverButtonLabel));
             OnPropertyChanged(nameof(RarSkipImagesButtonLabel));
             OnPropertyChanged(nameof(RarNoCompressButtonLabel));
             OnPropertyChanged(nameof(RarCompressionModeButtonLabel));
             OnPropertyChanged(nameof(RarVerboseButtonLabel));
             OnPropertyChanged(nameof(RarImageFormatButtonLabel));
+            OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
+        }
+
+        private string BuildRarCaptureCountButtonLabel()
+        {
+            if (RarSkipImagesEnabled)
+            {
+                return "Capturas: omitidas";
+            }
+
+            if (!TryNormalizeRarCaptureCount(RarCaptureCountQuick, out var normalizedCaptureCount))
+            {
+                return "Capturas: valor inválido";
+            }
+
+            var singleVideoContext = IsPackageRarSingleVideoContext();
+            if (string.IsNullOrWhiteSpace(normalizedCaptureCount))
+            {
+                return currentWorkflow is null
+                    ? "Capturas: auto 300/100"
+                    : singleVideoContext
+                        ? "Capturas: auto 300 principal"
+                        : "Capturas: auto 300/100";
+            }
+
+            return singleVideoContext
+                ? $"Máx imágenes: {normalizedCaptureCount} principal"
+                : $"Máx imágenes: {normalizedCaptureCount} c/u";
+        }
+
+        private bool IsPackageRarSingleVideoContext()
+        {
+            if (currentWorkflow is null)
+            {
+                return false;
+            }
+
+            if (currentWorkflow.SourceSelectionIsFile == true)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentWorkflow.RootPath)
+                && File.Exists(currentWorkflow.RootPath)
+                && IsVideoFile(currentWorkflow.RootPath))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentWorkflow.RootPath)
+                && Directory.Exists(currentWorkflow.RootPath))
+            {
+                return CountRarCandidateVideos(currentWorkflow.RootPath, 2) == 1;
+            }
+
+            return !string.IsNullOrWhiteSpace(currentWorkflow.PrimaryVideoPath)
+                && File.Exists(currentWorkflow.PrimaryVideoPath)
+                && IsVideoFile(currentWorkflow.PrimaryVideoPath);
+        }
+
+        private static int CountRarCandidateVideos(string rootPath, int stopAt)
+        {
+            try
+            {
+                var count = 0;
+                foreach (var path in Directory.EnumerateFiles(rootPath, "*.*", SearchOption.AllDirectories))
+                {
+                    if (IsVideoFile(path) && !IsIgnoredRarPackagingPath(path))
+                    {
+                        count++;
+                        if (count >= stopAt)
+                        {
+                            return count;
+                        }
+                    }
+                }
+
+                return count;
+            }
+            catch (IOException)
+            {
+                return 0;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return 0;
+            }
+        }
+
+        private static bool IsVideoFile(string path) => VideoExtensions.Contains(Path.GetExtension(path));
+
+        private static bool IsIgnoredRarPackagingPath(string path)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return false;
+            }
+
+            var parts = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return parts.Any(part =>
+                part.Equals("capturas", StringComparison.OrdinalIgnoreCase)
+                || part.Equals("RARs", StringComparison.OrdinalIgnoreCase)
+                || part.Equals("rar-input", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static bool TryNormalizeRarCaptureCount(string value, out string normalized)
+        {
+            normalized = string.Empty;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return true;
+            }
+
+            if (int.TryParse(value.Trim(), out var captureCount) && captureCount > 0)
+            {
+                normalized = captureCount.ToString();
+                return true;
+            }
+
+            return false;
         }
 
         private async Task ChangeTranslationDecisionAsync(bool translateRequired)
@@ -1267,11 +1538,18 @@ namespace MediaWorkflowOrchestrator.ViewModels
             activeOutputStepKey = outputStepKey;
             utilityOutputActive = false;
             ClearLiveOutputBuffer();
+            ResetDetailProgress(BuildProgressTitle(outputStepKey), "Iniciando proceso...");
+            ShowDetailProgress = true;
             DetailOutput = "Esperando salida del proceso...";
 
             try
             {
                 var record = await operation();
+                if (record is not null)
+                {
+                    CompleteDetailProgress(record.Success, record.Summary);
+                }
+
                 if (currentWorkflow is not null)
                 {
                     currentWorkflow = await workflowExecutionService.LoadWorkflowAsync(currentWorkflow.Id) ?? currentWorkflow;
@@ -1287,12 +1565,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
             catch (OperationCanceledException)
             {
+                CompleteDetailProgress(false, "Ejecución cancelada.");
                 StatusSeverity = InfoBarSeverity.Warning;
                 StatusMessage = "La ejecución fue cancelada.";
                 IsStatusInfoOpen = true;
             }
             catch (Exception ex)
             {
+                CompleteDetailProgress(false, ex.Message);
                 DiagnosticsTrace.Write($"ExecuteAsync crashed: {ex}");
                 StatusSeverity = InfoBarSeverity.Error;
                 StatusMessage = $"La ejecución falló: {ex.Message}";
@@ -1357,6 +1637,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 StepItems.Add(step);
             }
+            RefreshVisibleStepItems();
 
             SelectedStep = preferredSelectedStep is not null
                 ? StepItems.FirstOrDefault(step => step.StepKey == preferredSelectedStep)
@@ -1388,6 +1669,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
+            OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
         }
 
         private void ClearLiveOutputBuffer()
@@ -1456,13 +1738,19 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
         private void AppendOutput(string line)
         {
-            if (IsStructuredOutputMetadata(line))
+            if (IsStructuredOutputMetadata(line) && !IsStructuredProgressMetadata(line))
             {
                 return;
             }
 
             void UpdateOutput()
             {
+                UpdateDetailProgressFromOutput(line);
+                if (IsStructuredProgressMetadata(line))
+                {
+                    return;
+                }
+
                 AppendLineToLiveOutput(line);
                 if (activeOutputStepKey is not null && SelectedStep?.StepKey == activeOutputStepKey)
                 {
@@ -1504,6 +1792,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             if (SelectedStep is null)
             {
+                ShowDetailProgress = false;
                 DetailOutput = "Selecciona un paso para ver detalle y salida.";
                 return;
             }
@@ -1512,12 +1801,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 && SelectedStep.StepKey == activeOutputStepKey
                 && !string.IsNullOrWhiteSpace(LiveOutput))
             {
+                ShowDetailProgress = true;
                 DetailOutput = LiveOutput;
                 return;
             }
 
             if (utilityOutputActive && !string.IsNullOrWhiteSpace(LiveOutput))
             {
+                ShowDetailProgress = true;
                 DetailOutput = LiveOutput;
                 return;
             }
@@ -1542,6 +1833,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 }
             }
 
+            ApplyProgressForSelectedStep(SelectedStep, parts);
             DetailOutput = parts.Count > 0
                 ? string.Join($"{Environment.NewLine}{Environment.NewLine}", parts)
                 : "No hay salida disponible para este paso todavía.";
@@ -1554,6 +1846,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
             utilityOutputActive = true;
             SelectedStepTitle = title;
             SelectedStepDescription = description;
+            ResetDetailProgress(title, "Iniciando utilidad...");
+            ShowDetailProgress = true;
             DetailOutput = "Esperando salida del script...";
         }
 
@@ -1562,6 +1856,8 @@ namespace MediaWorkflowOrchestrator.ViewModels
             currentWorkflow = null;
             activeOutputStepKey = null;
             ClearLiveOutputBuffer();
+            ResetDetailProgress("Progreso del paso", "Esperando señales del proceso...");
+            ShowDetailProgress = false;
             HasExplicitStepSelection = false;
             DetailOutputHeightWasResized = false;
             DetailOutputHeight = 420;
@@ -1570,6 +1866,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 StepItems.Add(step);
             }
+            RefreshVisibleStepItems();
             SelectedStep = StepItems.FirstOrDefault();
             DisplayName = "Selecciona un archivo o carpeta para comenzar.";
             RootPath = "Sin workflow activo";
@@ -1667,9 +1964,10 @@ namespace MediaWorkflowOrchestrator.ViewModels
             ShowDownloadQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.Download;
             ShowTranslateQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.TranslateSubs;
             ShowCleanTracksQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.CleanTracks;
+            ShowTagAndRenameQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.TagAndRename;
             ShowPackageRarQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.PackageRar;
             ShowQuickActionOptions = SelectedStep is not null
-                && (ShowDownloadQuickOptions || ShowTranslateQuickOptions || ShowCleanTracksQuickOptions || ShowPackageRarQuickOptions);
+                && (ShowDownloadQuickOptions || ShowTranslateQuickOptions || ShowCleanTracksQuickOptions || ShowTagAndRenameQuickOptions || ShowPackageRarQuickOptions);
             ShowSkipAheadActions = currentWorkflow is not null
                 && SelectedStep is not null
                 && SelectedStep.StepKey != WorkflowStepKey.Download
@@ -1686,6 +1984,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowStepKey.Download => "Ajusta cómo se lanzan las descargas de Nyaa desde el panel lateral.",
                 WorkflowStepKey.TranslateSubs => "Controla los flags rápidos del traductor antes de ejecutarlo.",
                 WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso y marca exactamente qué audios y subtítulos deben sobrevivir al filtrado.",
+                WorkflowStepKey.TagAndRename => "Controla si el MKV recibe un poster embebido; la búsqueda automática usa IMDb y funciona con películas o series.",
                 WorkflowStepKey.PackageRar => "Puedes saltar pasos previos y empaquetar de inmediato si tu release ya está lista.",
                 _ => "Este paso no tiene flags rápidos expuestos en el dashboard."
             };
@@ -1769,8 +2068,231 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private static bool IsStructuredOutputMetadata(string line)
         {
             return line.StartsWith("MWO_RAW_DATA\t", StringComparison.Ordinal)
-                || line.StartsWith("MWO_WEIGHT_SUMMARY\t", StringComparison.Ordinal);
+                || line.StartsWith("MWO_WEIGHT_SUMMARY\t", StringComparison.Ordinal)
+                || IsStructuredProgressMetadata(line);
         }
+
+        private static bool IsStructuredProgressMetadata(string line) =>
+            line.StartsWith("MWO_PROGRESS\t", StringComparison.Ordinal);
+
+        private void ResetDetailProgress(string title, string message)
+        {
+            currentProgressSnapshot = null;
+            DetailProgressTitle = title;
+            DetailProgressMessage = message;
+            DetailProgressPercentLabel = "En curso";
+            DetailProgressValue = 0;
+            DetailProgressIsIndeterminate = true;
+        }
+
+        private void UpdateDetailProgressFromOutput(string line)
+        {
+            if (!TryParseProgressSnapshot(line, activeOutputStepKey, out var snapshot))
+            {
+                if (ShowDetailProgress && DetailProgressIsIndeterminate)
+                {
+                    DetailProgressMessage = ShortenProgressMessage(line);
+                }
+
+                return;
+            }
+
+            currentProgressSnapshot = snapshot;
+            ShowDetailProgress = true;
+            DetailProgressIsIndeterminate = snapshot.Percent is null;
+            DetailProgressValue = snapshot.Percent ?? 0;
+            DetailProgressPercentLabel = snapshot.Percent is null
+                ? "En curso"
+                : $"{Math.Round(snapshot.Percent.Value)}%";
+            DetailProgressMessage = snapshot.Message;
+            if (!string.IsNullOrWhiteSpace(snapshot.Title))
+            {
+                DetailProgressTitle = snapshot.Title;
+            }
+        }
+
+        private void CompleteDetailProgress(bool success, string message)
+        {
+            if (!ShowDetailProgress)
+            {
+                return;
+            }
+
+            DetailProgressIsIndeterminate = false;
+            DetailProgressValue = success ? 100 : Math.Max(DetailProgressValue, currentProgressSnapshot?.Percent ?? 0);
+            DetailProgressPercentLabel = success ? "100%" : "Detenido";
+            DetailProgressMessage = string.IsNullOrWhiteSpace(message)
+                ? success ? "Proceso completado." : "El proceso no terminó correctamente."
+                : message;
+        }
+
+        private void ApplyProgressForSelectedStep(WorkflowStepState step, IReadOnlyList<string> outputParts)
+        {
+            var title = BuildProgressTitle(step.StepKey);
+            var combinedOutput = string.Join(Environment.NewLine, outputParts);
+            var snapshot = ParseLastProgressSnapshot(combinedOutput, step.StepKey);
+
+            if (step.Status == WorkflowStepStatus.Running)
+            {
+                DetailProgressTitle = title;
+                ShowDetailProgress = true;
+                if (snapshot is null)
+                {
+                    DetailProgressIsIndeterminate = true;
+                    DetailProgressValue = 0;
+                    DetailProgressPercentLabel = "En curso";
+                    DetailProgressMessage = "Proceso en ejecución...";
+                    return;
+                }
+
+                ApplyProgressSnapshot(snapshot.Value);
+                return;
+            }
+
+            if (step.Status == WorkflowStepStatus.Succeeded)
+            {
+                DetailProgressTitle = title;
+                ShowDetailProgress = true;
+                DetailProgressIsIndeterminate = false;
+                DetailProgressValue = 100;
+                DetailProgressPercentLabel = "100%";
+                DetailProgressMessage = step.StatusReason;
+                return;
+            }
+
+            if (step.Status == WorkflowStepStatus.Failed && snapshot is not null)
+            {
+                ApplyProgressSnapshot(snapshot.Value);
+                DetailProgressTitle = title;
+                DetailProgressPercentLabel = "Detenido";
+                return;
+            }
+
+            ShowDetailProgress = false;
+        }
+
+        private void ApplyProgressSnapshot(WorkflowProgressSnapshot snapshot)
+        {
+            currentProgressSnapshot = snapshot;
+            DetailProgressTitle = string.IsNullOrWhiteSpace(snapshot.Title) ? DetailProgressTitle : snapshot.Title;
+            DetailProgressMessage = snapshot.Message;
+            DetailProgressIsIndeterminate = snapshot.Percent is null;
+            DetailProgressValue = snapshot.Percent ?? 0;
+            DetailProgressPercentLabel = snapshot.Percent is null
+                ? "En curso"
+                : $"{Math.Round(snapshot.Percent.Value)}%";
+            ShowDetailProgress = true;
+        }
+
+        private WorkflowProgressSnapshot? ParseLastProgressSnapshot(string output, WorkflowStepKey? stepKey)
+        {
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return null;
+            }
+
+            WorkflowProgressSnapshot? snapshot = null;
+            foreach (var line in output.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                if (TryParseProgressSnapshot(line, stepKey, out var parsed))
+                {
+                    snapshot = parsed;
+                }
+            }
+
+            return snapshot;
+        }
+
+        private static bool TryParseProgressSnapshot(string rawLine, WorkflowStepKey? stepKey, out WorkflowProgressSnapshot snapshot)
+        {
+            snapshot = default;
+            var line = rawLine.Replace("\r", string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return false;
+            }
+
+            var structuredMatch = StructuredProgressRegex.Match(line);
+            if (structuredMatch.Success && TryParsePercent(structuredMatch.Groups["percent"].Value, out var structuredPercent))
+            {
+                snapshot = new WorkflowProgressSnapshot(
+                    BuildProgressTitle(stepKey),
+                    structuredPercent,
+                    ShortenProgressMessage(structuredMatch.Groups["label"].Value));
+                return true;
+            }
+
+            var muxMatch = CompactMuxProgressRegex.Match(line);
+            if (muxMatch.Success
+                && int.TryParse(muxMatch.Groups["current"].Value, out var current)
+                && int.TryParse(muxMatch.Groups["total"].Value, out var total)
+                && TryParsePercent(muxMatch.Groups["percent"].Value, out var muxPercent)
+                && total > 0)
+            {
+                var aggregate = Math.Clamp((((current - 1) + (muxPercent / 100)) / total) * 100, 0, 100);
+                snapshot = new WorkflowProgressSnapshot(
+                    BuildProgressTitle(stepKey),
+                    aggregate,
+                    $"Mux {current}/{total}: {muxMatch.Groups["name"].Value.Trim()}");
+                return true;
+            }
+
+            var percentMatch = GenericPercentRegex.Match(line);
+            if (percentMatch.Success && TryParsePercent(percentMatch.Groups["percent"].Value, out var percent))
+            {
+                snapshot = new WorkflowProgressSnapshot(BuildProgressTitle(stepKey), percent, ShortenProgressMessage(line));
+                return true;
+            }
+
+            var fractionMatch = FractionProgressRegex.Match(line);
+            if (fractionMatch.Success
+                && int.TryParse(fractionMatch.Groups["current"].Value, out var fractionCurrent)
+                && int.TryParse(fractionMatch.Groups["total"].Value, out var fractionTotal)
+                && fractionTotal > 0
+                && fractionCurrent <= fractionTotal)
+            {
+                snapshot = new WorkflowProgressSnapshot(
+                    BuildProgressTitle(stepKey),
+                    Math.Clamp((fractionCurrent / (double)fractionTotal) * 100, 0, 100),
+                    ShortenProgressMessage(line));
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryParsePercent(string value, out double percent)
+        {
+            return double.TryParse(
+                value.Replace(',', '.'),
+                NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture,
+                out percent)
+                && percent >= 0
+                && percent <= 100;
+        }
+
+        private static string BuildProgressTitle(WorkflowStepKey? stepKey)
+        {
+            return stepKey switch
+            {
+                WorkflowStepKey.Download => "Progreso de descarga",
+                WorkflowStepKey.InspectSubs => "Progreso de inspección",
+                WorkflowStepKey.TranslateSubs => "Progreso de traducción",
+                WorkflowStepKey.CleanTracks => "Progreso de limpieza",
+                WorkflowStepKey.TagAndRename => "Progreso de etiquetas",
+                WorkflowStepKey.PackageRar => "Progreso de empaquetado",
+                _ => "Progreso del proceso",
+            };
+        }
+
+        private static string ShortenProgressMessage(string value)
+        {
+            var message = Regex.Replace(value.Trim(), @"\s+", " ");
+            return message.Length <= 180 ? message : $"{message[..177]}...";
+        }
+
+        private readonly record struct WorkflowProgressSnapshot(string Title, double? Percent, string Message);
 
         private static IReadOnlyList<WorkflowStepState> CreateNeutralStepTemplate() => new List<WorkflowStepState>
         {
@@ -1817,6 +2339,15 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 StatusReason = "Genera el comprimido final con contraseña e información adjunta.",
             }
         };
+
+        private void RefreshVisibleStepItems()
+        {
+            VisibleStepItems.Clear();
+            foreach (var step in StepItems.Where(step => step.StepKey != WorkflowStepKey.Download))
+            {
+                VisibleStepItems.Add(step);
+            }
+        }
 
         private static IReadOnlyList<string> BuildDownloadArgs(AppSettings settings)
         {

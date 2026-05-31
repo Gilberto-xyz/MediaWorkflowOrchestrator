@@ -8,281 +8,340 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:MediaWorkflowOrchestrator.Models"
     mc:Ignorable="d">
-    <Grid x:Name="DashboardLayoutRoot" Padding="24,18,24,28">
+    <Grid x:Name="DashboardLayoutRoot" Padding="28,18,28,28">
         <ScrollViewer
-            HorizontalScrollMode="Disabled"
             HorizontalScrollBarVisibility="Disabled"
+            HorizontalScrollMode="Disabled"
             VerticalScrollBarVisibility="Visible"
             VerticalScrollMode="Auto">
-            <StackPanel Spacing="18">
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Operación actual" />
-                    <TextBlock
-                        Style="{StaticResource SectionDescriptionTextStyle}"
-                        Text="El dashboard concentra el workflow activo, las decisiones rápidas y la salida del paso seleccionado en una sola vista." />
-                </StackPanel>
+            <Grid x:Name="DashboardContentGrid" ColumnSpacing="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                <Border Style="{StaticResource CardContainerStyle}">
-                    <StackPanel Spacing="16">
-                        <StackPanel Spacing="6">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Workflow actual" />
-                            <TextBlock
-                                Style="{StaticResource PageHeadlineTextStyle}"
-                                Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}"
-                                TextWrapping="WrapWholeWords" />
-                        </StackPanel>
+                <StackPanel x:Name="DashboardMainColumn" Spacing="18">
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
 
-                        <Border Style="{StaticResource InsetPanelBorderStyle}">
-                            <StackPanel Spacing="6">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Ruta base" />
-                                <TextBlock
-                                    Style="{StaticResource MonoCaptionTextStyle}"
-                                    Text="{x:Bind ViewModel.RootPath, Mode=OneWay}"
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
-
-                        <Grid x:Name="WorkflowStatusGrid" ColumnSpacing="12" RowSpacing="12">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Style="{StaticResource InsetPanelBorderStyle}">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Siguiente paso" />
-                                    <TextBlock
-                                        Style="{StaticResource MetricValueTextStyle}"
-                                        Text="{x:Bind ViewModel.NextStepLabel, Mode=OneWay}"
-                                        TextWrapping="WrapWholeWords" />
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="1" Style="{StaticResource InsetPanelBorderStyle}">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Estado global" />
-                                    <TextBlock
-                                        Style="{StaticResource MetricValueTextStyle}"
-                                        Text="{x:Bind ViewModel.GlobalStatus, Mode=OneWay}"
-                                        TextWrapping="WrapWholeWords" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <InfoBar
-                            IsClosable="False"
-                            IsOpen="{x:Bind ViewModel.IsStatusInfoOpen, Mode=OneWay}"
-                            Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                            Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}" />
-
-                        <StackPanel x:Name="TranslationDecisionPanel" Spacing="10">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Decisión pendiente" />
-                            <Grid x:Name="TranslationDecisionGrid" ColumnSpacing="8" RowSpacing="8">
+                    <Border Style="{StaticResource CardContainerStyle}">
+                        <StackPanel Spacing="18">
+                            <Grid x:Name="WorkflowStatusGrid" ColumnSpacing="38" RowSpacing="14">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Button
-                                    Grid.Column="0"
-                                    Command="{x:Bind ViewModel.MarkTranslateRequiredCommand}"
-                                    Content="Traducir subs"
-                                    Style="{StaticResource PrimaryCommandButtonStyle}" />
-                                <Button
-                                    Grid.Column="1"
-                                    Command="{x:Bind ViewModel.MarkTranslateSkippedCommand}"
-                                    Content="Omitir traducción"
-                                    Style="{StaticResource DenseActionButtonStyle}" />
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
 
-                <Border Style="{StaticResource CardContainerStyle}">
-                    <StackPanel Spacing="16">
-                        <StackPanel Spacing="4">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="{x:Bind ViewModel.QuickOptionsTitle, Mode=OneWay}" />
-                            <TextBlock
-                                Style="{StaticResource SectionDescriptionTextStyle}"
-                                Text="{x:Bind ViewModel.QuickOptionsDescription, Mode=OneWay}"
-                                TextWrapping="WrapWholeWords" />
-                        </StackPanel>
-
-                        <Border x:Name="SkipAheadPanel" Style="{StaticResource AccentPanelBorderStyle}">
-                            <StackPanel Spacing="10">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Preparación directa" />
-                                <Grid x:Name="SkipAheadActionGrid" ColumnSpacing="8" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
+                                <Grid Grid.Column="0" ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button
-                                        Grid.Column="0"
-                                        Command="{x:Bind ViewModel.PrepareSelectedStepCommand}"
-                                        Content="Saltar previos hasta este paso"
-                                        Style="{StaticResource DenseActionButtonStyle}" />
-                                    <Button
-                                        Grid.Column="1"
-                                        Command="{x:Bind ViewModel.PrepareAndRunSelectedStepCommand}"
-                                        Content="Saltar previos y ejecutar ahora"
-                                        Style="{StaticResource PrimaryCommandButtonStyle}" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border x:Name="DownloadQuickOptionsPanel" Style="{StaticResource InsetPanelBorderStyle}">
-                            <StackPanel Spacing="10">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Descarga" />
-                                <Grid x:Name="DownloadQuickOptionsGrid" ColumnSpacing="8" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <ToggleButton
-                                        Grid.Column="0"
-                                        Command="{x:Bind ViewModel.ToggleDownloadDryRunCommand}"
-                                        Content="{x:Bind ViewModel.DownloadDryRunButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.DownloadDryRunEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                    <ToggleButton
-                                        Grid.Column="1"
-                                        Command="{x:Bind ViewModel.ToggleDownloadForceLatestCommand}"
-                                        Content="{x:Bind ViewModel.DownloadForceLatestButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.DownloadForceLatestEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border x:Name="TranslateQuickOptionsPanel" Style="{StaticResource InsetPanelBorderStyle}">
-                            <StackPanel Spacing="10">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Traducción" />
-                                <Grid x:Name="TranslateQuickOptionsGrid" ColumnSpacing="8" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <ToggleButton
-                                        Grid.Column="0"
-                                        Command="{x:Bind ViewModel.ToggleTranslateFastModeCommand}"
-                                        Content="{x:Bind ViewModel.TranslateFastModeButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.TranslateFastModeEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                    <ToggleButton
-                                        Grid.Column="1"
-                                        Command="{x:Bind ViewModel.ToggleTranslateSkipSummaryCommand}"
-                                        Content="{x:Bind ViewModel.TranslateSkipSummaryButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.TranslateSkipSummaryEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border x:Name="CleanTracksQuickOptionsPanel" Style="{StaticResource AccentPanelBorderStyle}">
-                            <StackPanel Spacing="14">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Limpiar tracks" />
-                                    <TextBlock
-                                        Style="{StaticResource SectionDescriptionTextStyle}"
-                                        Text="Conserva solo las pistas correctas, marca la principal y mantiene visibles los casos especiales." />
-                                </StackPanel>
-
-                                <Grid x:Name="CleanupFlagsGrid" ColumnSpacing="8" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <ToggleButton
-                                        Grid.Column="0"
-                                        Command="{x:Bind ViewModel.ToggleCleanupCloseQbittorrentCommand}"
-                                        Content="{x:Bind ViewModel.CleanupCloseQbittorrentButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.CleanupCloseQbittorrentEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                    <ToggleButton
-                                        Grid.Column="1"
-                                        Command="{x:Bind ViewModel.ToggleCleanupDeleteOriginalsCommand}"
-                                        Content="{x:Bind ViewModel.CleanupDeleteOriginalsButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.CleanupDeleteOriginalsEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                </Grid>
-
-                                <Border Style="{StaticResource InsetPanelBorderStyle}">
-                                    <StackPanel Spacing="8">
-                                        <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.CleanupSpecialCasesPanelTitle, Mode=OneWay}" />
+                                    <SymbolIcon
+                                        Width="28"
+                                        Height="28"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource AccentSecondaryBrush}"
+                                        Symbol="Accept" />
+                                    <StackPanel Grid.Column="1" Spacing="8">
+                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="WORKFLOW" />
                                         <TextBlock
-                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                            Text="{x:Bind ViewModel.CleanupSpecialCasesPanelMessage, Mode=OneWay}"
-                                            TextWrapping="WrapWholeWords" />
+                                            Foreground="{StaticResource AccentSecondaryBrush}"
+                                            Style="{StaticResource DashboardStatusValueTextStyle}"
+                                            Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" />
                                         <TextBlock
                                             Style="{StaticResource MonoCaptionTextStyle}"
-                                            Text="{x:Bind ViewModel.CleanupSpecialCasesListText, Mode=OneWay}"
+                                            Text="{x:Bind ViewModel.RootPath, Mode=OneWay}"
                                             TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border Grid.Column="1" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0" Padding="28,0,0,0">
+                                    <StackPanel Spacing="10">
+                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="SIGUIENTE" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock
+                                                Style="{StaticResource DashboardStatusValueTextStyle}"
+                                                Text="{x:Bind ViewModel.NextStepLabel, Mode=OneWay}" />
+                                            <SymbolIcon Foreground="#FF7FA8FF" Symbol="Clock" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
 
-                                <Border Style="{StaticResource InsetPanelBorderStyle}">
+                                <Border Grid.Column="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0" Padding="28,0,0,0">
                                     <StackPanel Spacing="10">
-                                        <TextBlock FontWeight="SemiBold" Text="Audios" />
-                                        <Grid x:Name="CleanupAudioActionGrid" ColumnSpacing="8" RowSpacing="8">
+                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="ESTADO" />
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <TextBlock
+                                                Foreground="{StaticResource AccentSecondaryBrush}"
+                                                Style="{StaticResource DashboardStatusValueTextStyle}"
+                                                Text="{x:Bind ViewModel.GlobalStatus, Mode=OneWay}" />
+                                            <SymbolIcon Foreground="{StaticResource AccentSecondaryBrush}" Symbol="Accept" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <Border
+                                Padding="18,14"
+                                Background="{StaticResource DashboardInfoBrush}"
+                                CornerRadius="7">
+                                <StackPanel Orientation="Horizontal" Spacing="14">
+                                    <SymbolIcon
+                                        Foreground="#FFA9CAFF"
+                                        Symbol="Important"
+                                        VerticalAlignment="Center" />
+                                    <TextBlock
+                                        FontSize="15"
+                                        FontWeight="SemiBold"
+                                        Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel x:Name="TranslationDecisionPanel" Spacing="8">
+                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="DECISION PENDIENTE" />
+                                <Grid x:Name="TranslationDecisionGrid" ColumnSpacing="10" RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Command="{x:Bind ViewModel.MarkTranslateRequiredCommand}" Style="{StaticResource PrimaryCommandButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="World" />
+                                            <TextBlock Text="Traducir subs" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="1" Command="{x:Bind ViewModel.MarkTranslateSkippedCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Cancel" />
+                                            <TextBlock Text="Omitir traducción" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
+
+                    <Border Style="{StaticResource CardContainerStyle}">
+                        <StackPanel Spacing="14">
+                            <StackPanel Spacing="6">
+                                <TextBlock Style="{StaticResource DashboardSectionHeadingTextStyle}" Text="{x:Bind ViewModel.QuickOptionsTitle, Mode=OneWay}" />
+                                <TextBlock
+                                    Style="{StaticResource SectionDescriptionTextStyle}"
+                                    Text="{x:Bind ViewModel.QuickOptionsDescription, Mode=OneWay}" />
+                            </StackPanel>
+
+                            <Border x:Name="SkipAheadPanel" Style="{StaticResource AccentPanelBorderStyle}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="PREPARACION DIRECTA" />
+                                    <Grid x:Name="SkipAheadActionGrid" ColumnSpacing="10" RowSpacing="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Command="{x:Bind ViewModel.PrepareSelectedStepCommand}" Content="Saltar previos hasta este paso" Style="{StaticResource DenseActionButtonStyle}" />
+                                        <Button Grid.Column="1" Command="{x:Bind ViewModel.PrepareAndRunSelectedStepCommand}" Content="Saltar previos y ejecutar ahora" Style="{StaticResource PrimaryCommandButtonStyle}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="DownloadQuickOptionsPanel" Background="Transparent">
+                                <Grid x:Name="DownloadQuickOptionsGrid" ColumnSpacing="10" RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton Grid.Column="0" Command="{x:Bind ViewModel.ToggleDownloadDryRunCommand}" IsChecked="{x:Bind ViewModel.DownloadDryRunEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="View" />
+                                            <TextBlock Text="{x:Bind ViewModel.DownloadDryRunButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton Grid.Column="1" Command="{x:Bind ViewModel.ToggleDownloadForceLatestCommand}" IsChecked="{x:Bind ViewModel.DownloadForceLatestEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Sync" />
+                                            <TextBlock Text="{x:Bind ViewModel.DownloadForceLatestButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </Grid>
+                            </Border>
+
+                            <Border x:Name="TranslateQuickOptionsPanel" Background="Transparent">
+                                <Grid x:Name="TranslateQuickOptionsGrid" ColumnSpacing="10" RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton Grid.Column="0" Command="{x:Bind ViewModel.ToggleTranslateFastModeCommand}" IsChecked="{x:Bind ViewModel.TranslateFastModeEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Play" />
+                                            <TextBlock Text="{x:Bind ViewModel.TranslateFastModeButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton Grid.Column="1" Command="{x:Bind ViewModel.ToggleTranslateSkipSummaryCommand}" IsChecked="{x:Bind ViewModel.TranslateSkipSummaryEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Page" />
+                                            <TextBlock Text="{x:Bind ViewModel.TranslateSkipSummaryButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </Grid>
+                            </Border>
+
+                            <Border
+                                x:Name="CleanTracksQuickOptionsPanel"
+                                Padding="18"
+                                Background="{StaticResource DashboardPanelBrush}"
+                                BorderBrush="{StaticResource HairlineBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                                <StackPanel Spacing="16">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Style="{StaticResource DashboardSectionHeadingTextStyle}" Text="Limpiar tracks" />
+                                            <TextBlock
+                                                HorizontalAlignment="Left"
+                                                MaxWidth="860"
+                                                Style="{StaticResource SectionDescriptionTextStyle}"
+                                                Text="Conserva solo las pistas correctas, marca la principal y mantiene visibles los casos especiales." />
+                                        </StackPanel>
+                                        <SymbolIcon
+                                            Grid.Column="1"
+                                            Foreground="{StaticResource TextPrimaryBrush}"
+                                            Opacity="0.88"
+                                            Symbol="Up" />
+                                    </Grid>
+
+                                    <Grid x:Name="CleanupFlagsGrid" ColumnSpacing="10" RowSpacing="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton Grid.Column="0" Command="{x:Bind ViewModel.ToggleCleanupCloseQbittorrentCommand}" IsChecked="{x:Bind ViewModel.CleanupCloseQbittorrentEnabled, Mode=OneWay}" Style="{StaticResource CleanTracksToggleButtonStyle}">
+                                            <ToggleButton.Resources>
+                                                <SolidColorBrush x:Key="ToggleButtonBackground" Color="#262E3747" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="#34405266" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="#3E4C6078" />
+                                                <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="#66748799" />
+                                                <SolidColorBrush x:Key="ToggleButtonForeground" Color="#FFD9E2F1" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="#4A23496B" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#5B2B5A7F" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#6B336993" />
+                                                <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="#A56EC8FF" />
+                                                <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#BF82D5FF" />
+                                                <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="#FFFFFFFF" />
+                                            </ToggleButton.Resources>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Cancel" />
+                                                <TextBlock Text="{x:Bind ViewModel.CleanupCloseQbittorrentButtonLabel, Mode=OneWay}" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <ToggleButton Grid.Column="1" Command="{x:Bind ViewModel.ToggleCleanupDeleteOriginalsCommand}" IsChecked="{x:Bind ViewModel.CleanupDeleteOriginalsEnabled, Mode=OneWay}" Style="{StaticResource CleanTracksToggleButtonStyle}">
+                                            <ToggleButton.Resources>
+                                                <SolidColorBrush x:Key="ToggleButtonBackground" Color="#262E3747" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="#34405266" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="#3E4C6078" />
+                                                <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="#66748799" />
+                                                <SolidColorBrush x:Key="ToggleButtonForeground" Color="#FFD9E2F1" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="#5C3B1418" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#70471A20" />
+                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#85552028" />
+                                                <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="#D9824A52" />
+                                                <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#F09A6068" />
+                                                <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="#FFFFFFFF" />
+                                            </ToggleButton.Resources>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Delete" />
+                                                <TextBlock Text="{x:Bind ViewModel.CleanupDeleteOriginalsButtonLabel, Mode=OneWay}" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                    </Grid>
+
+                                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
+
+                                    <StackPanel Spacing="8">
+                                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="Revisión de layouts" />
+                                        <TextBlock
+                                            HorizontalAlignment="Left"
+                                            MaxWidth="980"
+                                            Style="{StaticResource SectionDescriptionTextStyle}"
+                                            Text="{x:Bind ViewModel.CleanupSpecialCasesPanelMessage, Mode=OneWay}" />
+                                        <TextBlock
+                                            FontFamily="Consolas"
+                                            Foreground="{StaticResource TextSecondaryBrush}"
+                                            Text="{x:Bind ViewModel.CleanupSpecialCasesListText, Mode=OneWay}"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+
+                                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
+
+                                    <StackPanel Spacing="10">
+                                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="Audios" />
+                                        <TextBlock
+                                            HorizontalAlignment="Left"
+                                            MaxWidth="980"
+                                            Style="{StaticResource SectionDescriptionTextStyle}"
+                                            Text="{x:Bind ViewModel.CleanupAudioSelectionMessage, Mode=OneWay}" />
+                                        <Grid x:Name="CleanupAudioActionGrid" ColumnSpacing="10" RowSpacing="8">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Button
-                                                Grid.Column="0"
-                                                Command="{x:Bind ViewModel.RefreshCleanupAudioOptionsCommand}"
-                                                Content="{x:Bind ViewModel.CleanupAudioRefreshButtonLabel, Mode=OneWay}"
-                                                Style="{StaticResource DenseActionButtonStyle}" />
-                                            <Button
-                                                Grid.Column="1"
-                                                Command="{x:Bind ViewModel.SelectAllCleanupAudiosCommand}"
-                                                Content="Conservar todos"
-                                                IsEnabled="{x:Bind ViewModel.HasCleanupAudioOptions, Mode=OneWay}"
-                                                Style="{StaticResource DenseActionButtonStyle}" />
-                                            <Button
-                                                Grid.Column="2"
-                                                Command="{x:Bind ViewModel.ClearCleanupAudioSelectionCommand}"
-                                                Content="Quitar todos"
-                                                IsEnabled="{x:Bind ViewModel.HasCleanupAudioOptions, Mode=OneWay}"
-                                                Style="{StaticResource DenseActionButtonStyle}" />
+                                            <Button Grid.Column="0" Command="{x:Bind ViewModel.RefreshCleanupAudioOptionsCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <SymbolIcon Symbol="Sync" />
+                                                    <TextBlock Text="{x:Bind ViewModel.CleanupAudioRefreshButtonLabel, Mode=OneWay}" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1" Command="{x:Bind ViewModel.SelectAllCleanupAudiosCommand}" IsEnabled="{x:Bind ViewModel.HasCleanupAudioOptions, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <SymbolIcon Symbol="Accept" />
+                                                    <TextBlock Text="Conservar todos" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="2" Command="{x:Bind ViewModel.ClearCleanupAudioSelectionCommand}" IsEnabled="{x:Bind ViewModel.HasCleanupAudioOptions, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <SymbolIcon Symbol="Cancel" />
+                                                    <TextBlock Text="Quitar todos" />
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
-
-                                        <TextBlock
-                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                            Text="{x:Bind ViewModel.CleanupAudioSelectionMessage, Mode=OneWay}"
-                                            TextWrapping="WrapWholeWords" />
-                                        <TextBlock
-                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                            Text="Ámbar = se conserva · Verde = principal"
-                                            TextWrapping="WrapWholeWords" />
-
+                                        <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Ámbar = se conserva · Verde = principal" />
                                         <ItemsControl ItemsSource="{x:Bind ViewModel.CleanupAudioOptions, Mode=OneWay}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -292,158 +351,368 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:TrackCleanupAudioOption">
                                                     <Border
-                                                        MinWidth="196"
-                                                        Margin="0,0,8,8"
+                                                        Width="330"
+                                                        Margin="0,0,10,10"
                                                         Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
                                                         BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
-                                                        BorderThickness="1.2"
+                                                        BorderThickness="2"
                                                         CornerRadius="12">
-                                                        <Grid MinHeight="88">
+                                                        <Grid MinHeight="98" Padding="10,10,12,10" ColumnSpacing="8">
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="*" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="38" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="54" />
+                                                            </Grid.ColumnDefinitions>
                                                             <Button
-                                                                Padding="10,30,10,10"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
+                                                                Grid.Column="0"
+                                                                Width="32"
+                                                                Height="32"
+                                                                Padding="0"
+                                                                Background="{x:Bind SelectorBackgroundBrush, Mode=OneWay}"
+                                                                BorderBrush="{x:Bind SelectorBorderBrush, Mode=OneWay}"
+                                                                BorderThickness="1"
                                                                 Command="{Binding ViewModel.ToggleCleanupAudioSelectionCommand, ElementName=RootPage}"
                                                                 CommandParameter="{Binding}"
-                                                                HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Stretch"
-                                                                VerticalAlignment="Stretch"
-                                                                VerticalContentAlignment="Stretch">
-                                                                <StackPanel MaxWidth="320" Spacing="3">
+                                                                CornerRadius="9"
+                                                                HorizontalAlignment="Center"
+                                                                ToolTipService.ToolTip="Conservar pista"
+                                                                VerticalAlignment="Center">
+                                                                <SymbolIcon
+                                                                    Width="17"
+                                                                    Height="17"
+                                                                    Foreground="{x:Bind SelectorGlyphBrush, Mode=OneWay}"
+                                                                    Symbol="Accept" />
+                                                            </Button>
+                                                            <Grid Grid.Column="1" MinWidth="0" RowSpacing="5" VerticalAlignment="Center">
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                                <Grid ColumnSpacing="6" MinWidth="0">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Border
+                                                                        Grid.Column="0"
+                                                                        Width="24"
+                                                                        Height="24"
+                                                                        Background="#26101814"
+                                                                        BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="6"
+                                                                        VerticalAlignment="Top">
+                                                                        <TextBlock
+                                                                            FontFamily="Segoe UI Symbol"
+                                                                            FontSize="13"
+                                                                            FontWeight="SemiBold"
+                                                                            Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                                            HorizontalAlignment="Center"
+                                                                            Text="♪"
+                                                                            VerticalAlignment="Center" />
+                                                                    </Border>
                                                                     <TextBlock
+                                                                        Grid.Column="1"
+                                                                        FontSize="13"
                                                                         FontWeight="SemiBold"
                                                                         Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                                        MaxLines="2"
                                                                         Text="{x:Bind PrimaryLabel, Mode=OneWay}"
+                                                                        TextTrimming="CharacterEllipsis"
                                                                         TextWrapping="WrapWholeWords" />
-                                                                    <TextBlock
-                                                                        Foreground="{x:Bind CaptionBrush, Mode=OneWay}"
-                                                                        Style="{StaticResource MutedCaptionTextStyle}"
-                                                                        Text="{x:Bind SecondaryLabel, Mode=OneWay}"
-                                                                        TextWrapping="WrapWholeWords" />
-                                                                </StackPanel>
-                                                            </Button>
-                                                            <Button
-                                                                HorizontalAlignment="Right"
-                                                                VerticalAlignment="Top"
-                                                                Margin="0,6,6,0"
-                                                                Command="{Binding ViewModel.MarkCleanupAudioPrimaryCommand, ElementName=RootPage}"
-                                                                CommandParameter="{Binding}"
-                                                                Content="{x:Bind PrimaryActionLabel, Mode=OneWay}"
-                                                                CornerRadius="8"
-                                                                FontSize="10"
-                                                                MinHeight="22"
+                                                                </Grid>
+                                                                <TextBlock
+                                                                    Grid.Row="1"
+                                                                    Margin="23,0,0,0"
+                                                                    FontSize="10"
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{x:Bind CaptionBrush, Mode=OneWay}"
+                                                                    MaxLines="2"
+                                                                    Opacity="0.82"
+                                                                    Text="{x:Bind SecondaryLabel, Mode=OneWay}"
+                                                                    TextTrimming="CharacterEllipsis"
+                                                                    TextWrapping="WrapWholeWords" />
+                                                            </Grid>
+                                                            <StackPanel
+                                                                Grid.Column="2"
                                                                 MinWidth="0"
-                                                                Padding="6,2"
-                                                                Style="{StaticResource DenseActionButtonStyle}" />
+                                                                Spacing="7"
+                                                                VerticalAlignment="Center">
+                                                                <Button
+                                                                    Width="36"
+                                                                    Height="36"
+                                                                    Padding="0"
+                                                                    Background="#33231814"
+                                                                    BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="9"
+                                                                    HorizontalAlignment="Right"
+                                                                    HorizontalContentAlignment="Center"
+                                                                    MinHeight="0"
+                                                                    MinWidth="0"
+                                                                    ToolTipService.ToolTip="Editar metadata"
+                                                                    VerticalContentAlignment="Center">
+                                                                    <Button.Flyout>
+                                                                        <Flyout>
+                                                                            <StackPanel MinWidth="300" Spacing="10">
+                                                                                <TextBox Header="Código de idioma" Text="{x:Bind LanguageCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                                <TextBox Header="Etiqueta visible" Text="{x:Bind LanguageLabel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                                <TextBox Header="Codec" Text="{x:Bind Codec, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                                <TextBox Header="Nombre de pista" Text="{x:Bind Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
+                                                                                <Button Command="{Binding ViewModel.SaveCleanupMetadataCommand, ElementName=RootPage}" Style="{StaticResource PrimaryCommandButtonStyle}">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                                        <SymbolIcon Symbol="Save" />
+                                                                                        <TextBlock Text="Guardar metadata" />
+                                                                                    </StackPanel>
+                                                                                </Button>
+                                                                            </StackPanel>
+                                                                        </Flyout>
+                                                                    </Button.Flyout>
+                                                                    <Grid Width="18" Height="18">
+                                                                        <FontIcon
+                                                                            FontFamily="Segoe MDL2 Assets"
+                                                                            FontSize="15"
+                                                                            Foreground="{StaticResource TextPrimaryBrush}"
+                                                                            Glyph="&#xE70F;"
+                                                                            HorizontalAlignment="Center"
+                                                                            VerticalAlignment="Center" />
+                                                                    </Grid>
+                                                                </Button>
+                                                                <Button
+                                                                    Command="{Binding ViewModel.MarkCleanupAudioPrimaryCommand, ElementName=RootPage}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Content="{x:Bind PrimaryBadgeLabel, Mode=OneWay}"
+                                                                    CornerRadius="8"
+                                                                    FontSize="9"
+                                                                    FontWeight="SemiBold"
+                                                                    HorizontalContentAlignment="Center"
+                                                                    MinHeight="22"
+                                                                    MinWidth="0"
+                                                                    Padding="5,2"
+                                                                    HorizontalAlignment="Right"
+                                                                    Style="{StaticResource DenseActionButtonStyle}" />
+                                                            </StackPanel>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
-                                </Border>
 
-                                <Border Style="{StaticResource InsetPanelBorderStyle}">
+                                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
+
                                     <StackPanel Spacing="10">
-                                        <TextBlock FontWeight="SemiBold" Text="Subtítulos" />
-                                        <Grid x:Name="CleanupSubtitleActionGrid" ColumnSpacing="8" RowSpacing="8">
+                                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="Subtítulos" />
+                                        <TextBlock
+                                            HorizontalAlignment="Left"
+                                            MaxWidth="980"
+                                            Style="{StaticResource SectionDescriptionTextStyle}"
+                                            Text="{x:Bind ViewModel.CleanupSubtitleSelectionMessage, Mode=OneWay}" />
+                                        <Grid x:Name="CleanupSubtitleActionGrid" ColumnSpacing="10" RowSpacing="8">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Button
-                                                Grid.Column="0"
-                                                Command="{x:Bind ViewModel.SelectAllCleanupSubtitlesCommand}"
-                                                Content="Conservar todos los subs"
-                                                IsEnabled="{x:Bind ViewModel.HasCleanupSubtitleOptions, Mode=OneWay}"
-                                                Style="{StaticResource DenseActionButtonStyle}" />
-                                            <Button
-                                                Grid.Column="1"
-                                                Command="{x:Bind ViewModel.ClearCleanupSubtitleSelectionCommand}"
-                                                Content="Quitar todos los subs"
-                                                IsEnabled="{x:Bind ViewModel.HasCleanupSubtitleOptions, Mode=OneWay}"
-                                                Style="{StaticResource DenseActionButtonStyle}" />
+                                            <Button Grid.Column="0" Command="{x:Bind ViewModel.SelectAllCleanupSubtitlesCommand}" IsEnabled="{x:Bind ViewModel.HasCleanupSubtitleOptions, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <SymbolIcon Symbol="Accept" />
+                                                    <TextBlock Text="Conservar todos los subs" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1" Command="{x:Bind ViewModel.ClearCleanupSubtitleSelectionCommand}" IsEnabled="{x:Bind ViewModel.HasCleanupSubtitleOptions, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <SymbolIcon Symbol="Cancel" />
+                                                    <TextBlock Text="Quitar todos los subs" />
+                                                </StackPanel>
+                                            </Button>
                                         </Grid>
-
-                                        <TextBlock
-                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                            Text="{x:Bind ViewModel.CleanupSubtitleSelectionMessage, Mode=OneWay}"
-                                            TextWrapping="WrapWholeWords" />
-                                        <TextBlock
-                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                            Text="Ámbar = se conserva · Verde = principal"
-                                            TextWrapping="WrapWholeWords" />
-
                                         <ItemsControl ItemsSource="{x:Bind ViewModel.CleanupSubtitleOptions, Mode=OneWay}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
-                                                    <ItemsWrapGrid Orientation="Horizontal" />
+                                                    <ItemsWrapGrid
+                                                        Orientation="Horizontal" />
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:TrackCleanupSubtitleOption">
                                                     <Border
-                                                        MinWidth="196"
-                                                        Margin="0,0,8,8"
+                                                        Width="330"
+                                                        Margin="0,0,10,10"
                                                         Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
                                                         BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
-                                                        BorderThickness="1.2"
+                                                        BorderThickness="2"
                                                         CornerRadius="12">
-                                                        <Grid MinHeight="88">
+                                                        <Grid MinHeight="98" Padding="10,10,12,10" ColumnSpacing="8">
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="*" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="38" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="54" />
+                                                            </Grid.ColumnDefinitions>
                                                             <Button
-                                                                Padding="10,30,10,10"
-                                                                Background="Transparent"
-                                                                BorderThickness="0"
+                                                                Grid.Column="0"
+                                                                Width="32"
+                                                                Height="32"
+                                                                Padding="0"
+                                                                Background="{x:Bind SelectorBackgroundBrush, Mode=OneWay}"
+                                                                BorderBrush="{x:Bind SelectorBorderBrush, Mode=OneWay}"
+                                                                BorderThickness="1"
                                                                 Command="{Binding ViewModel.ToggleCleanupSubtitleSelectionCommand, ElementName=RootPage}"
                                                                 CommandParameter="{Binding}"
-                                                                HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Stretch"
-                                                                VerticalAlignment="Stretch"
-                                                                VerticalContentAlignment="Stretch">
-                                                                <StackPanel MaxWidth="320" Spacing="3">
+                                                                CornerRadius="9"
+                                                                HorizontalAlignment="Center"
+                                                                ToolTipService.ToolTip="Conservar subtítulo"
+                                                                VerticalAlignment="Center">
+                                                                <SymbolIcon
+                                                                    Width="17"
+                                                                    Height="17"
+                                                                    Foreground="{x:Bind SelectorGlyphBrush, Mode=OneWay}"
+                                                                    Symbol="Accept" />
+                                                            </Button>
+                                                            <Grid Grid.Column="1" MinWidth="0" RowSpacing="5" VerticalAlignment="Center">
+                                                                <Grid.RowDefinitions>
+                                                                    <RowDefinition Height="Auto" />
+                                                                    <RowDefinition Height="Auto" />
+                                                                </Grid.RowDefinitions>
+                                                                <Grid ColumnSpacing="6" MinWidth="0">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Border
+                                                                        Grid.Column="0"
+                                                                        Width="24"
+                                                                        Height="24"
+                                                                        Background="#26101814"
+                                                                        BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="6"
+                                                                        VerticalAlignment="Top">
+                                                                        <TextBlock
+                                                                            FontSize="10"
+                                                                            FontWeight="SemiBold"
+                                                                            Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                                            HorizontalAlignment="Center"
+                                                                            Text="CC"
+                                                                            VerticalAlignment="Center" />
+                                                                    </Border>
                                                                     <TextBlock
+                                                                        Grid.Column="1"
+                                                                        FontSize="13"
                                                                         FontWeight="SemiBold"
                                                                         Foreground="{x:Bind TitleBrush, Mode=OneWay}"
+                                                                        MaxLines="2"
                                                                         Text="{x:Bind PrimaryLabel, Mode=OneWay}"
+                                                                        TextTrimming="CharacterEllipsis"
                                                                         TextWrapping="WrapWholeWords" />
-                                                                    <TextBlock
-                                                                        Foreground="{x:Bind CaptionBrush, Mode=OneWay}"
-                                                                        Style="{StaticResource MutedCaptionTextStyle}"
-                                                                        Text="{x:Bind SecondaryLabel, Mode=OneWay}"
-                                                                        TextWrapping="WrapWholeWords" />
-                                                                </StackPanel>
-                                                            </Button>
-                                                            <Button
-                                                                HorizontalAlignment="Right"
-                                                                VerticalAlignment="Top"
-                                                                Margin="0,6,6,0"
-                                                                Command="{Binding ViewModel.MarkCleanupSubtitlePrimaryCommand, ElementName=RootPage}"
-                                                                CommandParameter="{Binding}"
-                                                                Content="{x:Bind PrimaryActionLabel, Mode=OneWay}"
-                                                                CornerRadius="8"
-                                                                FontSize="10"
-                                                                MinHeight="22"
+                                                                </Grid>
+                                                                <TextBlock
+                                                                    Grid.Row="1"
+                                                                    Margin="23,0,0,0"
+                                                                    FontSize="10"
+                                                                    FontWeight="SemiBold"
+                                                                    Foreground="{x:Bind CaptionBrush, Mode=OneWay}"
+                                                                    MaxLines="2"
+                                                                    Opacity="0.82"
+                                                                    Text="{x:Bind SecondaryLabel, Mode=OneWay}"
+                                                                    TextTrimming="CharacterEllipsis"
+                                                                    TextWrapping="WrapWholeWords" />
+                                                            </Grid>
+                                                            <StackPanel
+                                                                Grid.Column="2"
                                                                 MinWidth="0"
-                                                                Padding="6,2"
-                                                                Style="{StaticResource DenseActionButtonStyle}" />
+                                                                Spacing="7"
+                                                                VerticalAlignment="Center">
+                                                                <Button
+                                                                    Width="36"
+                                                                    Height="36"
+                                                                    Padding="0"
+                                                                    Background="#33231814"
+                                                                    BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="9"
+                                                                    HorizontalAlignment="Right"
+                                                                    HorizontalContentAlignment="Center"
+                                                                    MinHeight="0"
+                                                                    MinWidth="0"
+                                                                    ToolTipService.ToolTip="Editar metadata"
+                                                                    VerticalContentAlignment="Center">
+                                                                    <Button.Flyout>
+                                                                        <Flyout>
+                                                                            <StackPanel MinWidth="300" Spacing="10">
+                                                                                <TextBox Header="Código de idioma" Text="{x:Bind LanguageCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                                <TextBox Header="Etiqueta visible" Text="{x:Bind LanguageLabel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                                <TextBox Header="Nombre de subtítulo" Text="{x:Bind Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
+                                                                                <Button Command="{Binding ViewModel.SaveCleanupMetadataCommand, ElementName=RootPage}" Style="{StaticResource PrimaryCommandButtonStyle}">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                                        <SymbolIcon Symbol="Save" />
+                                                                                        <TextBlock Text="Guardar metadata" />
+                                                                                    </StackPanel>
+                                                                                </Button>
+                                                                            </StackPanel>
+                                                                        </Flyout>
+                                                                    </Button.Flyout>
+                                                                    <Grid Width="18" Height="18">
+                                                                        <FontIcon
+                                                                            FontFamily="Segoe MDL2 Assets"
+                                                                            FontSize="15"
+                                                                            Foreground="{StaticResource TextPrimaryBrush}"
+                                                                            Glyph="&#xE70F;"
+                                                                            HorizontalAlignment="Center"
+                                                                            VerticalAlignment="Center" />
+                                                                    </Grid>
+                                                                </Button>
+                                                                <Button
+                                                                    Command="{Binding ViewModel.MarkCleanupSubtitlePrimaryCommand, ElementName=RootPage}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Content="{x:Bind PrimaryBadgeLabel, Mode=OneWay}"
+                                                                    CornerRadius="8"
+                                                                    FontSize="9"
+                                                                    FontWeight="SemiBold"
+                                                                    HorizontalContentAlignment="Center"
+                                                                    MinHeight="22"
+                                                                    MinWidth="0"
+                                                                    Padding="5,2"
+                                                                    HorizontalAlignment="Right"
+                                                                    Style="{StaticResource DenseActionButtonStyle}" />
+                                                            </StackPanel>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Border>
+                                </StackPanel>
+                            </Border>
 
-                        <Border x:Name="PackageRarQuickOptionsPanel" Style="{StaticResource InsetPanelBorderStyle}">
-                            <StackPanel Spacing="10">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Empaquetado RAR" />
-                                <Grid x:Name="PackageRarQuickOptionsGrid" ColumnSpacing="8" RowSpacing="8">
+                            <Border x:Name="TagAndRenameQuickOptionsPanel" Background="Transparent">
+                                <Grid x:Name="TagAndRenameQuickOptionsGrid" ColumnSpacing="10" RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton Grid.Column="0" Command="{x:Bind ViewModel.ToggleTagAndRenameAttachCoverCommand}" IsChecked="{x:Bind ViewModel.TagAndRenameAttachCoverEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Pictures" />
+                                            <TextBlock Text="{x:Bind ViewModel.TagAndRenameAttachCoverButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </Grid>
+                            </Border>
+
+                            <Border x:Name="PackageRarQuickOptionsPanel" Background="Transparent">
+                                <Grid x:Name="PackageRarQuickOptionsGrid" ColumnSpacing="14" RowSpacing="8">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -452,168 +721,235 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <ToggleButton
-                                        Grid.Row="0"
-                                        Grid.Column="0"
-                                        Command="{x:Bind ViewModel.ToggleRarSkipImagesCommand}"
-                                        Content="{x:Bind ViewModel.RarSkipImagesButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.RarSkipImagesEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                    <ToggleButton
-                                        Grid.Row="0"
-                                        Grid.Column="1"
-                                        Command="{x:Bind ViewModel.ToggleRarNoCompressCommand}"
-                                        Content="{x:Bind ViewModel.RarNoCompressButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.RarNoCompressEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                    <ToggleButton
-                                        Grid.Row="0"
-                                        Grid.Column="2"
-                                        Command="{x:Bind ViewModel.ToggleRarCompressionModeCommand}"
-                                        Content="{x:Bind ViewModel.RarCompressionModeButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.RarUseCompressionNormalEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
-                                    <Button
-                                        Grid.Row="1"
-                                        Grid.Column="0"
-                                        Command="{x:Bind ViewModel.CycleRarImageFormatCommand}"
-                                        Content="{x:Bind ViewModel.RarImageFormatButtonLabel, Mode=OneWay}"
-                                        Style="{StaticResource DenseActionButtonStyle}" />
-                                    <ToggleButton
-                                        Grid.Row="1"
-                                        Grid.Column="1"
-                                        Command="{x:Bind ViewModel.ToggleRarVerboseCommand}"
-                                        Content="{x:Bind ViewModel.RarVerboseButtonLabel, Mode=OneWay}"
-                                        IsChecked="{x:Bind ViewModel.RarVerboseEnabled, Mode=OneWay}"
-                                        Style="{StaticResource QuickToggleButtonStyle}" />
+                                    <ToggleButton Grid.Row="0" Grid.Column="0" Command="{x:Bind ViewModel.ToggleRarSkipImagesCommand}" IsChecked="{x:Bind ViewModel.RarSkipImagesEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Pictures" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarSkipImagesButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton Grid.Row="0" Grid.Column="1" Command="{x:Bind ViewModel.ToggleRarNoCompressCommand}" IsChecked="{x:Bind ViewModel.RarNoCompressEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Important" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarNoCompressButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ToggleButton Grid.Row="0" Grid.Column="2" Command="{x:Bind ViewModel.ToggleRarCompressionModeCommand}" IsChecked="{x:Bind ViewModel.RarUseCompressionNormalEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Save" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarCompressionModeButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <Button Grid.Row="0" Grid.Column="3" Command="{x:Bind ViewModel.CycleRarImageFormatCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Pictures" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarImageFormatButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Row="0" Grid.Column="4" Style="{StaticResource DenseActionButtonStyle}">
+                                        <Button.Flyout>
+                                            <Flyout>
+                                                <StackPanel MinWidth="250" Spacing="10">
+                                                    <TextBox
+                                                        Header="Máximo de imágenes"
+                                                        PlaceholderText="Auto: 300 principal / 100 c/u"
+                                                        Text="{x:Bind ViewModel.RarCaptureCountQuick, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                                        <TextBox.InputScope>
+                                                            <InputScope>
+                                                                <InputScope.Names>
+                                                                    <InputScopeName NameValue="Number" />
+                                                                </InputScope.Names>
+                                                            </InputScope>
+                                                        </TextBox.InputScope>
+                                                    </TextBox>
+                                                    <Button
+                                                        Command="{x:Bind ViewModel.ClearRarCaptureCountCommand}"
+                                                        Content="Usar automático"
+                                                        Style="{StaticResource DenseActionButtonStyle}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Pictures" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarCaptureCountButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <ToggleButton Grid.Row="0" Grid.Column="5" Command="{x:Bind ViewModel.ToggleRarVerboseCommand}" IsChecked="{x:Bind ViewModel.RarVerboseEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Message" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarVerboseButtonLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </ToggleButton>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource CardContainerStyle}">
-                    <StackPanel Spacing="12">
-                        <StackPanel Spacing="4">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Pasos" />
-                            <TextBlock
-                                Style="{StaticResource SectionDescriptionTextStyle}"
-                                Text="Selecciona cualquier etapa para revisar su salida, reintentarla o saltarla con criterio." />
+                            </Border>
                         </StackPanel>
+                    </Border>
 
-                        <ItemsControl ItemsSource="{x:Bind ViewModel.StepItems, Mode=OneWay}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:WorkflowStepState">
-                                    <Button
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Click="OnStepItemClicked"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Stretch"
-                                        Padding="0">
-                                        <Grid Margin="0,0,0,8">
+                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
+
+                    <Border Style="{StaticResource CardContainerStyle}">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="5">
+                                    <TextBlock Style="{StaticResource DashboardSectionHeadingTextStyle}" Text="Pasos del workflow" />
+                                    <TextBlock Style="{StaticResource SectionDescriptionTextStyle}" Text="Selecciona cualquier etapa para revisar su salida, reintentarla o saltarla con criterio." />
+                                </StackPanel>
+                                <Border Grid.Column="1" Padding="12,7" VerticalAlignment="Top" Background="{StaticResource DashboardChipBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="8">
+                                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="5 etapas" />
+                                </Border>
+                            </Grid>
+
+                            <Grid Padding="4,0,4,8" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="42" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="190" />
+                                    <ColumnDefinition Width="60" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource TableHeaderTextStyle}" Text="#" />
+                                <TextBlock Grid.Column="2" Style="{StaticResource TableHeaderTextStyle}" Text="Paso" />
+                                <TextBlock Grid.Column="3" Style="{StaticResource TableHeaderTextStyle}" Text="Estado" />
+                                <TextBlock Grid.Column="4" Style="{StaticResource TableHeaderTextStyle}" Text="Resultado" />
+                                <TextBlock Grid.Column="5" HorizontalAlignment="Right" Style="{StaticResource TableHeaderTextStyle}" Text="Accion" />
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.VisibleStepItems, Mode=OneWay}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:WorkflowStepState">
+                                        <Button
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Click="OnStepItemClicked"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="0">
                                             <Border
-                                                Background="Transparent"
-                                                BorderBrush="{x:Bind SelectionGlowOuterBrush, Mode=OneWay}"
-                                                BorderThickness="{x:Bind SelectionGlowOuterThickness, Mode=OneWay}"
-                                                CornerRadius="22"
-                                                Margin="-3"
-                                                Opacity="{x:Bind SelectionGlowOpacity, Mode=OneWay}" />
-                                            <Border
-                                                Background="Transparent"
-                                                BorderBrush="{x:Bind SelectionGlowInnerBrush, Mode=OneWay}"
-                                                BorderThickness="{x:Bind SelectionGlowInnerThickness, Mode=OneWay}"
-                                                CornerRadius="18"
-                                                Margin="-1"
-                                                Opacity="{x:Bind SelectionGlowOpacity, Mode=OneWay}" />
-                                            <Border
-                                                Padding="10"
-                                                Background="{x:Bind CardBackgroundBrush, Mode=OneWay}"
-                                                BorderBrush="{x:Bind CardBorderBrush, Mode=OneWay}"
-                                                BorderThickness="{x:Bind CardBorderThickness, Mode=OneWay}"
-                                                CornerRadius="16">
-                                                <Grid ColumnSpacing="10" RowSpacing="2">
+                                                Padding="4,0"
+                                                Background="{x:Bind RowBackgroundBrush, Mode=OneWay}"
+                                                BorderBrush="{x:Bind RowBorderBrush, Mode=OneWay}"
+                                                BorderThickness="0,0,0,1"
+                                                CornerRadius="7">
+                                                <Grid MinHeight="74" ColumnSpacing="16">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="6" />
+                                                        <ColumnDefinition Width="42" />
+                                                        <ColumnDefinition Width="42" />
                                                         <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="190" />
+                                                        <ColumnDefinition Width="60" />
                                                     </Grid.ColumnDefinitions>
-                                                    <Border
-                                                        Grid.Column="0"
-                                                        Background="{x:Bind SelectionRailBrush, Mode=OneWay}"
-                                                        CornerRadius="999"
-                                                        Opacity="{x:Bind SelectionRailOpacity, Mode=OneWay}" />
-                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                        <TextBlock
-                                                            FontWeight="SemiBold"
-                                                            Foreground="{x:Bind TitleBrush, Mode=OneWay}"
-                                                            Text="{x:Bind DisplayName, Mode=OneWay}"
-                                                            TextWrapping="WrapWholeWords" />
-                                                        <TextBlock
-                                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                                            Foreground="{x:Bind ReasonBrush, Mode=OneWay}"
-                                                            Text="{x:Bind StatusReason, Mode=OneWay}"
-                                                            TextWrapping="WrapWholeWords" />
+                                                    <TextBlock VerticalAlignment="Center" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind StepNumber, Mode=OneWay}" />
+                                                    <SymbolIcon Grid.Column="1" VerticalAlignment="Center" Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}" Symbol="{x:Bind StepSymbol, Mode=OneWay}" />
+                                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="5">
+                                                        <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{x:Bind TitleBrush, Mode=OneWay}" Text="{x:Bind DisplayName, Mode=OneWay}" />
+                                                        <TextBlock Foreground="{x:Bind ReasonBrush, Mode=OneWay}" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind StatusReason, Mode=OneWay}" TextWrapping="WrapWholeWords" />
                                                     </StackPanel>
-                                                    <StackPanel Grid.Column="2" HorizontalAlignment="Right" Spacing="3">
-                                                        <Border
-                                                            Width="10"
-                                                            Height="10"
-                                                            HorizontalAlignment="Right"
-                                                            Background="{x:Bind SelectionIndicatorBackgroundBrush, Mode=OneWay}"
-                                                            BorderBrush="{x:Bind SelectionIndicatorBorderBrush, Mode=OneWay}"
-                                                            BorderThickness="1.5"
-                                                            CornerRadius="999"
-                                                            Opacity="{x:Bind SelectionIndicatorOpacity, Mode=OneWay}" />
-                                                        <TextBlock
-                                                            HorizontalAlignment="Right"
-                                                            FontWeight="SemiBold"
-                                                            Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}"
-                                                            Text="{x:Bind Status, Mode=OneWay}"
-                                                            TextWrapping="WrapWholeWords" />
-                                                        <TextBlock
-                                                            HorizontalAlignment="Right"
-                                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                                            Text="{x:Bind FinishedAtDisplay, Mode=OneWay}" />
-                                                    </StackPanel>
+                                                    <Border Grid.Column="3" Padding="10,6" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{x:Bind StatusBadgeBackgroundBrush, Mode=OneWay}" CornerRadius="5">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Ellipse Width="8" Height="8" Fill="{x:Bind StatusAccentBrush, Mode=OneWay}" />
+                                                            <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}" Text="{x:Bind Status, Mode=OneWay}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="4" VerticalAlignment="Center" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind FinishedAtDisplay, Mode=OneWay}" />
+                                                    <Border Grid.Column="5" Width="38" Height="38" HorizontalAlignment="Right" VerticalAlignment="Center" Background="{StaticResource DashboardChipBrush}" CornerRadius="19">
+                                                        <SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{x:Bind StatusAccentBrush, Mode=OneWay}" Symbol="Forward" />
+                                                    </Border>
                                                 </Grid>
                                             </Border>
-                                        </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border
+                        Padding="18"
+                        Background="{StaticResource DashboardPanelBrush}"
+                        BorderBrush="{StaticResource HairlineBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                        <Grid RowSpacing="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="8">
+                                    <TextBlock Style="{StaticResource DashboardSectionHeadingTextStyle}" Text="Detalle y salida" />
+                                    <TextBlock FontSize="20" FontWeight="SemiBold" Text="{x:Bind ViewModel.SelectedStepTitle, Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource SectionDescriptionTextStyle}" Text="{x:Bind ViewModel.SelectedStepDescription, Mode=OneWay}" />
+                                </StackPanel>
+
+                                <Grid x:Name="DetailOutputToolbarGrid" Grid.Column="1" ColumnSpacing="10" RowSpacing="8" VerticalAlignment="Bottom">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border
+                                        x:Name="DetailOutputResizeHandle"
+                                        Background="{StaticResource SweepAccentBrush}"
+                                        CornerRadius="2"
+                                        Height="4"
+                                        HorizontalAlignment="Stretch"
+                                        Opacity="0.82"
+                                        PointerCaptureLost="OnDetailOutputResizeHandlePointerCaptureLost"
+                                        PointerMoved="OnDetailOutputResizeHandlePointerMoved"
+                                        PointerPressed="OnDetailOutputResizeHandlePointerPressed"
+                                        PointerReleased="OnDetailOutputResizeHandlePointerReleased"
+                                        VerticalAlignment="Center"
+                                        Width="88" />
+                                    <Button x:Name="DetailOutputAutoSizeButton" Grid.Column="1" Click="OnDetailOutputAutoSizeClicked" Style="{StaticResource DenseActionButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Setting" />
+                                            <TextBlock Text="Autoajustar" />
+                                        </StackPanel>
                                     </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
+                                    <Button Grid.Column="2" Command="{x:Bind ViewModel.ToggleDetailOutputTerminalCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="{x:Bind ViewModel.DetailOutputTerminalToggleSymbol, Mode=OneWay}" />
+                                            <TextBlock Text="{x:Bind ViewModel.DetailOutputTerminalToggleLabel, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="3" Command="{x:Bind ViewModel.OpenSelectedLogCommand}" IsEnabled="{x:Bind ViewModel.CanOpenSelectedLog, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon Symbol="Page" />
+                                            <TextBlock Text="Abrir log completo" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Grid>
 
-                <Border Style="{StaticResource CardContainerStyle}">
-                    <Grid RowSpacing="12">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Spacing="6">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Detalle y salida" />
-                            <TextBlock
-                                Style="{StaticResource PageHeadlineTextStyle}"
-                                Text="{x:Bind ViewModel.SelectedStepTitle, Mode=OneWay}"
-                                TextWrapping="WrapWholeWords" />
-                            <TextBlock
-                                Style="{StaticResource SectionDescriptionTextStyle}"
-                                Text="{x:Bind ViewModel.SelectedStepDescription, Mode=OneWay}" />
-
-                            <Border x:Name="PackageRarDetailActionsPanel" Style="{StaticResource InsetPanelBorderStyle}">
+                            <Border x:Name="PackageRarDetailActionsPanel" Grid.Row="1" Background="Transparent">
                                 <StackPanel Spacing="10">
-                                    <TextBlock
-                                        Style="{StaticResource MutedCaptionTextStyle}"
-                                        Text="{x:Bind ViewModel.PackageRarDetailSummary, Mode=OneWay}" />
-                                    <Grid x:Name="PackageRarDetailActionsGrid" ColumnSpacing="8" RowSpacing="8">
+                                    <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind ViewModel.PackageRarDetailSummary, Mode=OneWay}" />
+                                    <Grid x:Name="PackageRarDetailActionsGrid" ColumnSpacing="10" RowSpacing="8">
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
@@ -621,105 +957,96 @@
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Button
-                                            Grid.Row="0"
-                                            Grid.Column="0"
-                                            Background="{x:Bind ViewModel.PackageRarRawDataButtonBackground, Mode=OneWay}"
-                                            BorderBrush="{x:Bind ViewModel.PackageRarRawDataButtonBorderBrush, Mode=OneWay}"
-                                            Command="{x:Bind ViewModel.CopyPackageRarRawDataCommand}"
-                                            Content="{x:Bind ViewModel.PackageRarRawDataButtonLabel, Mode=OneWay}"
-                                            Foreground="{x:Bind ViewModel.PackageRarRawDataButtonForeground, Mode=OneWay}"
-                                            Style="{StaticResource DenseActionButtonStyle}" />
-                                        <Button
-                                            Grid.Row="0"
-                                            Grid.Column="1"
-                                            Background="{x:Bind ViewModel.PackageRarWeightSummaryButtonBackground, Mode=OneWay}"
-                                            BorderBrush="{x:Bind ViewModel.PackageRarWeightSummaryButtonBorderBrush, Mode=OneWay}"
-                                            Command="{x:Bind ViewModel.CopyPackageRarWeightSummaryCommand}"
-                                            Content="{x:Bind ViewModel.PackageRarWeightSummaryButtonLabel, Mode=OneWay}"
-                                            Foreground="{x:Bind ViewModel.PackageRarWeightSummaryButtonForeground, Mode=OneWay}"
-                                            Style="{StaticResource DenseActionButtonStyle}" />
-                                        <Button
-                                            Grid.Row="1"
-                                            Grid.Column="0"
-                                            Background="{x:Bind ViewModel.PackageRarCleanNameButtonBackground, Mode=OneWay}"
-                                            BorderBrush="{x:Bind ViewModel.PackageRarCleanNameButtonBorderBrush, Mode=OneWay}"
-                                            Command="{x:Bind ViewModel.CopyPackageRarCleanNameCommand}"
-                                            Content="{x:Bind ViewModel.PackageRarCleanNameButtonLabel, Mode=OneWay}"
-                                            Foreground="{x:Bind ViewModel.PackageRarCleanNameButtonForeground, Mode=OneWay}"
-                                            Style="{StaticResource DenseActionButtonStyle}" />
-                                        <Button
-                                            Grid.Row="1"
-                                            Grid.Column="1"
-                                            Background="{x:Bind ViewModel.PackageRarSeriesTitleButtonBackground, Mode=OneWay}"
-                                            BorderBrush="{x:Bind ViewModel.PackageRarSeriesTitleButtonBorderBrush, Mode=OneWay}"
-                                            Command="{x:Bind ViewModel.CopyPackageRarSeriesTitleCommand}"
-                                            Content="{x:Bind ViewModel.PackageRarSeriesTitleButtonLabel, Mode=OneWay}"
-                                            Foreground="{x:Bind ViewModel.PackageRarSeriesTitleButtonForeground, Mode=OneWay}"
-                                            Style="{StaticResource DenseActionButtonStyle}" />
+                                        <Button Grid.Row="0" Grid.Column="0" Background="{x:Bind ViewModel.PackageRarRawDataButtonBackground, Mode=OneWay}" BorderBrush="{x:Bind ViewModel.PackageRarRawDataButtonBorderBrush, Mode=OneWay}" Command="{x:Bind ViewModel.CopyPackageRarRawDataCommand}" Content="{x:Bind ViewModel.PackageRarRawDataButtonLabel, Mode=OneWay}" Foreground="{x:Bind ViewModel.PackageRarRawDataButtonForeground, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}" />
+                                        <Button Grid.Row="0" Grid.Column="1" Background="{x:Bind ViewModel.PackageRarWeightSummaryButtonBackground, Mode=OneWay}" BorderBrush="{x:Bind ViewModel.PackageRarWeightSummaryButtonBorderBrush, Mode=OneWay}" Command="{x:Bind ViewModel.CopyPackageRarWeightSummaryCommand}" Content="{x:Bind ViewModel.PackageRarWeightSummaryButtonLabel, Mode=OneWay}" Foreground="{x:Bind ViewModel.PackageRarWeightSummaryButtonForeground, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}" />
+                                        <Button Grid.Row="0" Grid.Column="2" Background="{x:Bind ViewModel.PackageRarCleanNameButtonBackground, Mode=OneWay}" BorderBrush="{x:Bind ViewModel.PackageRarCleanNameButtonBorderBrush, Mode=OneWay}" Command="{x:Bind ViewModel.CopyPackageRarCleanNameCommand}" Content="{x:Bind ViewModel.PackageRarCleanNameButtonLabel, Mode=OneWay}" Foreground="{x:Bind ViewModel.PackageRarCleanNameButtonForeground, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}" />
+                                        <Button Grid.Row="0" Grid.Column="3" Background="{x:Bind ViewModel.PackageRarSeriesTitleButtonBackground, Mode=OneWay}" BorderBrush="{x:Bind ViewModel.PackageRarSeriesTitleButtonBorderBrush, Mode=OneWay}" Command="{x:Bind ViewModel.CopyPackageRarSeriesTitleCommand}" Content="{x:Bind ViewModel.PackageRarSeriesTitleButtonLabel, Mode=OneWay}" Foreground="{x:Bind ViewModel.PackageRarSeriesTitleButtonForeground, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}" />
                                     </Grid>
                                 </StackPanel>
                             </Border>
-                        </StackPanel>
 
-                        <Grid x:Name="DetailOutputToolbarGrid" Grid.Row="1" ColumnSpacing="8" RowSpacing="8">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
                             <Border
-                                Background="{StaticResource SweepAccentBrush}"
-                                CornerRadius="999"
-                                Height="6"
-                                HorizontalAlignment="Stretch"
-                                Opacity="0.82"
-                                PointerCaptureLost="OnDetailOutputResizeHandlePointerCaptureLost"
-                                PointerMoved="OnDetailOutputResizeHandlePointerMoved"
-                                PointerPressed="OnDetailOutputResizeHandlePointerPressed"
-                                PointerReleased="OnDetailOutputResizeHandlePointerReleased"
-                                VerticalAlignment="Center" />
-                            <Button
-                                Grid.Column="1"
-                                Click="OnDetailOutputAutoSizeClicked"
-                                Content="Autoajustar"
-                                Style="{StaticResource DenseActionButtonStyle}" />
-                            <Button
-                                Grid.Column="2"
-                                Command="{x:Bind ViewModel.OpenSelectedLogCommand}"
-                                Content="Abrir log completo"
-                                IsEnabled="{x:Bind ViewModel.CanOpenSelectedLog, Mode=OneWay}"
-                                Style="{StaticResource DenseActionButtonStyle}" />
-                        </Grid>
+                                x:Name="DetailProgressPanel"
+                                Grid.Row="2"
+                                Padding="14,12"
+                                Background="#33101A28"
+                                BorderBrush="{StaticResource HairlineBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                                <Grid RowSpacing="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <SymbolIcon
+                                                Foreground="{StaticResource AccentSecondaryBrush}"
+                                                Symbol="Sync" />
+                                            <TextBlock
+                                                FontSize="14"
+                                                FontWeight="SemiBold"
+                                                Text="{x:Bind ViewModel.DetailProgressTitle, Mode=OneWay}" />
+                                        </StackPanel>
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource AccentSecondaryBrush}"
+                                            Text="{x:Bind ViewModel.DetailProgressPercentLabel, Mode=OneWay}" />
+                                    </Grid>
+                                    <Grid Grid.Row="1" RowSpacing="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <ProgressBar
+                                            Height="8"
+                                            IsIndeterminate="{x:Bind ViewModel.DetailProgressIsIndeterminate, Mode=OneWay}"
+                                            Maximum="100"
+                                            Minimum="0"
+                                            Value="{x:Bind ViewModel.DetailProgressValue, Mode=OneWay}" />
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Style="{StaticResource MutedCaptionTextStyle}"
+                                            Text="{x:Bind ViewModel.DetailProgressMessage, Mode=OneWay}"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextWrapping="NoWrap" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
 
-                        <TextBox
-                            Grid.Row="2"
-                            AcceptsReturn="True"
-                            Background="{StaticResource InsetSurfaceBrush}"
-                            BorderBrush="{StaticResource HairlineBrush}"
-                            BorderThickness="1"
-                            CornerRadius="16"
-                            FontFamily="Consolas"
-                            Foreground="{StaticResource TextPrimaryBrush}"
-                            Height="{x:Bind ViewModel.DetailOutputHeight, Mode=OneWay}"
-                            HorizontalAlignment="Stretch"
-                            IsReadOnly="True"
-                            Padding="12"
-                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                            ScrollViewer.VerticalScrollBarVisibility="Visible"
-                            Text="{x:Bind ViewModel.DetailOutput, Mode=OneWay}"
-                            TextWrapping="NoWrap" />
-                    </Grid>
-                </Border>
-            </StackPanel>
+                            <TextBox
+                                x:Name="DetailOutputTerminal"
+                                Grid.Row="3"
+                                AcceptsReturn="True"
+                                Background="#55101A28"
+                                BorderBrush="{StaticResource HairlineBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                FontFamily="Consolas"
+                                Foreground="{StaticResource TextPrimaryBrush}"
+                                Height="{x:Bind ViewModel.DetailOutputHeight, Mode=OneWay}"
+                                HorizontalAlignment="Stretch"
+                                IsReadOnly="True"
+                                Padding="16"
+                                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                Text="{x:Bind ViewModel.DetailOutput, Mode=OneWay}"
+                                TextWrapping="NoWrap" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </ScrollViewer>
     </Grid>
 </Page>

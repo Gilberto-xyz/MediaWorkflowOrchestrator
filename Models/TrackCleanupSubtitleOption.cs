@@ -150,7 +150,19 @@ namespace MediaWorkflowOrchestrator.Models
         public Brush CaptionBrush => TrackCleanupOptionVisuals.GetCaptionBrush(IsSelected, IsPrimary);
 
         [JsonIgnore]
+        public Brush SelectorBackgroundBrush => TrackCleanupOptionVisuals.GetSelectorBackground(IsSelected);
+
+        [JsonIgnore]
+        public Brush SelectorBorderBrush => TrackCleanupOptionVisuals.GetSelectorBorder(IsSelected);
+
+        [JsonIgnore]
+        public Brush SelectorGlyphBrush => TrackCleanupOptionVisuals.GetSelectorGlyph(IsSelected);
+
+        [JsonIgnore]
         public string PrimaryActionLabel => IsPrimary ? "Principal actual" : "Principal";
+
+        [JsonIgnore]
+        public string PrimaryBadgeLabel => IsPrimary ? "Actual" : "Principal";
 
         private void NotifyPresentationChanged()
         {
@@ -160,7 +172,11 @@ namespace MediaWorkflowOrchestrator.Models
             OnPropertyChanged(nameof(CardBorderBrush));
             OnPropertyChanged(nameof(TitleBrush));
             OnPropertyChanged(nameof(CaptionBrush));
+            OnPropertyChanged(nameof(SelectorBackgroundBrush));
+            OnPropertyChanged(nameof(SelectorBorderBrush));
+            OnPropertyChanged(nameof(SelectorGlyphBrush));
             OnPropertyChanged(nameof(PrimaryActionLabel));
+            OnPropertyChanged(nameof(PrimaryBadgeLabel));
         }
     }
 }

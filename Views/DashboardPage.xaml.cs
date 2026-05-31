@@ -33,6 +33,8 @@ namespace MediaWorkflowOrchestrator.Views
             UpdateTranslationDecisionVisibility();
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActionsVisibility();
+            UpdateDetailProgressVisibility();
+            UpdateDetailOutputTerminalVisibility();
             UpdateResponsiveLayout(ActualWidth);
         }
 
@@ -61,6 +63,7 @@ namespace MediaWorkflowOrchestrator.Views
                 or nameof(DashboardViewModel.ShowDownloadQuickOptions)
                 or nameof(DashboardViewModel.ShowTranslateQuickOptions)
                 or nameof(DashboardViewModel.ShowCleanTracksQuickOptions)
+                or nameof(DashboardViewModel.ShowTagAndRenameQuickOptions)
                 or nameof(DashboardViewModel.ShowPackageRarQuickOptions)
                 or nameof(DashboardViewModel.ShowSkipAheadActions))
             {
@@ -70,6 +73,16 @@ namespace MediaWorkflowOrchestrator.Views
             if (e.PropertyName == nameof(DashboardViewModel.ShowPackageRarDetailActions))
             {
                 _ = DispatcherQueue.TryEnqueue(UpdatePackageRarDetailActionsVisibility);
+            }
+
+            if (e.PropertyName == nameof(DashboardViewModel.ShowDetailProgress))
+            {
+                _ = DispatcherQueue.TryEnqueue(UpdateDetailProgressVisibility);
+            }
+
+            if (e.PropertyName == nameof(DashboardViewModel.ShowDetailOutputTerminal))
+            {
+                _ = DispatcherQueue.TryEnqueue(UpdateDetailOutputTerminalVisibility);
             }
         }
 
@@ -86,6 +99,7 @@ namespace MediaWorkflowOrchestrator.Views
             DownloadQuickOptionsPanel.Visibility = ViewModel.ShowDownloadQuickOptions ? Visibility.Visible : Visibility.Collapsed;
             TranslateQuickOptionsPanel.Visibility = ViewModel.ShowTranslateQuickOptions ? Visibility.Visible : Visibility.Collapsed;
             CleanTracksQuickOptionsPanel.Visibility = ViewModel.ShowCleanTracksQuickOptions ? Visibility.Visible : Visibility.Collapsed;
+            TagAndRenameQuickOptionsPanel.Visibility = ViewModel.ShowTagAndRenameQuickOptions ? Visibility.Visible : Visibility.Collapsed;
             PackageRarQuickOptionsPanel.Visibility = ViewModel.ShowPackageRarQuickOptions ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -94,6 +108,21 @@ namespace MediaWorkflowOrchestrator.Views
             PackageRarDetailActionsPanel.Visibility = ViewModel.ShowPackageRarDetailActions
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+        }
+
+        private void UpdateDetailProgressVisibility()
+        {
+            DetailProgressPanel.Visibility = ViewModel.ShowDetailProgress
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void UpdateDetailOutputTerminalVisibility()
+        {
+            var visibility = ViewModel.ShowDetailOutputTerminal ? Visibility.Visible : Visibility.Collapsed;
+            DetailOutputTerminal.Visibility = visibility;
+            DetailOutputResizeHandle.Visibility = visibility;
+            DetailOutputAutoSizeButton.Visibility = visibility;
         }
 
         private void OnStepItemClicked(object sender, RoutedEventArgs e)
@@ -159,57 +188,60 @@ namespace MediaWorkflowOrchestrator.Views
         private void UpdateResponsiveLayout(double width)
         {
             DashboardLayoutRoot.Padding = width < NarrowLayoutBreakpoint
-                ? new Thickness(12, 10, 12, 16)
+                ? new Thickness(10, 8, 10, 14)
                 : width < WideLayoutBreakpoint
-                    ? new Thickness(16, 14, 16, 20)
-                    : new Thickness(24, 18, 24, 28);
+                    ? new Thickness(14, 12, 14, 18)
+                    : new Thickness(20, 14, 20, 22);
+
+            DashboardContentGrid.ColumnSpacing = 0;
 
             ApplyResponsiveGrid(
                 WorkflowStatusGrid,
                 width < WideLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { Star(2), Star(), Star() },
                 (0, 0),
-                (0, 1));
+                (0, 1),
+                (0, 2));
 
             ApplyResponsiveGrid(
                 TranslationDecisionGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
                 SkipAheadActionGrid,
                 width < WideLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
                 DownloadQuickOptionsGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
                 TranslateQuickOptionsGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
                 CleanupFlagsGrid,
                 width < WideLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
                 CleanupAudioActionGrid,
                 width < WideLayoutBreakpoint,
-                new[] { Star(), Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1),
                 (0, 2));
@@ -217,36 +249,44 @@ namespace MediaWorkflowOrchestrator.Views
             ApplyResponsiveGrid(
                 CleanupSubtitleActionGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
+                TagAndRenameQuickOptionsGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { GridLength.Auto },
+                (0, 0));
+
+            ApplyResponsiveGrid(
                 PackageRarQuickOptionsGrid,
-                width < WideLayoutBreakpoint,
-                new[] { Star(), Star(), Star() },
+                width < MediumLayoutBreakpoint,
+                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1),
                 (0, 2),
-                (1, 0),
-                (1, 1));
+                (0, 3),
+                (0, 4),
+                (0, 5));
 
             ApplyResponsiveGrid(
                 PackageRarDetailActionsGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { Star(), Star() },
+                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1),
-                (1, 0),
-                (1, 1));
+                (0, 2),
+                (0, 3));
 
             ApplyResponsiveGrid(
                 DetailOutputToolbarGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { Star(), GridLength.Auto, GridLength.Auto },
+                new[] { Star(), GridLength.Auto, GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1),
-                (0, 2));
+                (0, 2),
+                (0, 3));
         }
 
         private static void ApplyResponsiveGrid(Grid grid, bool stacked, GridLength[] wideColumnWidths, params (int row, int column)[] widePositions)

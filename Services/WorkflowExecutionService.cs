@@ -103,6 +103,7 @@ namespace MediaWorkflowOrchestrator.Services
         public async Task<TrackCleanupAudioInspection> GetTrackCleanupAudioInspectionAsync(WorkflowInstance workflow, CancellationToken cancellationToken)
         {
             var settings = await appSettingsService.LoadAsync();
+            EnsureWorkflowSourceReferences(workflow);
             return await BuildTrackCleanupAudioInspectionAsync(settings, workflow, cancellationToken);
         }
 
@@ -131,6 +132,7 @@ namespace MediaWorkflowOrchestrator.Services
         public async Task<ExecutionRecord?> ExecuteStepAsync(WorkflowInstance workflow, WorkflowStepKey stepKey, Action<string>? onOutput, CancellationToken cancellationToken, bool forceExecution = false)
         {
             var settings = await appSettingsService.LoadAsync();
+            EnsureWorkflowSourceReferences(workflow);
             var step = workflow.FindStep(stepKey);
             if (step is null)
             {
@@ -328,12 +330,7 @@ namespace MediaWorkflowOrchestrator.Services
                 WorkflowStepKey.TagAndRename => new ProcessExecutionRequest
                 {
                     FileName = settings.PythonPath,
-                    Arguments = new[]
-                    {
-                        settings.TagAndRenameScriptPath,
-                        "--brand",
-                        settings.BrandName,
-                    },
+                    Arguments = BuildTagAndRenameArgs(settings, workflow).ToArray(),
                     WorkingDirectory = overrideWorkingDirectory ?? settings.TagAndRenameWorkingDirectory,
                 },
                 WorkflowStepKey.PackageRar => new ProcessExecutionRequest
@@ -350,9 +347,140 @@ namespace MediaWorkflowOrchestrator.Services
             };
         }
 
+        private static IEnumerable<string> BuildTagAndRenameArgs(AppSettings settings, WorkflowInstance workflow)
+        {
+            var args = new List<string>
+            {
+                settings.TagAndRenameScriptPath,
+                "--brand",
+                settings.BrandName,
+            };
+
+            var tagInputPath = ResolveTagAndRenameInputPath(workflow);
+            if (!string.IsNullOrWhiteSpace(tagInputPath))
+            {
+                args.Add("--input");
+                args.Add(tagInputPath);
+            }
+
+            var fileBotOutputDirectory = ResolveWorkflowOutputDirectory(workflow);
+            if (!string.IsNullOrWhiteSpace(fileBotOutputDirectory))
+            {
+                args.Add("--filebot-output");
+                args.Add(fileBotOutputDirectory);
+            }
+
+            if (!settings.TagAndRenameAttachCover)
+            {
+                args.Add("--no-cover");
+            }
+
+            return args;
+        }
+
+        private static string ResolveTagAndRenameInputPath(WorkflowInstance workflow)
+        {
+            var filteredVideo = ResolveFilteredVideo(workflow);
+            if (filteredVideo is not null)
+            {
+                return filteredVideo.FullName;
+            }
+
+            var primaryVideo = ResolvePrimaryVideo(workflow);
+            if (primaryVideo is not null)
+            {
+                return primaryVideo.FullName;
+            }
+
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            return !string.IsNullOrWhiteSpace(sourceRootPath) && Directory.Exists(sourceRootPath)
+                ? sourceRootPath
+                : string.Empty;
+        }
+
+        private static string ResolveWorkflowOutputDirectory(WorkflowInstance workflow)
+        {
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            if (!string.IsNullOrWhiteSpace(sourceRootPath))
+            {
+                return sourceRootPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.RootPath))
+            {
+                if (Directory.Exists(workflow.RootPath))
+                {
+                    return Path.GetFullPath(workflow.RootPath);
+                }
+
+                if (File.Exists(workflow.RootPath))
+                {
+                    return Path.GetDirectoryName(Path.GetFullPath(workflow.RootPath)) ?? string.Empty;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) && File.Exists(workflow.PrimaryVideoPath))
+            {
+                return Path.GetDirectoryName(Path.GetFullPath(workflow.PrimaryVideoPath)) ?? string.Empty;
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveSourceRootPath(WorkflowInstance workflow)
+        {
+            if (!string.IsNullOrWhiteSpace(workflow.SourceRootPath))
+            {
+                if (Directory.Exists(workflow.SourceRootPath))
+                {
+                    return Path.GetFullPath(workflow.SourceRootPath);
+                }
+
+                if (File.Exists(workflow.SourceRootPath))
+                {
+                    return Path.GetDirectoryName(Path.GetFullPath(workflow.SourceRootPath)) ?? string.Empty;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath) && File.Exists(workflow.SourcePrimaryVideoPath))
+            {
+                return Path.GetDirectoryName(Path.GetFullPath(workflow.SourcePrimaryVideoPath)) ?? string.Empty;
+            }
+
+            return string.Empty;
+        }
+
+        private static void EnsureWorkflowSourceReferences(WorkflowInstance workflow)
+        {
+            if (string.IsNullOrWhiteSpace(workflow.SourceRootPath))
+            {
+                if (!string.IsNullOrWhiteSpace(workflow.RootPath))
+                {
+                    workflow.SourceRootPath = workflow.RootPath;
+                }
+                else if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) && File.Exists(workflow.PrimaryVideoPath))
+                {
+                    workflow.SourceRootPath = Path.GetDirectoryName(Path.GetFullPath(workflow.PrimaryVideoPath)) ?? string.Empty;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath)
+                && !string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                && File.Exists(workflow.PrimaryVideoPath)
+                && !Path.GetFileName(workflow.PrimaryVideoPath).Contains(" (filtered)", StringComparison.OrdinalIgnoreCase))
+            {
+                workflow.SourcePrimaryVideoPath = workflow.PrimaryVideoPath;
+            }
+        }
+
         private static IEnumerable<string> BuildSubtitleInputArgs(WorkflowInstance workflow)
         {
-            var root = workflow.RootPath;
+            var root = ResolveSourceRootPath(workflow);
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                root = workflow.RootPath;
+            }
+
             if (!Directory.Exists(root))
             {
                 return Array.Empty<string>();
@@ -404,6 +532,7 @@ namespace MediaWorkflowOrchestrator.Services
         {
             var cleanupInputPath = ResolveTrackCleanupInputPath(workflow);
             var deleteOriginals = settings.TrackCleanupDeleteOriginals;
+            onOutput?.Invoke($"Limpiar tracks: eliminar originales {(deleteOriginals ? "activado" : "desactivado")} en la app.");
             var targetContext = ResolveTrackCleanupTargetContext(workflow, cleanupInputPath);
             IReadOnlyList<string> selectedAudioTrackIds = Array.Empty<string>();
             IReadOnlyList<string> selectedSubtitleTrackIds = Array.Empty<string>();
@@ -471,17 +600,7 @@ namespace MediaWorkflowOrchestrator.Services
             {
                 deleteOriginals = false;
                 onOutput?.Invoke(targetContext.Message);
-                onOutput?.Invoke("Se omitió --delete-originals porque este paso procesa más de un video y la selección manual de tracks no aplica.");
-            }
-
-            if (deleteOriginals && !string.IsNullOrWhiteSpace(targetContext.TargetVideoPath))
-            {
-                var audioTrackCount = await GetAudioTrackCountAsync(targetContext.TargetVideoPath, settings, cancellationToken);
-                if (audioTrackCount == 1)
-                {
-                    deleteOriginals = false;
-                    onOutput?.Invoke("Se omitió --delete-originals porque el archivo objetivo solo tiene una pista de audio.");
-                }
+                onOutput?.Invoke("Se omitió --delete-originals porque no se encontró un video objetivo seguro para validar la selección de tracks.");
             }
 
             return new ProcessExecutionRequest
@@ -588,12 +707,6 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return args;
-        }
-
-        private async Task<int?> GetAudioTrackCountAsync(string videoPath, AppSettings settings, CancellationToken cancellationToken)
-        {
-            var trackOptions = await GetTrackCleanupOptionsAsync(videoPath, settings, cancellationToken);
-            return trackOptions?.AudioOptions.Count;
         }
 
         private async Task<TrackCleanupAudioInspection> BuildTrackCleanupAudioInspectionAsync(
@@ -1151,18 +1264,22 @@ namespace MediaWorkflowOrchestrator.Services
                 targetVideoPath,
                 StringComparison.OrdinalIgnoreCase);
 
-            var selectedMap = hasMatchingSelection
-                ? workflow.TrackCleanupAudioOptions.ToDictionary(option => option.TrackId, option => option.IsSelected, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var previousOptions = hasMatchingSelection
+                ? workflow.TrackCleanupAudioOptions.ToDictionary(option => option.TrackId, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, TrackCleanupAudioOption>(StringComparer.OrdinalIgnoreCase);
             var primaryTrackId = hasMatchingSelection
                 ? workflow.TrackCleanupAudioOptions.FirstOrDefault(option => option.IsPrimary)?.TrackId
                 : null;
 
             foreach (var option in inspectedOptions)
             {
-                if (selectedMap.TryGetValue(option.TrackId, out var isSelected))
+                if (previousOptions.TryGetValue(option.TrackId, out var previousOption))
                 {
-                    option.IsSelected = isSelected;
+                    option.IsSelected = previousOption.IsSelected;
+                    option.LanguageCode = previousOption.LanguageCode;
+                    option.LanguageLabel = previousOption.LanguageLabel;
+                    option.Codec = previousOption.Codec;
+                    option.Name = previousOption.Name;
                 }
                 else
                 {
@@ -1187,18 +1304,21 @@ namespace MediaWorkflowOrchestrator.Services
                 targetVideoPath,
                 StringComparison.OrdinalIgnoreCase);
 
-            var selectedMap = hasMatchingSelection
-                ? workflow.TrackCleanupSubtitleOptions.ToDictionary(option => option.TrackId, option => option.IsSelected, StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            var previousOptions = hasMatchingSelection
+                ? workflow.TrackCleanupSubtitleOptions.ToDictionary(option => option.TrackId, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, TrackCleanupSubtitleOption>(StringComparer.OrdinalIgnoreCase);
             var primaryTrackId = hasMatchingSelection
                 ? workflow.TrackCleanupSubtitleOptions.FirstOrDefault(option => option.IsPrimary)?.TrackId
                 : null;
 
             foreach (var option in inspectedOptions)
             {
-                if (selectedMap.TryGetValue(option.TrackId, out var isSelected))
+                if (previousOptions.TryGetValue(option.TrackId, out var previousOption))
                 {
-                    option.IsSelected = isSelected;
+                    option.IsSelected = previousOption.IsSelected;
+                    option.LanguageCode = previousOption.LanguageCode;
+                    option.LanguageLabel = previousOption.LanguageLabel;
+                    option.Name = previousOption.Name;
                 }
                 else
                 {
@@ -1263,6 +1383,37 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static string ResolveTrackCleanupInputPath(WorkflowInstance workflow)
         {
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            if (!string.IsNullOrWhiteSpace(sourceRootPath) && Directory.Exists(sourceRootPath))
+            {
+                if (workflow.SourceSelectionIsFile is false)
+                {
+                    return sourceRootPath;
+                }
+
+                if (workflow.SourceSelectionIsFile is null && CountVideoFiles(sourceRootPath) > 1)
+                {
+                    return sourceRootPath;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath) && File.Exists(workflow.SourcePrimaryVideoPath))
+            {
+                return Path.GetFullPath(workflow.SourcePrimaryVideoPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(sourceRootPath) && Directory.Exists(sourceRootPath))
+            {
+                var candidate = Directory.EnumerateFiles(sourceRootPath, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(IsVideoFile)
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    return Path.GetFullPath(candidate);
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(workflow.RootPath) && Directory.Exists(workflow.RootPath))
             {
                 var rootPath = Path.GetFullPath(workflow.RootPath);
@@ -1403,12 +1554,12 @@ namespace MediaWorkflowOrchestrator.Services
             {
                 if (ContainsRenamerLaunchMessage(result.StandardOutput) && TagAndRenameOutputHasWarnings(result.StandardOutput))
                 {
-                    return "Etiquetas completadas con advertencias; FileBot fue lanzado correctamente.";
+                    return "Etiquetas completadas con advertencias; FileBot quedó listo para revisión manual.";
                 }
 
                 if (ContainsRenamerLaunchMessage(result.StandardOutput))
                 {
-                    return "Etiquetas completadas y FileBot lanzado correctamente.";
+                    return "Etiquetas completadas; FileBot quedó listo para revisión manual.";
                 }
             }
 
@@ -1427,7 +1578,7 @@ namespace MediaWorkflowOrchestrator.Services
                 return result;
             }
 
-            onOutput?.Invoke("El script de etiquetas reportó advertencias, pero FileBot fue lanzado correctamente. El paso se marcará como completado.");
+            onOutput?.Invoke("El script de etiquetas reportó advertencias, pero FileBot quedó listo para revisión manual. El paso se marcará como completado.");
             return new ProcessExecutionResult
             {
                 ExitCode = result.ExitCode,
@@ -1443,6 +1594,8 @@ namespace MediaWorkflowOrchestrator.Services
         private static bool ContainsRenamerLaunchMessage(string output)
         {
             return output.Contains("Renombrar.lnk lanzado.", StringComparison.OrdinalIgnoreCase)
+                || output.Contains("FileBot lanzado con salida fijada", StringComparison.OrdinalIgnoreCase)
+                || output.Contains("FileBot GUI abierto desde ruta real", StringComparison.OrdinalIgnoreCase)
                 || output.Contains("se lanzó FileBot", StringComparison.OrdinalIgnoreCase)
                 || output.Contains("se lanzo FileBot", StringComparison.OrdinalIgnoreCase);
         }
@@ -1523,7 +1676,6 @@ namespace MediaWorkflowOrchestrator.Services
             if (!string.IsNullOrWhiteSpace(scopedVideoPath))
             {
                 workflow.PrimaryVideoPath = scopedVideoPath;
-                workflow.RootPath = Path.GetDirectoryName(scopedVideoPath) ?? workflow.RootPath;
                 onOutput?.Invoke($"Usando el archivo objetivo para empaquetado RAR: {scopedVideoPath}");
                 return scopedVideoPath;
             }
@@ -1533,7 +1685,6 @@ namespace MediaWorkflowOrchestrator.Services
             if (!string.IsNullOrWhiteSpace(singleVideoInTree))
             {
                 workflow.PrimaryVideoPath = singleVideoInTree;
-                workflow.RootPath = Path.GetDirectoryName(singleVideoInTree) ?? workflow.RootPath;
                 onOutput?.Invoke($"Se detectó un único video válido dentro de la carpeta objetivo. Se empaquetará ese archivo: {singleVideoInTree}");
                 return singleVideoInTree;
             }
@@ -1572,6 +1723,31 @@ namespace MediaWorkflowOrchestrator.Services
                 primaryVideoPath = Path.GetFullPath(workflow.PrimaryVideoPath);
             }
 
+            var fileBotOutputPath = TryResolveLatestFileBotOutputVideo(workflow);
+            if (!string.IsNullOrWhiteSpace(fileBotOutputPath))
+            {
+                return fileBotOutputPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath) && File.Exists(workflow.SourcePrimaryVideoPath))
+            {
+                var sourcePrimaryVideoPath = Path.GetFullPath(workflow.SourcePrimaryVideoPath);
+                var filteredSibling = Directory.EnumerateFiles(Path.GetDirectoryName(sourcePrimaryVideoPath) ?? string.Empty, "* (filtered).*", SearchOption.TopDirectoryOnly)
+                    .Where(IsVideoFile)
+                    .Select(Path.GetFullPath)
+                    .OrderByDescending(File.GetLastWriteTimeUtc)
+                    .FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(filteredSibling))
+                {
+                    return filteredSibling;
+                }
+
+                if (workflow.SourceSelectionIsFile == true && string.IsNullOrWhiteSpace(primaryVideoPath))
+                {
+                    return sourcePrimaryVideoPath;
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(workflow.RootPath)
                 && File.Exists(workflow.RootPath)
                 && IsVideoFile(workflow.RootPath))
@@ -1587,12 +1763,17 @@ namespace MediaWorkflowOrchestrator.Services
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(workflow.RootPath) || !Directory.Exists(workflow.RootPath))
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            var searchRoot = !string.IsNullOrWhiteSpace(sourceRootPath) && Directory.Exists(sourceRootPath)
+                ? sourceRootPath
+                : workflow.RootPath;
+
+            if (string.IsNullOrWhiteSpace(searchRoot) || !Directory.Exists(searchRoot))
             {
                 return null;
             }
 
-            var rootPath = Path.GetFullPath(workflow.RootPath);
+            var rootPath = Path.GetFullPath(searchRoot);
             var directVideos = Directory.EnumerateFiles(rootPath, "*.*", SearchOption.TopDirectoryOnly)
                 .Where(IsVideoFile)
                 .Select(Path.GetFullPath)
@@ -1622,6 +1803,54 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return null;
+        }
+
+        private static string? TryResolveLatestFileBotOutputVideo(WorkflowInstance workflow)
+        {
+            if (workflow.SourceSelectionIsFile != true)
+            {
+                return null;
+            }
+
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            if (string.IsNullOrWhiteSpace(sourceRootPath) || !Directory.Exists(sourceRootPath))
+            {
+                return null;
+            }
+
+            var tagAndRenameStep = workflow.FindStep(WorkflowStepKey.TagAndRename);
+            var startedAtUtc = tagAndRenameStep?.StartedAt?.UtcDateTime;
+            if (startedAtUtc is null)
+            {
+                return null;
+            }
+
+            var lowerBoundUtc = startedAtUtc.Value.AddMinutes(-2);
+            var excludedPaths = new[]
+                {
+                    workflow.SourcePrimaryVideoPath,
+                    workflow.PrimaryVideoPath,
+                }
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => Path.GetFullPath(path!))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                return Directory.EnumerateFiles(sourceRootPath, "*.*", SearchOption.AllDirectories)
+                    .Where(IsVideoFile)
+                    .Where(path => !IsIgnoredRarPackagingPath(path))
+                    .Select(path => new FileInfo(path))
+                    .Where(file => !excludedPaths.Contains(file.FullName))
+                    .Where(file => file.LastWriteTimeUtc >= lowerBoundUtc)
+                    .OrderByDescending(file => file.LastWriteTimeUtc)
+                    .Select(file => file.FullName)
+                    .FirstOrDefault();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static bool IsIgnoredRarPackagingPath(string path)
@@ -1663,6 +1892,12 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static string ResolveRarTargetDirectory(WorkflowInstance workflow)
         {
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            if (!string.IsNullOrWhiteSpace(sourceRootPath) && Directory.Exists(sourceRootPath))
+            {
+                return sourceRootPath;
+            }
+
             if (!string.IsNullOrWhiteSpace(workflow.RootPath) && Directory.Exists(workflow.RootPath))
             {
                 return Path.GetFullPath(workflow.RootPath);
@@ -2606,8 +2841,37 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             workflow.PrimaryVideoPath = filteredFile.FullName;
-            workflow.RootPath = filteredFile.DirectoryName ?? workflow.RootPath;
+            if (string.IsNullOrWhiteSpace(workflow.RootPath)
+                || File.Exists(workflow.RootPath)
+                || IsPathInsideTransientWorkflowDirectory(workflow.RootPath))
+            {
+                workflow.RootPath = ResolveSourceRootPath(workflow)
+                    is { Length: > 0 } sourceRootPath
+                    ? sourceRootPath
+                    : filteredFile.DirectoryName ?? workflow.RootPath;
+            }
+
             onOutput?.Invoke($"Archivo principal actualizado para siguientes pasos: {filteredFile.FullName}");
+        }
+
+        private static bool IsPathInsideTransientWorkflowDirectory(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            var tagRoot = Path.GetFullPath(AppSettings.CreateDefault().TagAndRenameWorkingDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var appRoot = Path.GetFullPath(AppDataPaths.RootDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var fullPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            return fullPath.StartsWith(tagRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fullPath, tagRoot, StringComparison.OrdinalIgnoreCase)
+                || fullPath.StartsWith(appRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(fullPath, appRoot, StringComparison.OrdinalIgnoreCase);
         }
 
         private static TagAndRenamePreparation PrepareTagAndRenameWorkspace(AppSettings settings, WorkflowInstance workflow, Action<string>? onOutput)
@@ -2625,20 +2889,19 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             var workingDirectory = settings.TagAndRenameWorkingDirectory;
-            var completadoDirectory = Path.Combine(workingDirectory, "Completado");
-            Directory.CreateDirectory(completadoDirectory);
+            Directory.CreateDirectory(Path.Combine(workingDirectory, "Completado"));
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Subs"));
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Audios"));
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Videos"));
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Originales"));
 
-            var stagedVideoPath = StageVideoForTagAndRename(sourceVideo, completadoDirectory, workflow.Id, onOutput);
-            onOutput?.Invoke($"Preparando archivo para etiquetas y renombre: {stagedVideoPath}");
+            var stagedVideoPath = sourceVideo.FullName;
+            onOutput?.Invoke($"Etiquetas y renombre trabajará sobre el archivo original, sin copia local: {stagedVideoPath}");
 
             return new TagAndRenamePreparation(
                 workingDirectory,
                 Path.Combine(workingDirectory, "Renombrar.lnk"),
-                sourceVideo.Extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase) is false,
+                false,
                 stagedVideoPath);
         }
 
