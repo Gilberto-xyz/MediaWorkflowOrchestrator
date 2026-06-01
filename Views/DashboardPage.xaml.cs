@@ -196,14 +196,6 @@ namespace MediaWorkflowOrchestrator.Views
             DashboardContentGrid.ColumnSpacing = 0;
 
             ApplyResponsiveGrid(
-                WorkflowStatusGrid,
-                width < WideLayoutBreakpoint,
-                new[] { Star(2), Star(), Star() },
-                (0, 0),
-                (0, 1),
-                (0, 2));
-
-            ApplyResponsiveGrid(
                 TranslationDecisionGrid,
                 width < MediumLayoutBreakpoint,
                 new[] { GridLength.Auto, GridLength.Auto },

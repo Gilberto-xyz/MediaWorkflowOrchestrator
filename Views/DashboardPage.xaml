@@ -20,115 +20,31 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel x:Name="DashboardMainColumn" Spacing="18">
-                    <Border Height="1" Background="{StaticResource HairlineBrush}" />
-
-                    <Border Style="{StaticResource CardContainerStyle}">
-                        <StackPanel Spacing="18">
-                            <Grid x:Name="WorkflowStatusGrid" ColumnSpacing="38" RowSpacing="14">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <Grid Grid.Column="0" ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <SymbolIcon
-                                        Width="28"
-                                        Height="28"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource AccentSecondaryBrush}"
-                                        Symbol="Accept" />
-                                    <StackPanel Grid.Column="1" Spacing="8">
-                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="WORKFLOW" />
-                                        <TextBlock
-                                            Foreground="{StaticResource AccentSecondaryBrush}"
-                                            Style="{StaticResource DashboardStatusValueTextStyle}"
-                                            Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" />
-                                        <TextBlock
-                                            Style="{StaticResource MonoCaptionTextStyle}"
-                                            Text="{x:Bind ViewModel.RootPath, Mode=OneWay}"
-                                            TextWrapping="Wrap" />
-                                    </StackPanel>
-                                </Grid>
-
-                                <Border Grid.Column="1" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0" Padding="28,0,0,0">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="SIGUIENTE" />
-                                        <StackPanel Orientation="Horizontal" Spacing="10">
-                                            <TextBlock
-                                                Style="{StaticResource DashboardStatusValueTextStyle}"
-                                                Text="{x:Bind ViewModel.NextStepLabel, Mode=OneWay}" />
-                                            <SymbolIcon Foreground="#FF7FA8FF" Symbol="Clock" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Grid.Column="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0" Padding="28,0,0,0">
-                                    <StackPanel Spacing="10">
-                                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="ESTADO" />
-                                        <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <TextBlock
-                                                Foreground="{StaticResource AccentSecondaryBrush}"
-                                                Style="{StaticResource DashboardStatusValueTextStyle}"
-                                                Text="{x:Bind ViewModel.GlobalStatus, Mode=OneWay}" />
-                                            <SymbolIcon Foreground="{StaticResource AccentSecondaryBrush}" Symbol="Accept" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <Border
-                                Padding="18,14"
-                                Background="{StaticResource DashboardInfoBrush}"
-                                CornerRadius="7">
-                                <StackPanel Orientation="Horizontal" Spacing="14">
-                                    <SymbolIcon
-                                        Foreground="#FFA9CAFF"
-                                        Symbol="Important"
-                                        VerticalAlignment="Center" />
-                                    <TextBlock
-                                        FontSize="15"
-                                        FontWeight="SemiBold"
-                                        Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"
-                                        TextWrapping="WrapWholeWords" />
+                    <StackPanel x:Name="TranslationDecisionPanel" Spacing="8">
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="DECISION PENDIENTE" />
+                        <Grid x:Name="TranslationDecisionGrid" ColumnSpacing="10" RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Command="{x:Bind ViewModel.MarkTranslateRequiredCommand}" Style="{StaticResource PrimaryCommandButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <SymbolIcon Symbol="World" />
+                                    <TextBlock Text="Traducir subs" />
                                 </StackPanel>
-                            </Border>
-
-                            <StackPanel x:Name="TranslationDecisionPanel" Spacing="8">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="DECISION PENDIENTE" />
-                                <Grid x:Name="TranslationDecisionGrid" ColumnSpacing="10" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Command="{x:Bind ViewModel.MarkTranslateRequiredCommand}" Style="{StaticResource PrimaryCommandButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="World" />
-                                            <TextBlock Text="Traducir subs" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1" Command="{x:Bind ViewModel.MarkTranslateSkippedCommand}" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Cancel" />
-                                            <TextBlock Text="Omitir traducción" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
+                            </Button>
+                            <Button Grid.Column="1" Command="{x:Bind ViewModel.MarkTranslateSkippedCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <SymbolIcon Symbol="Cancel" />
+                                    <TextBlock Text="Omitir traducción" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
 
                     <Border Height="1" Background="{StaticResource HairlineBrush}" />
 

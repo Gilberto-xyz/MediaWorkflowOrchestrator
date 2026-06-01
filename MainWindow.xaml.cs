@@ -14,12 +14,11 @@ namespace MediaWorkflowOrchestrator
 {
     public sealed partial class MainWindow : Window, IRecipient<WorkflowSelectedMessage>
     {
-        private const double ShellHeaderStackBreakpoint = 1180;
         private const double ShellCompactSpacingBreakpoint = 900;
         private static readonly SolidColorBrush FallbackQuickRunSelectedBackgroundBrush = CreateBrush(0xFF, 0xE5, 0xA3, 0x4F);
         private static readonly SolidColorBrush FallbackQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0xF5, 0xC3, 0x72);
         private static readonly SolidColorBrush FallbackQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0x17, 0x11, 0x0A);
-        private static readonly Thickness ExpandedQuickActionsPaneMargin = new(6, 3, 6, 6);
+        private static readonly Thickness ExpandedQuickActionsPaneMargin = new(6, 2, 6, 6);
         private DashboardPage? trackedDashboardPage;
         private bool rootShellInitialized;
 
@@ -47,6 +46,7 @@ namespace MediaWorkflowOrchestrator
             UpdateQuickActionsPaneState();
             UpdateShellResponsiveLayout();
             rootShellInitialized = true;
+            UpdateShellWorkflowHeader();
         }
 
         private void OnRootShellSizeChanged(object sender, SizeChangedEventArgs e)
@@ -121,7 +121,7 @@ namespace MediaWorkflowOrchestrator
             var showQuickActions = AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded && isPaneOpen;
 
             QuickActionsPaneScrollViewer.Visibility = showQuickActions ? Visibility.Visible : Visibility.Collapsed;
-            QuickActionsFooterBorder.Visibility = showQuickActions ? Visibility.Visible : Visibility.Collapsed;
+            QuickActionsFooterBorder.Visibility = Visibility.Collapsed;
             UpdateQuickActionsPaneCompactMode(false);
 
             if (!showQuickActions)
@@ -144,25 +144,16 @@ namespace MediaWorkflowOrchestrator
         private void UpdateShellResponsiveLayout()
         {
             var width = RootShell.ActualWidth;
-            var stackHeader = width < ShellHeaderStackBreakpoint;
             var compactShell = width < ShellCompactSpacingBreakpoint;
-            var tightenSummaryCard = width < 1460;
 
             ShellHeaderLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            ShellHeaderLayout.ColumnDefinitions[1].Width = stackHeader ? new GridLength(0) : GridLength.Auto;
-            Grid.SetColumn(ShellHeaderSummaryCard, stackHeader ? 0 : 1);
-            Grid.SetRow(ShellHeaderSummaryCard, stackHeader ? 1 : 0);
-            ShellHeaderSummaryCard.MaxWidth = stackHeader ? double.NaN : tightenSummaryCard ? 256 : 284;
-            ShellHeaderSummaryCard.Padding = compactShell ? new Thickness(14) : new Thickness(16);
-            ShellHeaderSummaryContent.Spacing = compactShell ? 3 : 4;
-            ShellHeaderSummaryText.FontSize = compactShell ? 14 : 15;
-            ShellHeaderSummaryText.LineHeight = compactShell ? 21 : 23;
-            ShellHeaderLayout.ColumnSpacing = stackHeader ? 0 : 18;
-            ShellHeaderLayout.RowSpacing = compactShell ? 10 : 12;
+            ShellHeaderLayout.ColumnDefinitions[1].Width = new GridLength(0);
+            ShellHeaderLayout.ColumnSpacing = 0;
+            ShellHeaderLayout.RowSpacing = compactShell ? 4 : 6;
 
-            QuickActionsFooterHintText.Visibility = compactShell ? Visibility.Collapsed : Visibility.Visible;
-            ContentFrame.Margin = compactShell ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 14, 12);
-            AppNavigationView.OpenPaneLength = compactShell ? 288 : 320;
+            QuickActionsFooterBorder.Visibility = Visibility.Collapsed;
+            ContentFrame.Margin = compactShell ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 12, 10);
+            AppNavigationView.OpenPaneLength = compactShell ? 280 : 304;
         }
 
         public void Receive(WorkflowSelectedMessage message)
@@ -221,6 +212,7 @@ namespace MediaWorkflowOrchestrator
                 trackedDashboardPage.ViewModel.PropertyChanged += OnDashboardViewModelPropertyChanged;
             }
 
+            UpdateShellWorkflowHeader();
             UpdateQuickRunSelectedButtonVisual();
         }
 
@@ -233,9 +225,16 @@ namespace MediaWorkflowOrchestrator
             }
         }
 
+        private void UpdateShellWorkflowHeader()
+        {
+            var dashboardViewModel = trackedDashboardPage?.ViewModel;
+            ShellWorkflowHeader.DataContext = dashboardViewModel;
+            ShellWorkflowHeader.Visibility = dashboardViewModel is null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         private void UpdateQuickRunSelectedButtonVisual()
         {
-            var isActive = trackedDashboardPage?.ViewModel.HasExplicitStepSelection == true;
+            var isActive = trackedDashboardPage?.ViewModel.SelectedStep is not null;
             if (isActive)
             {
                 var background = GetApplicationBrush("AccentPrimaryBrush", FallbackQuickRunSelectedBackgroundBrush);
