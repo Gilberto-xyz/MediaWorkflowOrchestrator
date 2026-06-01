@@ -285,10 +285,10 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public string CleanupDeleteOriginalsButtonLabel => $"Eliminar originales: {(CleanupDeleteOriginalsEnabled ? "ON" : "OFF")}";
         public string TagAndRenameAttachCoverButtonLabel => $"Cover/poster: {(TagAndRenameAttachCoverEnabled ? "ON" : "OFF")}";
         public string CleanupAudioRefreshButtonLabel => CleanupAudioSelectionBusy ? "Cargando tracks..." : "Recargar tracks";
-        public string PackageRarRawDataButtonLabel => "Raw Data";
-        public string PackageRarWeightSummaryButtonLabel => "Peso completo";
-        public string PackageRarCleanNameButtonLabel => "Nombre limpio";
-        public string PackageRarSeriesTitleButtonLabel => "Nombre corto";
+        public string PackageRarRawDataButtonLabel => "Nombre(s) + Raw Data";
+        public string PackageRarWeightSummaryButtonLabel => "Peso - Promedio";
+        public string PackageRarCleanNameButtonLabel => "Nombre";
+        public string PackageRarSeriesTitleButtonLabel => "Nombre Serie + Raw Data";
         public bool HasCleanupAudioOptions => CleanupAudioOptions.Count > 0;
         public bool HasCleanupSubtitleOptions => CleanupSubtitleOptions.Count > 0;
         public bool HasCleanupSpecialCases => CleanupSpecialCases.Count > 0;
