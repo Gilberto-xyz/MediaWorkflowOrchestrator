@@ -4,31 +4,59 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Default">
-            <Color x:Key="WindowBackdropStartColor">#FF0B0F16</Color>
-            <Color x:Key="WindowBackdropMidColor">#FF121926</Color>
-            <Color x:Key="WindowBackdropEndColor">#FF1B1713</Color>
-            <Color x:Key="HeroVeilStartColor">#14000000</Color>
-            <Color x:Key="HeroVeilEndColor">#240E1218</Color>
-            <Color x:Key="BackdropGlowColor">#52E5A34F</Color>
+            <Color x:Key="WindowBackdropStartColor">#FF090D12</Color>
+            <Color x:Key="WindowBackdropMidColor">#FF101720</Color>
+            <Color x:Key="WindowBackdropEndColor">#FF141516</Color>
+            <Color x:Key="HeroVeilStartColor">#1C000000</Color>
+            <Color x:Key="HeroVeilEndColor">#26000000</Color>
+            <Color x:Key="BackdropGlowColor">#3035A77A</Color>
             <Color x:Key="AccentSweepStartColor">#00E5A34F</Color>
             <Color x:Key="AccentSweepMidColor">#74E5A34F</Color>
             <Color x:Key="AccentSweepEndColor">#00F5C372</Color>
-            <Color x:Key="AccentPrimaryColor">#FFE5A34F</Color>
-            <Color x:Key="AccentSecondaryColor">#FF8C5A1E</Color>
-            <Color x:Key="AccentForegroundColor">#FF17110A</Color>
+            <Color x:Key="AccentPrimaryColor">#FFE9A24A</Color>
+            <Color x:Key="AccentSecondaryColor">#FF35A77A</Color>
+            <Color x:Key="AccentForegroundColor">#FF16120C</Color>
             <Color x:Key="TextPrimaryColor">#FFF5F7FA</Color>
             <Color x:Key="TextSecondaryColor">#FFAFBAC8</Color>
             <Color x:Key="TextTertiaryColor">#FF8C98A8</Color>
-            <Color x:Key="CardSurfaceColor">#D9161B23</Color>
-            <Color x:Key="CardSurfaceStrongColor">#F01D2430</Color>
-            <Color x:Key="PaneSurfaceColor">#D4121720</Color>
-            <Color x:Key="InsetSurfaceColor">#DB1B202A</Color>
-            <Color x:Key="SoftAccentSurfaceColor">#302F2112</Color>
-            <Color x:Key="OutlineColor">#1FFFFFFF</Color>
-            <Color x:Key="OutlineStrongColor">#40E5A34F</Color>
-            <Color x:Key="SuccessColor">#FF5EC38A</Color>
+            <Color x:Key="CardSurfaceColor">#EA151B22</Color>
+            <Color x:Key="CardSurfaceStrongColor">#F41B222B</Color>
+            <Color x:Key="PaneSurfaceColor">#EC0D131B</Color>
+            <Color x:Key="InsetSurfaceColor">#F0171E27</Color>
+            <Color x:Key="SoftAccentSurfaceColor">#332A2116</Color>
+            <Color x:Key="DashboardPanelColor">#66101B2B</Color>
+            <Color x:Key="DashboardChipColor">#33182436</Color>
+            <Color x:Key="DashboardInfoColor">#6A10213A</Color>
+            <Color x:Key="OutlineColor">#2AFFFFFF</Color>
+            <Color x:Key="OutlineStrongColor">#6650C79A</Color>
+            <Color x:Key="SuccessColor">#FF50C79A</Color>
             <Color x:Key="WarningColor">#FFF0C56A</Color>
             <Color x:Key="DangerColor">#FFF27C82</Color>
+            <Color x:Key="RunNextBackgroundColor">#FF237A55</Color>
+            <Color x:Key="RunNextBorderColor">#FF50C79A</Color>
+            <Color x:Key="RunNextForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="RunSelectedBackgroundColor">#FF285A8F</Color>
+            <Color x:Key="RunSelectedActiveBackgroundColor">#FF3477B8</Color>
+            <Color x:Key="RunSelectedBorderColor">#FF6BA7E6</Color>
+            <Color x:Key="RunSelectedForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="QuickFileBackgroundColor">#FF213A5A</Color>
+            <Color x:Key="QuickFileBorderColor">#FF3E6D9E</Color>
+            <Color x:Key="QuickFileForegroundColor">#FFA9CEFF</Color>
+            <Color x:Key="QuickFolderBackgroundColor">#FF4A3820</Color>
+            <Color x:Key="QuickFolderBorderColor">#FF826333</Color>
+            <Color x:Key="QuickFolderForegroundColor">#FFFFD28B</Color>
+            <Color x:Key="QuickWeeklyBackgroundColor">#FF173E3B</Color>
+            <Color x:Key="QuickWeeklyBorderColor">#FF2E716A</Color>
+            <Color x:Key="QuickWeeklyForegroundColor">#FF8FE1D3</Color>
+            <Color x:Key="QuickLinkBackgroundColor">#FF40314F</Color>
+            <Color x:Key="QuickLinkBorderColor">#FF72588B</Color>
+            <Color x:Key="QuickLinkForegroundColor">#FFD8B3EE</Color>
+            <Color x:Key="QuickOpenFolderBackgroundColor">#FF4B2E2B</Color>
+            <Color x:Key="QuickOpenFolderBorderColor">#FF8D514A</Color>
+            <Color x:Key="QuickOpenFolderForegroundColor">#FFFFB8A8</Color>
+            <Color x:Key="QuickLogBackgroundColor">#FF303B49</Color>
+            <Color x:Key="QuickLogBorderColor">#FF566A80</Color>
+            <Color x:Key="QuickLogForegroundColor">#FFC4D1E1</Color>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Light">
@@ -52,39 +80,95 @@
             <Color x:Key="PaneSurfaceColor">#EEFFFFFF</Color>
             <Color x:Key="InsetSurfaceColor">#FFF6EFE5</Color>
             <Color x:Key="SoftAccentSurfaceColor">#FFF8EBD8</Color>
+            <Color x:Key="DashboardPanelColor">#EFFFFFFF</Color>
+            <Color x:Key="DashboardChipColor">#FFF6EFE5</Color>
+            <Color x:Key="DashboardInfoColor">#FFEAF3FF</Color>
             <Color x:Key="OutlineColor">#180F172A</Color>
             <Color x:Key="OutlineStrongColor">#26B86618</Color>
             <Color x:Key="SuccessColor">#FF2E8F57</Color>
             <Color x:Key="WarningColor">#FFBD7A00</Color>
             <Color x:Key="DangerColor">#FFD95C63</Color>
+            <Color x:Key="RunNextBackgroundColor">#FF2E8F57</Color>
+            <Color x:Key="RunNextBorderColor">#FF256F46</Color>
+            <Color x:Key="RunNextForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="RunSelectedBackgroundColor">#FF356B9A</Color>
+            <Color x:Key="RunSelectedActiveBackgroundColor">#FF285A8F</Color>
+            <Color x:Key="RunSelectedBorderColor">#FF28557D</Color>
+            <Color x:Key="RunSelectedForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="QuickFileBackgroundColor">#FFDCEAF9</Color>
+            <Color x:Key="QuickFileBorderColor">#FF91B7DA</Color>
+            <Color x:Key="QuickFileForegroundColor">#FF1E527E</Color>
+            <Color x:Key="QuickFolderBackgroundColor">#FFFFEBCB</Color>
+            <Color x:Key="QuickFolderBorderColor">#FFE0B56A</Color>
+            <Color x:Key="QuickFolderForegroundColor">#FF7B4E05</Color>
+            <Color x:Key="QuickWeeklyBackgroundColor">#FFD9EFEA</Color>
+            <Color x:Key="QuickWeeklyBorderColor">#FF82BDB2</Color>
+            <Color x:Key="QuickWeeklyForegroundColor">#FF22655C</Color>
+            <Color x:Key="QuickLinkBackgroundColor">#FFE9DDF0</Color>
+            <Color x:Key="QuickLinkBorderColor">#FFB999C5</Color>
+            <Color x:Key="QuickLinkForegroundColor">#FF694477</Color>
+            <Color x:Key="QuickOpenFolderBackgroundColor">#FFFFE1DA</Color>
+            <Color x:Key="QuickOpenFolderBorderColor">#FFE5A093</Color>
+            <Color x:Key="QuickOpenFolderForegroundColor">#FF8A4235</Color>
+            <Color x:Key="QuickLogBackgroundColor">#FFE3E9F0</Color>
+            <Color x:Key="QuickLogBorderColor">#FFA8B6C7</Color>
+            <Color x:Key="QuickLogForegroundColor">#FF40536A</Color>
         </ResourceDictionary>
 
         <ResourceDictionary x:Key="Dark">
-            <Color x:Key="WindowBackdropStartColor">#FF0B0F16</Color>
-            <Color x:Key="WindowBackdropMidColor">#FF121926</Color>
-            <Color x:Key="WindowBackdropEndColor">#FF1B1713</Color>
-            <Color x:Key="HeroVeilStartColor">#14000000</Color>
-            <Color x:Key="HeroVeilEndColor">#240E1218</Color>
-            <Color x:Key="BackdropGlowColor">#52E5A34F</Color>
+            <Color x:Key="WindowBackdropStartColor">#FF090D12</Color>
+            <Color x:Key="WindowBackdropMidColor">#FF101720</Color>
+            <Color x:Key="WindowBackdropEndColor">#FF141516</Color>
+            <Color x:Key="HeroVeilStartColor">#1C000000</Color>
+            <Color x:Key="HeroVeilEndColor">#26000000</Color>
+            <Color x:Key="BackdropGlowColor">#3035A77A</Color>
             <Color x:Key="AccentSweepStartColor">#00E5A34F</Color>
             <Color x:Key="AccentSweepMidColor">#74E5A34F</Color>
             <Color x:Key="AccentSweepEndColor">#00F5C372</Color>
-            <Color x:Key="AccentPrimaryColor">#FFE5A34F</Color>
-            <Color x:Key="AccentSecondaryColor">#FF8C5A1E</Color>
-            <Color x:Key="AccentForegroundColor">#FF17110A</Color>
+            <Color x:Key="AccentPrimaryColor">#FFE9A24A</Color>
+            <Color x:Key="AccentSecondaryColor">#FF35A77A</Color>
+            <Color x:Key="AccentForegroundColor">#FF16120C</Color>
             <Color x:Key="TextPrimaryColor">#FFF5F7FA</Color>
             <Color x:Key="TextSecondaryColor">#FFAFBAC8</Color>
             <Color x:Key="TextTertiaryColor">#FF8C98A8</Color>
-            <Color x:Key="CardSurfaceColor">#D9161B23</Color>
-            <Color x:Key="CardSurfaceStrongColor">#F01D2430</Color>
-            <Color x:Key="PaneSurfaceColor">#D4121720</Color>
-            <Color x:Key="InsetSurfaceColor">#DB1B202A</Color>
-            <Color x:Key="SoftAccentSurfaceColor">#302F2112</Color>
-            <Color x:Key="OutlineColor">#1FFFFFFF</Color>
-            <Color x:Key="OutlineStrongColor">#40E5A34F</Color>
-            <Color x:Key="SuccessColor">#FF5EC38A</Color>
+            <Color x:Key="CardSurfaceColor">#EA151B22</Color>
+            <Color x:Key="CardSurfaceStrongColor">#F41B222B</Color>
+            <Color x:Key="PaneSurfaceColor">#EC0D131B</Color>
+            <Color x:Key="InsetSurfaceColor">#F0171E27</Color>
+            <Color x:Key="SoftAccentSurfaceColor">#332A2116</Color>
+            <Color x:Key="DashboardPanelColor">#66101B2B</Color>
+            <Color x:Key="DashboardChipColor">#33182436</Color>
+            <Color x:Key="DashboardInfoColor">#6A10213A</Color>
+            <Color x:Key="OutlineColor">#2AFFFFFF</Color>
+            <Color x:Key="OutlineStrongColor">#6650C79A</Color>
+            <Color x:Key="SuccessColor">#FF50C79A</Color>
             <Color x:Key="WarningColor">#FFF0C56A</Color>
             <Color x:Key="DangerColor">#FFF27C82</Color>
+            <Color x:Key="RunNextBackgroundColor">#FF237A55</Color>
+            <Color x:Key="RunNextBorderColor">#FF50C79A</Color>
+            <Color x:Key="RunNextForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="RunSelectedBackgroundColor">#FF285A8F</Color>
+            <Color x:Key="RunSelectedActiveBackgroundColor">#FF3477B8</Color>
+            <Color x:Key="RunSelectedBorderColor">#FF6BA7E6</Color>
+            <Color x:Key="RunSelectedForegroundColor">#FFFFFFFF</Color>
+            <Color x:Key="QuickFileBackgroundColor">#FF213A5A</Color>
+            <Color x:Key="QuickFileBorderColor">#FF3E6D9E</Color>
+            <Color x:Key="QuickFileForegroundColor">#FFA9CEFF</Color>
+            <Color x:Key="QuickFolderBackgroundColor">#FF4A3820</Color>
+            <Color x:Key="QuickFolderBorderColor">#FF826333</Color>
+            <Color x:Key="QuickFolderForegroundColor">#FFFFD28B</Color>
+            <Color x:Key="QuickWeeklyBackgroundColor">#FF173E3B</Color>
+            <Color x:Key="QuickWeeklyBorderColor">#FF2E716A</Color>
+            <Color x:Key="QuickWeeklyForegroundColor">#FF8FE1D3</Color>
+            <Color x:Key="QuickLinkBackgroundColor">#FF40314F</Color>
+            <Color x:Key="QuickLinkBorderColor">#FF72588B</Color>
+            <Color x:Key="QuickLinkForegroundColor">#FFD8B3EE</Color>
+            <Color x:Key="QuickOpenFolderBackgroundColor">#FF4B2E2B</Color>
+            <Color x:Key="QuickOpenFolderBorderColor">#FF8D514A</Color>
+            <Color x:Key="QuickOpenFolderForegroundColor">#FFFFB8A8</Color>
+            <Color x:Key="QuickLogBackgroundColor">#FF303B49</Color>
+            <Color x:Key="QuickLogBorderColor">#FF566A80</Color>
+            <Color x:Key="QuickLogForegroundColor">#FFC4D1E1</Color>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 
@@ -100,11 +184,39 @@
     <SolidColorBrush x:Key="PaneGlassBrush" Color="{ThemeResource PaneSurfaceColor}" />
     <SolidColorBrush x:Key="InsetSurfaceBrush" Color="{ThemeResource InsetSurfaceColor}" />
     <SolidColorBrush x:Key="SoftAccentSurfaceBrush" Color="{ThemeResource SoftAccentSurfaceColor}" />
+    <SolidColorBrush x:Key="DashboardPanelBrush" Color="{ThemeResource DashboardPanelColor}" />
+    <SolidColorBrush x:Key="DashboardChipBrush" Color="{ThemeResource DashboardChipColor}" />
+    <SolidColorBrush x:Key="DashboardInfoBrush" Color="{ThemeResource DashboardInfoColor}" />
     <SolidColorBrush x:Key="OverlayStrokeBrush" Color="{ThemeResource OutlineStrongColor}" />
     <SolidColorBrush x:Key="HairlineBrush" Color="{ThemeResource OutlineColor}" />
     <SolidColorBrush x:Key="SuccessBrush" Color="{ThemeResource SuccessColor}" />
     <SolidColorBrush x:Key="WarningBrush" Color="{ThemeResource WarningColor}" />
     <SolidColorBrush x:Key="DangerBrush" Color="{ThemeResource DangerColor}" />
+    <SolidColorBrush x:Key="RunNextBackgroundBrush" Color="{ThemeResource RunNextBackgroundColor}" />
+    <SolidColorBrush x:Key="RunNextBorderBrush" Color="{ThemeResource RunNextBorderColor}" />
+    <SolidColorBrush x:Key="RunNextForegroundBrush" Color="{ThemeResource RunNextForegroundColor}" />
+    <SolidColorBrush x:Key="RunSelectedBackgroundBrush" Color="{ThemeResource RunSelectedBackgroundColor}" />
+    <SolidColorBrush x:Key="RunSelectedActiveBackgroundBrush" Color="{ThemeResource RunSelectedActiveBackgroundColor}" />
+    <SolidColorBrush x:Key="RunSelectedBorderBrush" Color="{ThemeResource RunSelectedBorderColor}" />
+    <SolidColorBrush x:Key="RunSelectedForegroundBrush" Color="{ThemeResource RunSelectedForegroundColor}" />
+    <SolidColorBrush x:Key="QuickFileBackgroundBrush" Color="{ThemeResource QuickFileBackgroundColor}" />
+    <SolidColorBrush x:Key="QuickFileBorderBrush" Color="{ThemeResource QuickFileBorderColor}" />
+    <SolidColorBrush x:Key="QuickFileForegroundBrush" Color="{ThemeResource QuickFileForegroundColor}" />
+    <SolidColorBrush x:Key="QuickFolderBackgroundBrush" Color="{ThemeResource QuickFolderBackgroundColor}" />
+    <SolidColorBrush x:Key="QuickFolderBorderBrush" Color="{ThemeResource QuickFolderBorderColor}" />
+    <SolidColorBrush x:Key="QuickFolderForegroundBrush" Color="{ThemeResource QuickFolderForegroundColor}" />
+    <SolidColorBrush x:Key="QuickWeeklyBackgroundBrush" Color="{ThemeResource QuickWeeklyBackgroundColor}" />
+    <SolidColorBrush x:Key="QuickWeeklyBorderBrush" Color="{ThemeResource QuickWeeklyBorderColor}" />
+    <SolidColorBrush x:Key="QuickWeeklyForegroundBrush" Color="{ThemeResource QuickWeeklyForegroundColor}" />
+    <SolidColorBrush x:Key="QuickLinkBackgroundBrush" Color="{ThemeResource QuickLinkBackgroundColor}" />
+    <SolidColorBrush x:Key="QuickLinkBorderBrush" Color="{ThemeResource QuickLinkBorderColor}" />
+    <SolidColorBrush x:Key="QuickLinkForegroundBrush" Color="{ThemeResource QuickLinkForegroundColor}" />
+    <SolidColorBrush x:Key="QuickOpenFolderBackgroundBrush" Color="{ThemeResource QuickOpenFolderBackgroundColor}" />
+    <SolidColorBrush x:Key="QuickOpenFolderBorderBrush" Color="{ThemeResource QuickOpenFolderBorderColor}" />
+    <SolidColorBrush x:Key="QuickOpenFolderForegroundBrush" Color="{ThemeResource QuickOpenFolderForegroundColor}" />
+    <SolidColorBrush x:Key="QuickLogBackgroundBrush" Color="{ThemeResource QuickLogBackgroundColor}" />
+    <SolidColorBrush x:Key="QuickLogBorderBrush" Color="{ThemeResource QuickLogBorderColor}" />
+    <SolidColorBrush x:Key="QuickLogForegroundBrush" Color="{ThemeResource QuickLogForegroundColor}" />
 
     <LinearGradientBrush x:Key="WindowBackdropBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="{ThemeResource WindowBackdropStartColor}" Offset="0" />
@@ -143,29 +255,29 @@
     </LinearGradientBrush>
 
     <Style x:Key="HeroTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontSize" Value="22" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="CharacterSpacing" Value="-24" />
+        <Setter Property="CharacterSpacing" Value="0" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
 
     <Style x:Key="PageHeadlineTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="23" />
+        <Setter Property="FontSize" Value="18" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="CharacterSpacing" Value="-12" />
+        <Setter Property="CharacterSpacing" Value="0" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
 
     <Style x:Key="MetricValueTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
 
     <Style x:Key="SectionTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="11" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="CharacterSpacing" Value="90" />
+        <Setter Property="CharacterSpacing" Value="80" />
         <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
@@ -179,7 +291,7 @@
     <Style x:Key="HeaderInsightTextStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionDescriptionTextStyle}">
         <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="CharacterSpacing" Value="-8" />
+        <Setter Property="CharacterSpacing" Value="0" />
         <Setter Property="LineHeight" Value="23" />
         <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     </Style>
@@ -197,52 +309,52 @@
     </Style>
 
     <Style x:Key="CardContainerStyle" TargetType="Border">
-        <Setter Property="CornerRadius" Value="24" />
-        <Setter Property="Padding" Value="20" />
-        <Setter Property="Margin" Value="0,0,0,18" />
-        <Setter Property="Background" Value="{ThemeResource CardGlassBrush}" />
-        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
     </Style>
 
     <Style x:Key="InsetPanelBorderStyle" TargetType="Border">
-        <Setter Property="CornerRadius" Value="18" />
-        <Setter Property="Padding" Value="16" />
-        <Setter Property="Background" Value="{ThemeResource InsetSurfaceBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Background" Value="{ThemeResource DashboardPanelBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="AccentPanelBorderStyle" TargetType="Border">
-        <Setter Property="CornerRadius" Value="18" />
-        <Setter Property="Padding" Value="16" />
-        <Setter Property="Background" Value="{ThemeResource SoftAccentSurfaceBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Background" Value="{ThemeResource DashboardPanelBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource OverlayStrokeBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="PaneSectionBorderStyle" TargetType="Border">
-        <Setter Property="CornerRadius" Value="18" />
-        <Setter Property="Padding" Value="14" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="10" />
         <Setter Property="Background" Value="{ThemeResource PaneGlassBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <Style x:Key="DenseActionButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="MinHeight" Value="34" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Background" Value="{ThemeResource CardGlassStrongBrush}" />
+        <Setter Property="Background" Value="{ThemeResource DashboardChipBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
     </Style>
 
     <Style x:Key="PrimaryCommandButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="MinHeight" Value="34" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="{ThemeResource AccentPrimaryBrush}" />
@@ -251,13 +363,59 @@
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
+    <Style x:Key="ColoredCommandAppBarButtonStyle" TargetType="AppBarButton">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Margin" Value="2,0" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
     <Style x:Key="QuickToggleButtonStyle" TargetType="ToggleButton">
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="MinHeight" Value="34" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Background" Value="{ThemeResource CardGlassStrongBrush}" />
+        <Setter Property="Background" Value="{ThemeResource DashboardChipBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+    </Style>
+
+    <Style x:Key="CleanTracksToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource QuickToggleButtonStyle}">
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Background" Value="#3321184E" />
+        <Setter Property="BorderBrush" Value="#7A5B4BE0" />
+        <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style x:Key="DashboardSectionHeadingTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="19" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="CharacterSpacing" Value="0" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="DashboardStatusValueTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+    </Style>
+
+    <Style x:Key="TableHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitleTextStyle}">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="CharacterSpacing" Value="60" />
+    </Style>
+
+    <Style x:Key="RailMetricLabelTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MutedCaptionTextStyle}">
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="RailMetricValueTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
 </ResourceDictionary>

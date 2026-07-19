@@ -33,7 +33,6 @@ namespace MediaWorkflowOrchestrator.Views
             UpdateTranslationDecisionVisibility();
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActionsVisibility();
-            UpdateDetailProgressVisibility();
             UpdateDetailOutputTerminalVisibility();
             UpdateResponsiveLayout(ActualWidth);
         }
@@ -75,11 +74,6 @@ namespace MediaWorkflowOrchestrator.Views
                 _ = DispatcherQueue.TryEnqueue(UpdatePackageRarDetailActionsVisibility);
             }
 
-            if (e.PropertyName == nameof(DashboardViewModel.ShowDetailProgress))
-            {
-                _ = DispatcherQueue.TryEnqueue(UpdateDetailProgressVisibility);
-            }
-
             if (e.PropertyName == nameof(DashboardViewModel.ShowDetailOutputTerminal))
             {
                 _ = DispatcherQueue.TryEnqueue(UpdateDetailOutputTerminalVisibility);
@@ -106,13 +100,6 @@ namespace MediaWorkflowOrchestrator.Views
         private void UpdatePackageRarDetailActionsVisibility()
         {
             PackageRarDetailActionsPanel.Visibility = ViewModel.ShowPackageRarDetailActions
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-
-        private void UpdateDetailProgressVisibility()
-        {
-            DetailProgressPanel.Visibility = ViewModel.ShowDetailProgress
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
@@ -188,10 +175,10 @@ namespace MediaWorkflowOrchestrator.Views
         private void UpdateResponsiveLayout(double width)
         {
             DashboardLayoutRoot.Padding = width < NarrowLayoutBreakpoint
-                ? new Thickness(10, 8, 10, 14)
+                ? new Thickness(8, 6, 8, 10)
                 : width < WideLayoutBreakpoint
-                    ? new Thickness(14, 12, 14, 18)
-                    : new Thickness(20, 14, 20, 22);
+                    ? new Thickness(12, 8, 12, 14)
+                    : new Thickness(16, 10, 16, 16);
 
             DashboardContentGrid.ColumnSpacing = 0;
 

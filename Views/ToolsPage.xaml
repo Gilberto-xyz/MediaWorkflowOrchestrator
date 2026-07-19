@@ -98,6 +98,7 @@
                                 <CheckBox Content="Descarga en dry-run" IsChecked="{x:Bind ViewModel.Settings.DownloaderDryRun, Mode=TwoWay}" />
                                 <CheckBox Content="Forzar latest en Nyaa" IsChecked="{x:Bind ViewModel.Settings.DownloaderForceLatest, Mode=TwoWay}" />
                                 <CheckBox Content="Limpiar tracks: eliminar originales después de filtrar" IsChecked="{x:Bind ViewModel.Settings.TrackCleanupDeleteOriginals, Mode=TwoWay}" />
+                                <CheckBox Content="Etiquetas: buscar e incrustar cover/poster desde IMDb" IsChecked="{x:Bind ViewModel.Settings.TagAndRenameAttachCover, Mode=TwoWay}" />
                                 <Grid x:Name="ToolsTranslationGrid" ColumnSpacing="10" RowSpacing="10">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -141,7 +142,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBox
                                         Grid.Column="0"
-                                        Header="Número de capturas (opcional)"
+                                        Header="Máximo de imágenes (opcional)"
                                         PlaceholderText="Ej. 6"
                                         Text="{x:Bind ViewModel.Settings.RarCaptureCount, Mode=TwoWay}" />
                                     <ComboBox Grid.Column="1" Header="Formato de imagen" SelectedItem="{x:Bind ViewModel.Settings.RarImageFormat, Mode=TwoWay}">

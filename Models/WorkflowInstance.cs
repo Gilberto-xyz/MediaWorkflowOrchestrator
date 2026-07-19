@@ -5,7 +5,9 @@ namespace MediaWorkflowOrchestrator.Models
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
         public string DisplayName { get; set; } = "Sin workflow";
         public string RootPath { get; set; } = string.Empty;
+        public string SourceRootPath { get; set; } = string.Empty;
         public string PrimaryVideoPath { get; set; } = string.Empty;
+        public string SourcePrimaryVideoPath { get; set; } = string.Empty;
         public string TrackCleanupSelectionVideoPath { get; set; } = string.Empty;
         public List<TrackCleanupAudioOption> TrackCleanupAudioOptions { get; set; } = new();
         public List<TrackCleanupSubtitleOption> TrackCleanupSubtitleOptions { get; set; } = new();

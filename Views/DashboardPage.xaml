@@ -19,7 +19,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel x:Name="DashboardMainColumn" Spacing="18">
+                <StackPanel x:Name="DashboardMainColumn" Spacing="10">
                     <StackPanel x:Name="TranslationDecisionPanel" Spacing="8">
                         <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="DECISION PENDIENTE" />
                         <Grid x:Name="TranslationDecisionGrid" ColumnSpacing="10" RowSpacing="8">
@@ -644,31 +644,31 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <ToggleButton Grid.Row="0" Grid.Column="0" Command="{x:Bind ViewModel.ToggleRarSkipImagesCommand}" IsChecked="{x:Bind ViewModel.RarSkipImagesEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                    <ToggleButton Grid.Row="0" Grid.Column="0" Command="{x:Bind ViewModel.ToggleRarSkipImagesCommand}" IsChecked="{x:Bind ViewModel.RarGenerateImagesEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <SymbolIcon Symbol="Pictures" />
-                                            <TextBlock Text="{x:Bind ViewModel.RarSkipImagesButtonLabel, Mode=OneWay}" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarGenerateImagesButtonLabel, Mode=OneWay}" />
                                         </StackPanel>
                                     </ToggleButton>
-                                    <ToggleButton Grid.Row="0" Grid.Column="1" Command="{x:Bind ViewModel.ToggleRarNoCompressCommand}" IsChecked="{x:Bind ViewModel.RarNoCompressEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                    <ToggleButton Grid.Row="0" Grid.Column="1" Command="{x:Bind ViewModel.ToggleRarNoCompressCommand}" IsChecked="{x:Bind ViewModel.RarCreateArchiveEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Important" />
-                                            <TextBlock Text="{x:Bind ViewModel.RarNoCompressButtonLabel, Mode=OneWay}" />
+                                            <SymbolIcon Symbol="Save" />
+                                            <TextBlock Text="{x:Bind ViewModel.RarCreateArchiveButtonLabel, Mode=OneWay}" />
                                         </StackPanel>
                                     </ToggleButton>
-                                    <ToggleButton Grid.Row="0" Grid.Column="2" Command="{x:Bind ViewModel.ToggleRarCompressionModeCommand}" IsChecked="{x:Bind ViewModel.RarUseCompressionNormalEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
+                                    <ToggleButton Grid.Row="0" Grid.Column="2" Command="{x:Bind ViewModel.ToggleRarCompressionModeCommand}" IsChecked="{x:Bind ViewModel.RarUseCompressionNormalEnabled, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.RarArchiveOptionsEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <SymbolIcon Symbol="Save" />
                                             <TextBlock Text="{x:Bind ViewModel.RarCompressionModeButtonLabel, Mode=OneWay}" />
                                         </StackPanel>
                                     </ToggleButton>
-                                    <Button Grid.Row="0" Grid.Column="3" Command="{x:Bind ViewModel.CycleRarImageFormatCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                    <Button Grid.Row="0" Grid.Column="3" Command="{x:Bind ViewModel.CycleRarImageFormatCommand}" IsEnabled="{x:Bind ViewModel.RarImageOptionsEnabled, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <SymbolIcon Symbol="Pictures" />
                                             <TextBlock Text="{x:Bind ViewModel.RarImageFormatButtonLabel, Mode=OneWay}" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Grid.Row="0" Grid.Column="4" Style="{StaticResource DenseActionButtonStyle}">
+                                    <Button Grid.Row="0" Grid.Column="4" IsEnabled="{x:Bind ViewModel.RarImageOptionsEnabled, Mode=OneWay}" Style="{StaticResource DenseActionButtonStyle}">
                                         <Button.Flyout>
                                             <Flyout>
                                                 <StackPanel MinWidth="250" Spacing="10">
@@ -702,6 +702,7 @@
                                             <TextBlock Text="{x:Bind ViewModel.RarVerboseButtonLabel, Mode=OneWay}" />
                                         </StackPanel>
                                     </ToggleButton>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="6" Margin="2,2,0,0" Style="{StaticResource MutedCaptionTextStyle}" Text="{x:Bind ViewModel.RarQuickOptionsSummary, Mode=OneWay}" />
                                 </Grid>
                             </Border>
                         </StackPanel>
@@ -757,7 +758,7 @@
                                                 BorderBrush="{x:Bind RowBorderBrush, Mode=OneWay}"
                                                 BorderThickness="0,0,0,1"
                                                 CornerRadius="7">
-                                                <Grid MinHeight="74" ColumnSpacing="16">
+                                                <Grid MinHeight="62" ColumnSpacing="14">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="42" />
                                                         <ColumnDefinition Width="42" />
@@ -792,14 +793,13 @@
                     </Border>
 
                     <Border
-                        Padding="18"
+                        Padding="14"
                         Background="{StaticResource DashboardPanelBrush}"
                         BorderBrush="{StaticResource HairlineBrush}"
                         BorderThickness="1"
                         CornerRadius="8">
                         <Grid RowSpacing="14">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -886,64 +886,9 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border
-                                x:Name="DetailProgressPanel"
-                                Grid.Row="2"
-                                Padding="14,12"
-                                Background="#33101A28"
-                                BorderBrush="{StaticResource HairlineBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8">
-                                <Grid RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon
-                                                Foreground="{StaticResource AccentSecondaryBrush}"
-                                                Symbol="Sync" />
-                                            <TextBlock
-                                                FontSize="14"
-                                                FontWeight="SemiBold"
-                                                Text="{x:Bind ViewModel.DetailProgressTitle, Mode=OneWay}" />
-                                        </StackPanel>
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            FontSize="14"
-                                            FontWeight="SemiBold"
-                                            Foreground="{StaticResource AccentSecondaryBrush}"
-                                            Text="{x:Bind ViewModel.DetailProgressPercentLabel, Mode=OneWay}" />
-                                    </Grid>
-                                    <Grid Grid.Row="1" RowSpacing="8">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <ProgressBar
-                                            Height="8"
-                                            IsIndeterminate="{x:Bind ViewModel.DetailProgressIsIndeterminate, Mode=OneWay}"
-                                            Maximum="100"
-                                            Minimum="0"
-                                            Value="{x:Bind ViewModel.DetailProgressValue, Mode=OneWay}" />
-                                        <TextBlock
-                                            Grid.Row="1"
-                                            Style="{StaticResource MutedCaptionTextStyle}"
-                                            Text="{x:Bind ViewModel.DetailProgressMessage, Mode=OneWay}"
-                                            TextTrimming="CharacterEllipsis"
-                                            TextWrapping="NoWrap" />
-                                    </Grid>
-                                </Grid>
-                            </Border>
-
                             <TextBox
                                 x:Name="DetailOutputTerminal"
-                                Grid.Row="3"
+                                Grid.Row="2"
                                 AcceptsReturn="True"
                                 Background="#55101A28"
                                 BorderBrush="{StaticResource HairlineBrush}"

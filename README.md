@@ -148,6 +148,7 @@ La app entiende el caso donde solo existe una carpeta final con videos directos 
 - `Solo info`
 - `Modo RAR: Contenedor fast / Comprimir`
 - `Formato imagen: jpg / png`
+- `Máx imágenes: N principal / N c/u`
 - `Verbose`
 
 ## Dónde guarda datos

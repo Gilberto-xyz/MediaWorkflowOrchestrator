@@ -15,10 +15,10 @@ namespace MediaWorkflowOrchestrator
     public sealed partial class MainWindow : Window, IRecipient<WorkflowSelectedMessage>
     {
         private const double ShellCompactSpacingBreakpoint = 900;
-        private static readonly SolidColorBrush FallbackQuickRunSelectedBackgroundBrush = CreateBrush(0xFF, 0xE5, 0xA3, 0x4F);
-        private static readonly SolidColorBrush FallbackQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0xF5, 0xC3, 0x72);
-        private static readonly SolidColorBrush FallbackQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0x17, 0x11, 0x0A);
-        private static readonly Thickness ExpandedQuickActionsPaneMargin = new(6, 2, 6, 6);
+        private static readonly SolidColorBrush FallbackQuickRunSelectedBackgroundBrush = CreateBrush(0xFF, 0x28, 0x5A, 0x8F);
+        private static readonly SolidColorBrush FallbackQuickRunSelectedActiveBackgroundBrush = CreateBrush(0xFF, 0x34, 0x77, 0xB8);
+        private static readonly SolidColorBrush FallbackQuickRunSelectedBorderBrush = CreateBrush(0xFF, 0x6B, 0xA7, 0xE6);
+        private static readonly SolidColorBrush FallbackQuickRunSelectedForegroundBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
         private DashboardPage? trackedDashboardPage;
         private bool rootShellInitialized;
 
@@ -43,7 +43,6 @@ namespace MediaWorkflowOrchestrator
             }
 
             RootShell.SizeChanged += OnRootShellSizeChanged;
-            UpdateQuickActionsPaneState();
             UpdateShellResponsiveLayout();
             rootShellInitialized = true;
             UpdateShellWorkflowHeader();
@@ -51,7 +50,6 @@ namespace MediaWorkflowOrchestrator
 
         private void OnRootShellSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            UpdateQuickActionsPaneState();
             UpdateShellResponsiveLayout();
         }
 
@@ -95,65 +93,21 @@ namespace MediaWorkflowOrchestrator
             await RestartApplicationAsync();
         }
 
-        private void OnNavigationDisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
-        {
-            UpdateQuickActionsPaneState();
-        }
-
-        private void OnNavigationPaneOpening(NavigationView sender, object args)
-        {
-            UpdateQuickActionsPaneState(paneOpenOverride: true);
-        }
-
-        private void OnNavigationPaneClosing(NavigationView sender, object args)
-        {
-            UpdateQuickActionsPaneState(paneOpenOverride: false);
-        }
-
-        private void OnNavigationPaneVisibilityChanged(NavigationView sender, object args)
-        {
-            UpdateQuickActionsPaneState();
-        }
-
-        private void UpdateQuickActionsPaneState(bool? paneOpenOverride = null)
-        {
-            var isPaneOpen = paneOpenOverride ?? AppNavigationView.IsPaneOpen;
-            var showQuickActions = AppNavigationView.DisplayMode == NavigationViewDisplayMode.Expanded && isPaneOpen;
-
-            QuickActionsPaneScrollViewer.Visibility = showQuickActions ? Visibility.Visible : Visibility.Collapsed;
-            QuickActionsFooterBorder.Visibility = Visibility.Collapsed;
-            UpdateQuickActionsPaneCompactMode(false);
-
-            if (!showQuickActions)
-            {
-                return;
-            }
-
-            QuickActionsPaneScrollViewer.Margin = ExpandedQuickActionsPaneMargin;
-            QuickActionsPaneScrollViewer.HorizontalAlignment = HorizontalAlignment.Stretch;
-            QuickActionsPaneScrollViewer.Width = double.NaN;
-            QuickActionsCompactRoot.HorizontalAlignment = HorizontalAlignment.Left;
-        }
-
-        private void UpdateQuickActionsPaneCompactMode(bool compactMode)
-        {
-            QuickActionsExpandedRoot.Visibility = compactMode ? Visibility.Collapsed : Visibility.Visible;
-            QuickActionsCompactRoot.Visibility = compactMode ? Visibility.Visible : Visibility.Collapsed;
-        }
-
         private void UpdateShellResponsiveLayout()
         {
             var width = RootShell.ActualWidth;
             var compactShell = width < ShellCompactSpacingBreakpoint;
 
-            ShellHeaderLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            ShellHeaderLayout.ColumnDefinitions[1].Width = new GridLength(0);
-            ShellHeaderLayout.ColumnSpacing = 0;
-            ShellHeaderLayout.RowSpacing = compactShell ? 4 : 6;
-
-            QuickActionsFooterBorder.Visibility = Visibility.Collapsed;
-            ContentFrame.Margin = compactShell ? new Thickness(0, 0, 8, 8) : new Thickness(0, 0, 12, 10);
-            AppNavigationView.OpenPaneLength = compactShell ? 280 : 304;
+            ShellHeaderLayout.Margin = compactShell
+                ? new Thickness(0, 0, 4, 4)
+                : new Thickness(0, 0, 8, 6);
+            ContentFrame.Margin = compactShell
+                ? new Thickness(0, 0, 4, 4)
+                : new Thickness(0, 0, 8, 8);
+            AppNavigationView.OpenPaneLength = compactShell ? 208 : 224;
+            ShellCommandBar.DefaultLabelPosition = compactShell
+                ? CommandBarDefaultLabelPosition.Collapsed
+                : CommandBarDefaultLabelPosition.Right;
         }
 
         public void Receive(WorkflowSelectedMessage message)
@@ -197,6 +151,7 @@ namespace MediaWorkflowOrchestrator
             if (ReferenceEquals(trackedDashboardPage, page))
             {
                 UpdateQuickRunSelectedButtonVisual();
+                UpdateShellProgressMonitorVisibility();
                 return;
             }
 
@@ -214,6 +169,7 @@ namespace MediaWorkflowOrchestrator
 
             UpdateShellWorkflowHeader();
             UpdateQuickRunSelectedButtonVisual();
+            UpdateShellProgressMonitorVisibility();
         }
 
         private void OnDashboardViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -222,6 +178,11 @@ namespace MediaWorkflowOrchestrator
                 or nameof(DashboardViewModel.SelectedStep))
             {
                 _ = DispatcherQueue.TryEnqueue(UpdateQuickRunSelectedButtonVisual);
+            }
+
+            if (e.PropertyName == nameof(DashboardViewModel.ShowDetailProgress))
+            {
+                _ = DispatcherQueue.TryEnqueue(UpdateShellProgressMonitorVisibility);
             }
         }
 
@@ -235,27 +196,22 @@ namespace MediaWorkflowOrchestrator
         private void UpdateQuickRunSelectedButtonVisual()
         {
             var isActive = trackedDashboardPage?.ViewModel.SelectedStep is not null;
-            if (isActive)
-            {
-                var background = GetApplicationBrush("AccentPrimaryBrush", FallbackQuickRunSelectedBackgroundBrush);
-                var border = GetApplicationBrush("OverlayStrokeBrush", FallbackQuickRunSelectedBorderBrush);
-                var foreground = GetApplicationBrush("AccentForegroundBrush", FallbackQuickRunSelectedForegroundBrush);
+            var background = isActive
+                ? GetApplicationBrush("RunSelectedActiveBackgroundBrush", FallbackQuickRunSelectedActiveBackgroundBrush)
+                : GetApplicationBrush("RunSelectedBackgroundBrush", FallbackQuickRunSelectedBackgroundBrush);
+            var border = GetApplicationBrush("RunSelectedBorderBrush", FallbackQuickRunSelectedBorderBrush);
+            var foreground = GetApplicationBrush("RunSelectedForegroundBrush", FallbackQuickRunSelectedForegroundBrush);
 
-                QuickRunSelectedButton.Background = background;
-                QuickRunSelectedButton.BorderBrush = border;
-                QuickRunSelectedButton.Foreground = foreground;
-                CompactQuickRunSelectedButton.Background = background;
-                CompactQuickRunSelectedButton.BorderBrush = border;
-                CompactQuickRunSelectedButton.Foreground = foreground;
-                return;
-            }
+            QuickRunSelectedButton.Background = background;
+            QuickRunSelectedButton.BorderBrush = border;
+            QuickRunSelectedButton.Foreground = foreground;
+        }
 
-            QuickRunSelectedButton.ClearValue(Button.BackgroundProperty);
-            QuickRunSelectedButton.ClearValue(Button.BorderBrushProperty);
-            QuickRunSelectedButton.ClearValue(Button.ForegroundProperty);
-            CompactQuickRunSelectedButton.ClearValue(Button.BackgroundProperty);
-            CompactQuickRunSelectedButton.ClearValue(Button.BorderBrushProperty);
-            CompactQuickRunSelectedButton.ClearValue(Button.ForegroundProperty);
+        private void UpdateShellProgressMonitorVisibility()
+        {
+            ShellProgressMonitor.Visibility = trackedDashboardPage?.ViewModel.ShowDetailProgress == true
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private static void ExecuteCommand(ICommand command)

@@ -13,7 +13,9 @@ namespace MediaWorkflowOrchestrator.Services
             {
                 DisplayName = string.IsNullOrWhiteSpace(displayName) ? "Workflow nuevo" : displayName,
                 RootPath = rootPath,
+                SourceRootPath = rootPath,
                 PrimaryVideoPath = primaryVideo,
+                SourcePrimaryVideoPath = primaryVideo,
                 SourceSelectionIsFile = isFile,
                 Steps = CreateDefaultSteps(),
             };

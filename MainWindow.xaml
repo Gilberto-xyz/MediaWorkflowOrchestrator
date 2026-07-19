@@ -7,55 +7,24 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
     <Grid x:Name="RootShell" Loaded="OnRootShellLoaded">
-        <Grid Background="{StaticResource WindowBackdropBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.RowSpan="2" Background="{StaticResource WindowBackdropBrush}">
             <Rectangle Fill="{StaticResource CinematicVeilBrush}" />
         </Grid>
 
-        <NavigationView
-            x:Name="AppNavigationView"
-            Background="Transparent"
-            IsBackButtonVisible="Collapsed"
-            IsSettingsVisible="False"
-            CompactPaneLength="56"
-            CompactModeThresholdWidth="860"
-            ExpandedModeThresholdWidth="1320"
-            OpenPaneLength="304"
-            PaneDisplayMode="Auto"
-            DisplayModeChanged="OnNavigationDisplayModeChanged"
-            PaneOpening="OnNavigationPaneOpening"
-            PaneClosing="OnNavigationPaneClosing"
-            PaneOpened="OnNavigationPaneVisibilityChanged"
-            PaneClosed="OnNavigationPaneVisibilityChanged"
-            ItemInvoked="OnNavigationItemInvoked"
-            SelectionChanged="OnNavigationSelectionChanged">
-            <NavigationView.PaneHeader>
-                <StackPanel Margin="12,10,12,6" Spacing="8">
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border
-                            Width="40"
-                            Height="40"
-                            Background="{StaticResource AccentPrimaryBrush}"
-                            CornerRadius="8">
-                            <SymbolIcon
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Foreground="{StaticResource AccentForegroundBrush}"
-                                Symbol="Library" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="2">
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="Media Workflow" />
-                            <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Cabina de ejecución local" />
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </NavigationView.PaneHeader>
-
-            <NavigationView.Header>
-                <Grid x:Name="ShellHeaderLayout" Margin="0,0,0,2" ColumnSpacing="10" RowSpacing="4">
+        <Grid x:Name="ShellHeaderLayout" Margin="8,0,8,6">
+            <Border
+                x:Name="ShellWorkflowHeader"
+                Padding="12,7"
+                Background="{StaticResource DashboardPanelBrush}"
+                BorderBrush="{StaticResource HairlineBrush}"
+                BorderThickness="0,0,0,1"
+                CornerRadius="7">
+                <Grid ColumnSpacing="14" RowSpacing="4">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -64,11 +33,8 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <Grid
-                        x:Name="ShellWorkflowHeader"
-                        ColumnSpacing="24"
-                        RowSpacing="8"
-                        MinHeight="82">
+
+                    <Grid MinWidth="0" ColumnSpacing="18" RowSpacing="2">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -76,89 +42,307 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <Grid Grid.Column="0" ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <SymbolIcon
-                                Width="22"
-                                Height="22"
-                                Foreground="{StaticResource AccentSecondaryBrush}"
-                                Symbol="Accept"
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Ellipse
+                                Width="8"
+                                Height="8"
+                                Fill="{StaticResource AccentSecondaryBrush}"
                                 VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="WORKFLOW" />
-                                <TextBlock
-                                    Foreground="{StaticResource AccentSecondaryBrush}"
-                                    FontSize="17"
-                                    FontWeight="SemiBold"
-                                    MaxLines="2"
-                                    Text="{Binding DisplayName}"
-                                    TextTrimming="CharacterEllipsis"
-                                    TextWrapping="WrapWholeWords" />
-                                <TextBlock
-                                    MaxLines="1"
-                                    Style="{StaticResource MonoCaptionTextStyle}"
-                                    Text="{Binding RootPath}"
-                                    TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Grid>
+                            <TextBlock
+                                FontSize="15"
+                                FontWeight="SemiBold"
+                                MaxLines="1"
+                                Text="{Binding DisplayName}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock
+                            Grid.Row="1"
+                            Margin="16,0,0,0"
+                            MaxLines="1"
+                            Style="{StaticResource MonoCaptionTextStyle}"
+                            Text="{Binding RootPath}"
+                            TextTrimming="CharacterEllipsis" />
 
-                        <Border Grid.Column="1" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0" Padding="20,0,0,0">
-                            <StackPanel Spacing="5" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="SIGUIENTE" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                            <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Siguiente" />
+                            <TextBlock
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                MaxLines="1"
+                                Text="{Binding NextStepLabel}"
+                                TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            MaxLines="1"
+                            Style="{StaticResource MutedCaptionTextStyle}"
+                            Text="{Binding StatusMessage}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTipService.ToolTip="{Binding StatusMessage}" />
+
+                        <StackPanel Grid.Column="2" Grid.RowSpan="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="7" Height="7" Fill="{StaticResource AccentSecondaryBrush}" />
+                            <TextBlock
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource AccentSecondaryBrush}"
+                                Text="{Binding GlobalStatus}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <CommandBar
+                        x:Name="ShellCommandBar"
+                        Grid.Column="1"
+                        Background="Transparent"
+                        ClosedDisplayMode="Compact"
+                        DefaultLabelPosition="Right"
+                        IsDynamicOverflowEnabled="True"
+                        IsOpen="False">
+                        <AppBarButton
+                            Click="OnQuickRunNextClicked"
+                            Icon="Play"
+                            Label="Ejecutar siguiente"
+                            Background="{StaticResource RunNextBackgroundBrush}"
+                            BorderBrush="{StaticResource RunNextBorderBrush}"
+                            Foreground="{StaticResource RunNextForegroundBrush}"
+                            Style="{StaticResource ColoredCommandAppBarButtonStyle}"
+                            ToolTipService.ToolTip="Ejecutar el siguiente paso disponible" />
+                        <AppBarButton
+                            x:Name="QuickRunSelectedButton"
+                            Click="OnQuickRunSelectedClicked"
+                            Icon="Forward"
+                            Label="Ejecutar seleccionado"
+                            Background="{StaticResource RunSelectedBackgroundBrush}"
+                            BorderBrush="{StaticResource RunSelectedBorderBrush}"
+                            Foreground="{StaticResource RunSelectedForegroundBrush}"
+                            Style="{StaticResource ColoredCommandAppBarButtonStyle}"
+                            ToolTipService.ToolTip="Ejecutar el paso seleccionado" />
+
+                        <CommandBar.SecondaryCommands>
+                            <AppBarButton Click="OnQuickRetryClicked" Icon="Refresh" Label="Reintentar paso" />
+                            <AppBarButton Click="OnQuickSkipClicked" Icon="Redo" Label="Omitir paso seleccionado" />
+                            <AppBarButton Click="OnQuickCancelClicked" Icon="Cancel" Label="Cancelar ejecución actual" />
+                        </CommandBar.SecondaryCommands>
+                    </CommandBar>
+
+                    <Border
+                        Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        Padding="0,4,0,0"
+                        BorderBrush="{StaticResource HairlineBrush}"
+                        BorderThickness="0,1,0,0">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border
+                                x:Name="ShellProgressMonitor"
+                                MinWidth="240"
+                                Padding="10,6"
+                                Background="{StaticResource DashboardInfoBrush}"
+                                BorderBrush="{StaticResource HairlineBrush}"
+                                BorderThickness="1"
+                                CornerRadius="7"
+                                Visibility="Collapsed">
+                                <Grid ColumnSpacing="8" RowSpacing="3">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <ProgressRing
+                                        Grid.RowSpan="2"
+                                        Width="20"
+                                        Height="20"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource AccentSecondaryBrush}"
+                                        IsActive="{Binding IsProgressOperationActive}" />
                                     <TextBlock
-                                        FontSize="16"
+                                        Grid.Column="1"
+                                        FontSize="12"
                                         FontWeight="SemiBold"
-                                        Text="{Binding NextStepLabel}"
+                                        MaxLines="1"
+                                        Text="{Binding DetailProgressPhaseLabel}"
                                         TextTrimming="CharacterEllipsis" />
-                                    <SymbolIcon Foreground="#FF7FA8FF" Symbol="Clock" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="2" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1,0,0,0" Padding="20,0,0,0">
-                            <StackPanel Spacing="5" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="ESTADO" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock
-                                        FontSize="16"
+                                        Grid.Column="2"
+                                        FontSize="12"
                                         FontWeight="SemiBold"
                                         Foreground="{StaticResource AccentSecondaryBrush}"
-                                        Text="{Binding GlobalStatus}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <SymbolIcon Foreground="{StaticResource AccentSecondaryBrush}" Symbol="Accept" />
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
+                                        Text="{Binding DetailProgressPercentLabel}" />
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        Grid.ColumnSpan="2"
+                                        MaxLines="1"
+                                        Style="{StaticResource MutedCaptionTextStyle}"
+                                        Text="{Binding DetailProgressMessage}"
+                                        TextTrimming="CharacterEllipsis"
+                                        ToolTipService.ToolTip="{Binding DetailProgressMessage}" />
+                                    <ProgressBar
+                                        Grid.Row="2"
+                                        Grid.ColumnSpan="3"
+                                        Height="5"
+                                        Foreground="{StaticResource AccentSecondaryBrush}"
+                                        IsIndeterminate="{Binding DetailProgressIsIndeterminate}"
+                                        Maximum="100"
+                                        Minimum="0"
+                                        Value="{Binding DetailProgressValue}" />
 
-                        <Border
-                            Grid.Row="1"
-                            Grid.ColumnSpan="3"
-                            Padding="12,8"
-                            Background="{StaticResource DashboardInfoBrush}"
-                            CornerRadius="6">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <SymbolIcon
-                                    Foreground="#FFA9CAFF"
-                                    Symbol="Important"
-                                    VerticalAlignment="Center" />
-                                <TextBlock
-                                    FontSize="13"
-                                    FontWeight="SemiBold"
-                                    MaxLines="1"
-                                    Text="{Binding StatusMessage}"
-                                    TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
+                                    <Grid Grid.Row="3" Grid.ColumnSpan="3" Margin="0,2,0,0" ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Actual" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            FontSize="11"
+                                            MaxLines="1"
+                                            Text="{Binding DetailItemProgressTitle}"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTipService.ToolTip="{Binding DetailItemProgressTitle}" />
+                                        <TextBlock
+                                            Grid.Column="2"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Text="{Binding DetailItemProgressPercentLabel}" />
+                                    </Grid>
+                                    <ProgressBar
+                                        Grid.Row="4"
+                                        Grid.ColumnSpan="3"
+                                        Height="4"
+                                        Foreground="{StaticResource AccentPrimaryBrush}"
+                                        IsIndeterminate="{Binding DetailItemProgressIsIndeterminate}"
+                                        Maximum="100"
+                                        Minimum="0"
+                                        Value="{Binding DetailItemProgressValue}" />
+                                </Grid>
+                            </Border>
+
+                            <ScrollViewer
+                                Grid.Column="1"
+                                HorizontalScrollBarVisibility="Hidden"
+                                HorizontalScrollMode="Auto"
+                                VerticalScrollBarVisibility="Disabled"
+                                VerticalScrollMode="Disabled">
+                                <CommandBar
+                                    x:Name="QuickAccessCommandBar"
+                                    Background="Transparent"
+                                    ClosedDisplayMode="Compact"
+                                    DefaultLabelPosition="Right"
+                                    IsDynamicOverflowEnabled="False"
+                                    IsOpen="False"
+                                    OverflowButtonVisibility="Collapsed">
+                                    <AppBarButton
+                                        Click="OnQuickPickFileClicked"
+                                        Icon="Document"
+                                        Label="Elegir archivo base"
+                                        Background="{StaticResource QuickFileBackgroundBrush}"
+                                        BorderBrush="{StaticResource QuickFileBorderBrush}"
+                                        Foreground="{StaticResource QuickFileForegroundBrush}"
+                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                    <AppBarButton
+                                        Click="OnQuickPickFolderClicked"
+                                        Icon="Folder"
+                                        Label="Elegir carpeta del release"
+                                        Background="{StaticResource QuickFolderBackgroundBrush}"
+                                        BorderBrush="{StaticResource QuickFolderBorderBrush}"
+                                        Foreground="{StaticResource QuickFolderForegroundBrush}"
+                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                    <AppBarButton
+                                        Click="OnQuickDownloadWeeklyClicked"
+                                        Icon="Download"
+                                        Label="Descarga semanal desde Nyaa"
+                                        Background="{StaticResource QuickWeeklyBackgroundBrush}"
+                                        BorderBrush="{StaticResource QuickWeeklyBorderBrush}"
+                                        Foreground="{StaticResource QuickWeeklyForegroundBrush}"
+                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                    <AppBarButton
+                                        Click="OnQuickDownloadFromLinkClicked"
+                                        Icon="World"
+                                        Label="Descargar desde link de Nyaa"
+                                        Background="{StaticResource QuickLinkBackgroundBrush}"
+                                        BorderBrush="{StaticResource QuickLinkBorderBrush}"
+                                        Foreground="{StaticResource QuickLinkForegroundBrush}"
+                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                    <AppBarSeparator />
+                                    <AppBarButton
+                                        Click="OnQuickOpenFolderClicked"
+                                        Icon="OpenFile"
+                                        Label="Abrir carpeta del workflow"
+                                        Background="{StaticResource QuickOpenFolderBackgroundBrush}"
+                                        BorderBrush="{StaticResource QuickOpenFolderBorderBrush}"
+                                        Foreground="{StaticResource QuickOpenFolderForegroundBrush}"
+                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                    <AppBarButton
+                                        Click="OnQuickOpenLogClicked"
+                                        Icon="Page"
+                                        Label="Abrir log del paso"
+                                        Background="{StaticResource QuickLogBackgroundBrush}"
+                                        BorderBrush="{StaticResource QuickLogBorderBrush}"
+                                        Foreground="{StaticResource QuickLogForegroundBrush}"
+                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                </CommandBar>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
                 </Grid>
-            </NavigationView.Header>
+            </Border>
+        </Grid>
+
+        <NavigationView
+            x:Name="AppNavigationView"
+            Grid.Row="1"
+            Background="Transparent"
+            CompactPaneLength="48"
+            IsBackButtonVisible="Collapsed"
+            IsPaneOpen="False"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="False"
+            IsTitleBarAutoPaddingEnabled="False"
+            OpenPaneLength="224"
+            PaneDisplayMode="LeftCompact"
+            ItemInvoked="OnNavigationItemInvoked"
+            SelectionChanged="OnNavigationSelectionChanged">
+            <NavigationView.PaneHeader>
+                <Grid Margin="8,6,8,8" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="32" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border
+                        Width="32"
+                        Height="32"
+                        Background="{StaticResource AccentPrimaryBrush}"
+                        CornerRadius="7">
+                        <SymbolIcon
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Foreground="{StaticResource AccentForegroundBrush}"
+                            Symbol="Library" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="Media Workflow" />
+                        <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Ejecución local" />
+                    </StackPanel>
+                </Grid>
+            </NavigationView.PaneHeader>
 
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="DashboardItem" Content="Panel" Icon="Home" Tag="dashboard" />
@@ -167,148 +351,7 @@
                 <NavigationViewItem Content="Recargar app" Icon="Refresh" SelectsOnInvoked="False" Tag="reload" />
             </NavigationView.MenuItems>
 
-            <NavigationView.PaneCustomContent>
-                <ScrollViewer
-                    x:Name="QuickActionsPaneScrollViewer"
-                    Margin="6,3,6,6"
-                    HorizontalScrollBarVisibility="Disabled"
-                    VerticalScrollBarVisibility="Auto"
-                    VerticalScrollMode="Auto">
-                    <Grid>
-                        <StackPanel x:Name="QuickActionsExpandedRoot" Spacing="10">
-                            <Border Style="{StaticResource PaneSectionBorderStyle}">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Entrada" />
-                                    <Button Click="OnQuickPickFileClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Document" />
-                                            <TextBlock Text="Elegir archivo base" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickPickFolderClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Folder" />
-                                            <TextBlock Text="Elegir carpeta del release" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickDownloadWeeklyClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Download" />
-                                            <TextBlock Text="Descarga semanal desde Nyaa" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickDownloadFromLinkClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="World" />
-                                            <TextBlock Text="Descargar desde link de Nyaa" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource PaneSectionBorderStyle}">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Ejecución" />
-                                    <Button Click="OnQuickRunNextClicked" HorizontalAlignment="Stretch" Style="{StaticResource PrimaryCommandButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Play" />
-                                            <TextBlock Text="Ejecutar siguiente paso" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="QuickRunSelectedButton" Click="OnQuickRunSelectedClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Forward" />
-                                            <TextBlock Text="Ejecutar paso seleccionado" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickRetryClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Refresh" />
-                                            <TextBlock Text="Reintentar paso" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickSkipClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Redo" />
-                                            <TextBlock Text="Omitir paso seleccionado" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickCancelClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Cancel" />
-                                            <TextBlock Text="Cancelar ejecución actual" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-
-                            <Border Style="{StaticResource PaneSectionBorderStyle}">
-                                <StackPanel Spacing="8">
-                                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Revisión" />
-                                    <Button Click="OnQuickOpenFolderClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="OpenFile" />
-                                            <TextBlock Text="Abrir carpeta del workflow" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Click="OnQuickOpenLogClicked" HorizontalAlignment="Stretch" Style="{StaticResource DenseActionButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Page" />
-                                            <TextBlock Text="Abrir log del paso" TextWrapping="WrapWholeWords" />
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-
-                        <StackPanel x:Name="QuickActionsCompactRoot" HorizontalAlignment="Center" Spacing="8" Visibility="Collapsed">
-                            <Button Click="OnQuickPickFileClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Elegir archivo base">
-                                <SymbolIcon Symbol="Document" />
-                            </Button>
-                            <Button Click="OnQuickPickFolderClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Elegir carpeta del release">
-                                <SymbolIcon Symbol="Folder" />
-                            </Button>
-                            <Button Click="OnQuickDownloadWeeklyClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Descarga semanal desde Nyaa">
-                                <SymbolIcon Symbol="Download" />
-                            </Button>
-                            <Button Click="OnQuickDownloadFromLinkClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Descargar desde link de Nyaa">
-                                <SymbolIcon Symbol="World" />
-                            </Button>
-                            <Button Click="OnQuickRunNextClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Ejecutar siguiente paso">
-                                <SymbolIcon Symbol="Play" />
-                            </Button>
-                            <Button x:Name="CompactQuickRunSelectedButton" Click="OnQuickRunSelectedClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Ejecutar paso seleccionado">
-                                <SymbolIcon Symbol="Forward" />
-                            </Button>
-                            <Button Click="OnQuickRetryClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Reintentar paso">
-                                <SymbolIcon Symbol="Refresh" />
-                            </Button>
-                            <Button Click="OnQuickSkipClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Omitir paso seleccionado">
-                                <SymbolIcon Symbol="Redo" />
-                            </Button>
-                            <Button Click="OnQuickCancelClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Cancelar ejecución actual">
-                                <SymbolIcon Symbol="Cancel" />
-                            </Button>
-                            <Button Click="OnQuickOpenFolderClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Abrir carpeta del workflow">
-                                <SymbolIcon Symbol="OpenFile" />
-                            </Button>
-                            <Button Click="OnQuickOpenLogClicked" Width="42" Height="42" MinWidth="42" Padding="0" HorizontalAlignment="Left" Style="{StaticResource DenseActionButtonStyle}" ToolTipService.ToolTip="Abrir log del paso">
-                                <SymbolIcon Symbol="Page" />
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-                </ScrollViewer>
-            </NavigationView.PaneCustomContent>
-
-            <NavigationView.PaneFooter>
-                <Border
-                    x:Name="QuickActionsFooterBorder"
-                    Margin="12,0,12,12"
-                    Height="1"
-                    Visibility="Collapsed" />
-            </NavigationView.PaneFooter>
-
-            <Frame x:Name="ContentFrame" Margin="0,0,14,12" />
+            <Frame x:Name="ContentFrame" Margin="0,0,8,8" />
         </NavigationView>
     </Grid>
 </Window>

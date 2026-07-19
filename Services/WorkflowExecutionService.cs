@@ -16,6 +16,22 @@ namespace MediaWorkflowOrchestrator.Services
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
+        private static readonly IReadOnlyDictionary<string, string> MatroskaLegacyLanguageCodes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ar"] = "ara",
+            ["de"] = "ger",
+            ["en"] = "eng",
+            ["es"] = "spa",
+            ["fa"] = "per",
+            ["fr"] = "fre",
+            ["it"] = "ita",
+            ["ja"] = "jpn",
+            ["ko"] = "kor",
+            ["pt"] = "por",
+            ["th"] = "tha",
+            ["und"] = "und",
+            ["zh"] = "chi",
+        };
         private const string EmptyTrackSelectionToken = "__none__";
 
         private readonly IAppSettingsService appSettingsService;
@@ -206,14 +222,18 @@ namespace MediaWorkflowOrchestrator.Services
                 if (stepKey == WorkflowStepKey.TagAndRename)
                 {
                     var preparation = PrepareTagAndRenameWorkspace(settings, workflow, onOutput);
+                    await ApplyTagAndRenameTrackMetadataOverridesAsync(
+                        settings,
+                        workflow,
+                        preparation.InputPath,
+                        cancellationToken,
+                        onOutput);
                     request = BuildRequest(settings, workflow, stepKey, preparation.WorkingDirectory);
-                    result = preparation.LaunchRenamerOnly
-                        ? await LaunchRenamerShortcutAsync(preparation, cancellationToken, onOutput)
-                        : await processRunnerService.RunAsync(request, onOutput, cancellationToken);
+                    result = await processRunnerService.RunAsync(request, onOutput, cancellationToken);
                 }
                 else if (stepKey == WorkflowStepKey.PackageRar)
                 {
-                    var rarInputPath = await PrepareRarPackagingInputAsync(workflow, cancellationToken, onOutput);
+                    var rarInputPath = await PrepareRarPackagingInputAsync(settings, workflow, cancellationToken, onOutput);
                     structuredHintsInputPath = rarInputPath;
                     request = BuildRequest(settings, workflow, stepKey, overrideStepInputPath: rarInputPath);
                     result = await processRunnerService.RunAsync(request, onOutput, cancellationToken);
@@ -252,6 +272,10 @@ namespace MediaWorkflowOrchestrator.Services
             result = NormalizeProcessResult(stepKey, result, onOutput);
             step.OutputHints = new Dictionary<string, string>();
             result = ExtractStructuredOutputHints(stepKey, workflow, step, result, structuredHintsInputPath);
+            if (stepKey == WorkflowStepKey.CleanTracks && result.Success)
+            {
+                await ApplyCleanTracksMetadataOverridesAsync(settings, workflow, cancellationToken, onOutput);
+            }
 
             await File.WriteAllTextAsync(logPaths.stdout, result.StandardOutput, cancellationToken);
             await File.WriteAllTextAsync(logPaths.stderr, result.StandardError, cancellationToken);
@@ -380,6 +404,22 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static string ResolveTagAndRenameInputPath(WorkflowInstance workflow)
         {
+            var sourceRootPath = ResolveSourceRootPath(workflow);
+            if (workflow.SourceSelectionIsFile is false
+                && !string.IsNullOrWhiteSpace(sourceRootPath)
+                && Directory.Exists(sourceRootPath))
+            {
+                return sourceRootPath;
+            }
+
+            if (workflow.SourceSelectionIsFile is null
+                && !string.IsNullOrWhiteSpace(sourceRootPath)
+                && Directory.Exists(sourceRootPath)
+                && CountVideoFiles(sourceRootPath) > 1)
+            {
+                return sourceRootPath;
+            }
+
             var filteredVideo = ResolveFilteredVideo(workflow);
             if (filteredVideo is not null)
             {
@@ -392,10 +432,165 @@ namespace MediaWorkflowOrchestrator.Services
                 return primaryVideo.FullName;
             }
 
-            var sourceRootPath = ResolveSourceRootPath(workflow);
             return !string.IsNullOrWhiteSpace(sourceRootPath) && Directory.Exists(sourceRootPath)
                 ? sourceRootPath
                 : string.Empty;
+        }
+
+        private async Task ApplyTagAndRenameTrackMetadataOverridesAsync(
+            AppSettings settings,
+            WorkflowInstance workflow,
+            string tagInputPath,
+            CancellationToken cancellationToken,
+            Action<string>? onOutput)
+        {
+            var filteredVideo = ResolveFilteredVideo(workflow);
+            var selectedOnly = filteredVideo is not null && PathsEqual(tagInputPath, filteredVideo.FullName);
+            await ApplyTrackMetadataOverridesToVideoAsync(
+                settings,
+                workflow,
+                tagInputPath,
+                selectedOnly,
+                "antes de etiquetas",
+                cancellationToken,
+                onOutput);
+        }
+
+        private async Task ApplyCleanTracksMetadataOverridesAsync(
+            AppSettings settings,
+            WorkflowInstance workflow,
+            CancellationToken cancellationToken,
+            Action<string>? onOutput)
+        {
+            var filteredVideo = ResolveFilteredVideo(workflow);
+            if (filteredVideo is null)
+            {
+                return;
+            }
+
+            await ApplyTrackMetadataOverridesToVideoAsync(
+                settings,
+                workflow,
+                filteredVideo.FullName,
+                selectedOnly: true,
+                "después de limpiar tracks",
+                cancellationToken,
+                onOutput);
+        }
+
+        private async Task ApplyTrackMetadataOverridesToVideoAsync(
+            AppSettings settings,
+            WorkflowInstance workflow,
+            string videoPath,
+            bool selectedOnly,
+            string stageDescription,
+            CancellationToken cancellationToken,
+            Action<string>? onOutput)
+        {
+            if (workflow.TrackCleanupAudioOptions.Count == 0 && workflow.TrackCleanupSubtitleOptions.Count == 0)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.MkvpropeditPath) || !File.Exists(settings.MkvpropeditPath))
+            {
+                onOutput?.Invoke($"Metadata manual de tracks no aplicada {stageDescription}: no se encontró mkvpropedit.");
+                return;
+            }
+
+            var audioOptions = workflow.TrackCleanupAudioOptions
+                .Where(option => !selectedOnly || option.IsSelected)
+                .ToList();
+            var subtitleOptions = workflow.TrackCleanupSubtitleOptions
+                .Where(option => !selectedOnly || option.IsSelected)
+                .ToList();
+
+            var args = new List<string> { videoPath };
+            var editCount = 0;
+            for (var index = 0; index < audioOptions.Count; index++)
+            {
+                args.Add("--edit");
+                args.Add($"track:a{index + 1}");
+                AddTagAndRenameLanguageMetadataArgs(args, audioOptions[index].LanguageCode);
+                editCount++;
+            }
+
+            for (var index = 0; index < subtitleOptions.Count; index++)
+            {
+                args.Add("--edit");
+                args.Add($"track:s{index + 1}");
+                AddTagAndRenameLanguageMetadataArgs(args, subtitleOptions[index].LanguageCode);
+                editCount++;
+            }
+
+            if (editCount == 0)
+            {
+                return;
+            }
+
+            var result = await processRunnerService.RunAsync(
+                new ProcessExecutionRequest
+                {
+                    FileName = settings.MkvpropeditPath,
+                    Arguments = args.ToArray(),
+                    WorkingDirectory = Path.GetDirectoryName(videoPath) ?? Environment.CurrentDirectory,
+                },
+                onOutput,
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                throw new InvalidOperationException($"No se pudo aplicar metadata manual de tracks {stageDescription}: {BuildFailureSummary(result)}");
+            }
+
+            var scope = selectedOnly ? "pistas conservadas del archivo filtrado" : "pistas inspeccionadas del archivo original";
+            onOutput?.Invoke($"Metadata manual de tracks aplicada {stageDescription} ({scope}).");
+        }
+
+        private static void AddTagAndRenameLanguageMetadataArgs(List<string> args, string? languageCode)
+        {
+            var ietfCode = NormalizeTagAndRenameLanguageCode(TrackLanguageCatalog.GetCanonicalBaseCode(languageCode));
+            var legacyCode = GetMatroskaLegacyLanguageCode(ietfCode);
+            if (!string.IsNullOrWhiteSpace(legacyCode))
+            {
+                args.Add("--set");
+                args.Add($"language={legacyCode}");
+            }
+
+            args.Add("--set");
+            args.Add($"language-ietf={ietfCode}");
+        }
+
+        private static string? GetMatroskaLegacyLanguageCode(string languageCode)
+        {
+            var normalized = NormalizeTagAndRenameLanguageCode(languageCode);
+            if (normalized.Length == 3)
+            {
+                return normalized;
+            }
+
+            var baseCode = normalized.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? normalized;
+            if (MatroskaLegacyLanguageCodes.TryGetValue(baseCode, out var legacyCode))
+            {
+                return legacyCode;
+            }
+
+            return baseCode.Length == 3 ? baseCode : null;
+        }
+
+        private static string NormalizeTagAndRenameLanguageCode(string? languageCode)
+        {
+            if (string.IsNullOrWhiteSpace(languageCode))
+            {
+                return "und";
+            }
+
+            return languageCode.Trim().Replace('_', '-').ToLowerInvariant();
         }
 
         private static string ResolveWorkflowOutputDirectory(WorkflowInstance workflow)
@@ -1554,12 +1749,12 @@ namespace MediaWorkflowOrchestrator.Services
             {
                 if (ContainsRenamerLaunchMessage(result.StandardOutput) && TagAndRenameOutputHasWarnings(result.StandardOutput))
                 {
-                    return "Etiquetas completadas con advertencias; FileBot quedó listo para revisión manual.";
+                    return "Etiquetas completadas con advertencias; FileBot quedó abierto para renombrado manual.";
                 }
 
                 if (ContainsRenamerLaunchMessage(result.StandardOutput))
                 {
-                    return "Etiquetas completadas; FileBot quedó listo para revisión manual.";
+                    return "Etiquetas completadas; FileBot quedó abierto para renombrado manual.";
                 }
             }
 
@@ -1578,7 +1773,7 @@ namespace MediaWorkflowOrchestrator.Services
                 return result;
             }
 
-            onOutput?.Invoke("El script de etiquetas reportó advertencias, pero FileBot quedó listo para revisión manual. El paso se marcará como completado.");
+            onOutput?.Invoke("El script de etiquetas reportó advertencias, pero FileBot quedó abierto para renombrado manual. El paso se marcará como completado.");
             return new ProcessExecutionResult
             {
                 ExitCode = result.ExitCode,
@@ -1593,11 +1788,8 @@ namespace MediaWorkflowOrchestrator.Services
 
         private static bool ContainsRenamerLaunchMessage(string output)
         {
-            return output.Contains("Renombrar.lnk lanzado.", StringComparison.OrdinalIgnoreCase)
-                || output.Contains("FileBot lanzado con salida fijada", StringComparison.OrdinalIgnoreCase)
-                || output.Contains("FileBot GUI abierto desde ruta real", StringComparison.OrdinalIgnoreCase)
-                || output.Contains("se lanzó FileBot", StringComparison.OrdinalIgnoreCase)
-                || output.Contains("se lanzo FileBot", StringComparison.OrdinalIgnoreCase);
+            return output.Contains("FileBot GUI abierto desde exe", StringComparison.OrdinalIgnoreCase)
+                || output.Contains("FileBot CLI finalizado", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool TagAndRenameOutputHasWarnings(string output)
@@ -1668,11 +1860,12 @@ namespace MediaWorkflowOrchestrator.Services
         }
 
         private static async Task<string> PrepareRarPackagingInputAsync(
+            AppSettings settings,
             WorkflowInstance workflow,
             CancellationToken cancellationToken,
             Action<string>? onOutput)
         {
-            var scopedVideoPath = ResolveRarScopedVideoPath(workflow);
+            var scopedVideoPath = await ResolveRarScopedVideoPathAsync(settings, workflow, cancellationToken, onOutput);
             if (!string.IsNullOrWhiteSpace(scopedVideoPath))
             {
                 workflow.PrimaryVideoPath = scopedVideoPath;
@@ -1715,7 +1908,11 @@ namespace MediaWorkflowOrchestrator.Services
             return wrapperRoot;
         }
 
-        private static string? ResolveRarScopedVideoPath(WorkflowInstance workflow)
+        private static async Task<string?> ResolveRarScopedVideoPathAsync(
+            AppSettings settings,
+            WorkflowInstance workflow,
+            CancellationToken cancellationToken,
+            Action<string>? onOutput)
         {
             string? primaryVideoPath = null;
             if (!string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath) && File.Exists(workflow.PrimaryVideoPath))
@@ -1726,7 +1923,8 @@ namespace MediaWorkflowOrchestrator.Services
             var fileBotOutputPath = TryResolveLatestFileBotOutputVideo(workflow);
             if (!string.IsNullOrWhiteSpace(fileBotOutputPath))
             {
-                return fileBotOutputPath;
+                return await NormalizeFileBotOutputNameAsync(settings, fileBotOutputPath, cancellationToken, onOutput)
+                    ?? fileBotOutputPath;
             }
 
             if (!string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath) && File.Exists(workflow.SourcePrimaryVideoPath))
@@ -1803,6 +2001,277 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             return null;
+        }
+
+        private static async Task<string?> NormalizeFileBotOutputNameAsync(
+            AppSettings settings,
+            string fileBotOutputPath,
+            CancellationToken cancellationToken,
+            Action<string>? onOutput)
+        {
+            if (string.IsNullOrWhiteSpace(fileBotOutputPath) || !File.Exists(fileBotOutputPath))
+            {
+                return fileBotOutputPath;
+            }
+
+            var currentFile = new FileInfo(fileBotOutputPath);
+            var normalizedStem = await TryBuildNormalizedFileBotStemAsync(settings, currentFile.FullName, cancellationToken);
+            if (string.IsNullOrWhiteSpace(normalizedStem))
+            {
+                return currentFile.FullName;
+            }
+
+            var targetPath = Path.Combine(currentFile.DirectoryName ?? string.Empty, normalizedStem + currentFile.Extension);
+            if (string.Equals(Path.GetFullPath(targetPath), currentFile.FullName, StringComparison.OrdinalIgnoreCase))
+            {
+                return currentFile.FullName;
+            }
+
+            targetPath = ResolveAvailableSiblingPath(targetPath);
+            try
+            {
+                File.Move(currentFile.FullName, targetPath);
+                onOutput?.Invoke($"Nombre FileBot normalizado por metadatos MKV: {Path.GetFileName(currentFile.FullName)} -> {Path.GetFileName(targetPath)}");
+                return targetPath;
+            }
+            catch (IOException ex)
+            {
+                onOutput?.Invoke($"No se pudo normalizar el nombre FileBot; se usará el nombre actual ({ex.Message}).");
+                return currentFile.FullName;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                onOutput?.Invoke($"No se pudo normalizar el nombre FileBot; se usará el nombre actual ({ex.Message}).");
+                return currentFile.FullName;
+            }
+        }
+
+        private static async Task<string?> TryBuildNormalizedFileBotStemAsync(
+            AppSettings settings,
+            string videoPath,
+            CancellationToken cancellationToken)
+        {
+            var stem = Path.GetFileNameWithoutExtension(videoPath);
+            var languageBlockMatch = Regex.Match(
+                stem,
+                @"\baudio\s+(?<audio>.+?)(?:\s+subt\s+(?<subtitles>.+?))?(?=\s+\[[^\]]+\]$|\s*$)",
+                RegexOptions.IgnoreCase);
+            if (!languageBlockMatch.Success)
+            {
+                return null;
+            }
+
+            var tracks = await InspectMkvLanguageTracksAsync(settings, videoPath, cancellationToken);
+            if (tracks.Count == 0)
+            {
+                return null;
+            }
+
+            var audioTokens = BuildReleaseLanguageTokens(tracks.Where(static track => track.Type.Equals("audio", StringComparison.OrdinalIgnoreCase)));
+            var subtitleTokens = BuildReleaseLanguageTokens(tracks.Where(static track => track.Type.Equals("subtitles", StringComparison.OrdinalIgnoreCase)));
+            if (audioTokens.Count == 0 && subtitleTokens.Count == 0)
+            {
+                return null;
+            }
+
+            var replacementParts = new List<string>();
+            if (audioTokens.Count > 0)
+            {
+                replacementParts.Add("audio " + string.Join(' ', audioTokens));
+            }
+
+            if (subtitleTokens.Count > 0)
+            {
+                replacementParts.Add("subt " + string.Join(' ', subtitleTokens));
+            }
+
+            var replacement = string.Join(' ', replacementParts);
+            var normalizedStem = stem[..languageBlockMatch.Index]
+                + replacement
+                + stem[(languageBlockMatch.Index + languageBlockMatch.Length)..];
+
+            normalizedStem = Regex.Replace(normalizedStem, @"\s+", " ").Trim();
+            return string.Equals(normalizedStem, stem, StringComparison.Ordinal)
+                ? null
+                : normalizedStem;
+        }
+
+        private static async Task<IReadOnlyList<FileBotLanguageTrack>> InspectMkvLanguageTracksAsync(
+            AppSettings settings,
+            string videoPath,
+            CancellationToken cancellationToken)
+        {
+            var mkvmergePath = string.IsNullOrWhiteSpace(settings.MkvmergePath)
+                ? "mkvmerge"
+                : settings.MkvmergePath;
+
+            if (!string.Equals(mkvmergePath, "mkvmerge", StringComparison.OrdinalIgnoreCase) && !File.Exists(mkvmergePath))
+            {
+                return Array.Empty<FileBotLanguageTrack>();
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = mkvmergePath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            startInfo.ArgumentList.Add("-J");
+            startInfo.ArgumentList.Add(videoPath);
+
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+            var stdout = await stdoutTask;
+            _ = await stderrTask;
+
+            if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(stdout))
+            {
+                return Array.Empty<FileBotLanguageTrack>();
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(stdout);
+                if (!doc.RootElement.TryGetProperty("tracks", out var tracksElement)
+                    || tracksElement.ValueKind != JsonValueKind.Array)
+                {
+                    return Array.Empty<FileBotLanguageTrack>();
+                }
+
+                var tracks = new List<FileBotLanguageTrack>();
+                foreach (var track in tracksElement.EnumerateArray())
+                {
+                    var type = TryGetJsonString(track, "type") ?? string.Empty;
+                    if (!type.Equals("audio", StringComparison.OrdinalIgnoreCase)
+                        && !type.Equals("subtitles", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var properties = track.TryGetProperty("properties", out var propertiesElement)
+                        && propertiesElement.ValueKind == JsonValueKind.Object
+                            ? propertiesElement
+                            : default;
+
+                    tracks.Add(new FileBotLanguageTrack(
+                        type,
+                        TryGetJsonString(properties, "language"),
+                        TryGetJsonString(properties, "language_ietf") ?? TryGetJsonString(properties, "language-ietf"),
+                        TryGetJsonString(properties, "track_name")));
+                }
+
+                return tracks;
+            }
+            catch (JsonException)
+            {
+                return Array.Empty<FileBotLanguageTrack>();
+            }
+        }
+
+        private static IReadOnlyList<string> BuildReleaseLanguageTokens(IEnumerable<FileBotLanguageTrack> tracks)
+        {
+            var result = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var track in tracks)
+            {
+                var token = NormalizeReleaseLanguageToken(track.LanguageRaw, track.LanguageIetf, track.Name);
+                if (string.IsNullOrWhiteSpace(token) || !seen.Add(token))
+                {
+                    continue;
+                }
+
+                result.Add(token);
+            }
+
+            return result;
+        }
+
+        private static string NormalizeReleaseLanguageToken(string? languageRaw, string? languageIetf, string? trackName)
+        {
+            var raw = NormalizeReleaseLanguageCode(languageRaw);
+            var ietf = NormalizeReleaseLanguageCode(languageIetf);
+            var name = NormalizeReleaseLanguageName(trackName);
+            var combined = $"{raw} {ietf} {name}";
+
+            if (Regex.IsMatch(combined, @"\b(?:latino|latinoamerica|latinoamericano|latin\s*america|es-419|es-la)\b", RegexOptions.IgnoreCase))
+            {
+                return "es-419";
+            }
+
+            if (Regex.IsMatch(combined, @"\b(?:castellano|espana|spain|es-es)\b", RegexOptions.IgnoreCase))
+            {
+                return "es-es";
+            }
+
+            if (raw.Equals("spa", StringComparison.OrdinalIgnoreCase)
+                || raw.Equals("es", StringComparison.OrdinalIgnoreCase)
+                || ietf.Equals("spa", StringComparison.OrdinalIgnoreCase)
+                || ietf.Equals("es", StringComparison.OrdinalIgnoreCase))
+            {
+                return "es";
+            }
+
+            if (!string.IsNullOrWhiteSpace(raw) && !raw.Equals("und", StringComparison.OrdinalIgnoreCase))
+            {
+                return raw;
+            }
+
+            if (!string.IsNullOrWhiteSpace(ietf) && !ietf.Equals("und", StringComparison.OrdinalIgnoreCase))
+            {
+                return ietf;
+            }
+
+            return "und";
+        }
+
+        private static string NormalizeReleaseLanguageCode(string? value) =>
+            string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim().Replace('_', '-').ToLowerInvariant();
+
+        private static string NormalizeReleaseLanguageName(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var normalized = value.Trim().ToLowerInvariant()
+                .Replace("á", "a")
+                .Replace("é", "e")
+                .Replace("í", "i")
+                .Replace("ó", "o")
+                .Replace("ú", "u")
+                .Replace("ñ", "n");
+            return Regex.Replace(normalized, @"[^\p{Ll}\p{Nd}-]+", " ").Trim();
+        }
+
+        private static string ResolveAvailableSiblingPath(string targetPath)
+        {
+            if (!File.Exists(targetPath))
+            {
+                return targetPath;
+            }
+
+            var directory = Path.GetDirectoryName(targetPath) ?? string.Empty;
+            var stem = Path.GetFileNameWithoutExtension(targetPath);
+            var extension = Path.GetExtension(targetPath);
+            var sequence = 1;
+            string candidate;
+            do
+            {
+                candidate = Path.Combine(directory, $"{stem} ({sequence}){extension}");
+                sequence++;
+            }
+            while (File.Exists(candidate));
+
+            return candidate;
         }
 
         private static string? TryResolveLatestFileBotOutputVideo(WorkflowInstance workflow)
@@ -2881,13 +3350,6 @@ namespace MediaWorkflowOrchestrator.Services
                 throw new InvalidOperationException("La carpeta de trabajo de etiquetas y renombre no existe.");
             }
 
-            var sourceVideo = ResolveFilteredVideo(workflow)
-                ?? ResolvePrimaryVideo(workflow);
-            if (sourceVideo is null)
-            {
-                throw new InvalidOperationException("No se encontró un archivo de video para preparar el paso de etiquetas y renombre.");
-            }
-
             var workingDirectory = settings.TagAndRenameWorkingDirectory;
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Completado"));
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Subs"));
@@ -2895,14 +3357,25 @@ namespace MediaWorkflowOrchestrator.Services
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Videos"));
             Directory.CreateDirectory(Path.Combine(workingDirectory, "Originales"));
 
-            var stagedVideoPath = sourceVideo.FullName;
-            onOutput?.Invoke($"Etiquetas y renombre trabajará sobre el archivo original, sin copia local: {stagedVideoPath}");
+            var inputPath = ResolveTagAndRenameInputPath(workflow);
+            if (string.IsNullOrWhiteSpace(inputPath) || (!File.Exists(inputPath) && !Directory.Exists(inputPath)))
+            {
+                throw new InvalidOperationException("No se encontró un archivo o carpeta de video para preparar el paso de etiquetas y renombre.");
+            }
+
+            if (Directory.Exists(inputPath))
+            {
+                var mkvCount = Directory.EnumerateFiles(inputPath, "*.mkv", SearchOption.TopDirectoryOnly).Count();
+                onOutput?.Invoke($"Etiquetas y renombre trabajará sobre la carpeta seleccionada ({mkvCount} MKV): {inputPath}");
+            }
+            else
+            {
+                onOutput?.Invoke($"Etiquetas y renombre trabajará sobre el archivo original, sin copia local: {inputPath}");
+            }
 
             return new TagAndRenamePreparation(
                 workingDirectory,
-                Path.Combine(workingDirectory, "Renombrar.lnk"),
-                false,
-                stagedVideoPath);
+                inputPath);
         }
 
         private static string StageVideoForTagAndRename(FileInfo sourceVideo, string completadoDirectory, string workflowId, Action<string>? onOutput)
@@ -2954,53 +3427,6 @@ namespace MediaWorkflowOrchestrator.Services
                 Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
                 Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
                 StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static async Task<ProcessExecutionResult> LaunchRenamerShortcutAsync(
-            TagAndRenamePreparation preparation,
-            CancellationToken cancellationToken,
-            Action<string>? onOutput)
-        {
-            var startedAt = DateTimeOffset.UtcNow;
-            var stdout = string.Empty;
-            var stderr = string.Empty;
-
-            if (!File.Exists(preparation.ShortcutPath))
-            {
-                stderr = $"No se encontró el acceso directo de renombrado: {preparation.ShortcutPath}";
-                return new ProcessExecutionResult
-                {
-                    ExitCode = 1,
-                    StandardOutput = stdout,
-                    StandardError = stderr,
-                    StartedAt = startedAt,
-                    FinishedAt = DateTimeOffset.UtcNow,
-                    CommandDisplay = preparation.ShortcutPath,
-                    Success = false,
-                };
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = preparation.ShortcutPath,
-                UseShellExecute = true,
-                WorkingDirectory = preparation.WorkingDirectory,
-            });
-
-            stdout = $"No hay MKV para etiquetar; se lanzó FileBot mediante {preparation.ShortcutPath}.";
-            onOutput?.Invoke(stdout);
-
-            return await Task.FromResult(new ProcessExecutionResult
-            {
-                ExitCode = 0,
-                StandardOutput = stdout,
-                StandardError = stderr,
-                StartedAt = startedAt,
-                FinishedAt = DateTimeOffset.UtcNow,
-                CommandDisplay = preparation.ShortcutPath,
-                Success = true,
-            });
         }
 
         private static FileInfo? ResolvePrimaryVideo(WorkflowInstance workflow)
@@ -3100,6 +3526,12 @@ namespace MediaWorkflowOrchestrator.Services
             bool IsForced,
             int Order);
 
-        private sealed record TagAndRenamePreparation(string WorkingDirectory, string ShortcutPath, bool LaunchRenamerOnly, string StagedVideoPath);
+        private readonly record struct FileBotLanguageTrack(
+            string Type,
+            string? LanguageRaw,
+            string? LanguageIetf,
+            string? Name);
+
+        private sealed record TagAndRenamePreparation(string WorkingDirectory, string InputPath);
     }
 }

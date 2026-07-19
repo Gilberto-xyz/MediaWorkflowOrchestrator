@@ -4,6 +4,10 @@ namespace MediaWorkflowOrchestrator.Models
 {
     public sealed class WorkflowStepState : ObservableObject
     {
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush TransparentRowBrush = CreateBrush(0x00, 0x00, 0x00, 0x00);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SubtleRowBorderBrush = CreateBrush(0x22, 0xB6, 0xC5, 0xDA);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedRowBackgroundBrush = CreateBrush(0x52, 0x1C, 0x76, 0x58);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedRowBorderBrush = CreateBrush(0xFF, 0x3F, 0xE6, 0x84);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingBackgroundBrush = CreateBrush(0x1C, 0x90, 0x9D, 0xAE);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingBorderBrush = CreateBrush(0x66, 0x90, 0x9D, 0xAE);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush PendingAccentBrush = CreateBrush(0xFF, 0xD7, 0xDF, 0xEA);
@@ -24,9 +28,7 @@ namespace MediaWorkflowOrchestrator.Models
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FailedBorderBrush = CreateBrush(0x88, 0xF0, 0x71, 0x78);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush FailedAccentBrush = CreateBrush(0xFF, 0xFF, 0xD6, 0xD9);
 
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBackgroundBrush = CreateBrush(0x50, 0x4B, 0x31, 0x12);
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBorderBrush = CreateBrush(0xFF, 0xE5, 0xA3, 0x4F);
-        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedAccentBrush = CreateBrush(0xFF, 0xFF, 0xE3, 0xBB);
+        private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedBorderBrush = CreateBrush(0xFF, 0x3F, 0xE6, 0x84);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedTextBrush = CreateBrush(0xFF, 0xFF, 0xFB, 0xF6);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush DefaultTextBrush = CreateBrush(0xFF, 0xFF, 0xFF, 0xFF);
         private static readonly Microsoft.UI.Xaml.Media.SolidColorBrush SelectedSubtitleBrush = CreateBrush(0xEC, 0xF6, 0xE3, 0xC8);
@@ -145,8 +147,49 @@ namespace MediaWorkflowOrchestrator.Models
         public string FinishedAtDisplay => FinishedAt?.ToLocalTime().ToString("g") ?? "Pendiente";
 
         [JsonIgnore]
+        public string StepNumber => StepKey switch
+        {
+            WorkflowStepKey.Download => "00",
+            WorkflowStepKey.InspectSubs => "01",
+            WorkflowStepKey.TranslateSubs => "02",
+            WorkflowStepKey.CleanTracks => "03",
+            WorkflowStepKey.TagAndRename => "04",
+            WorkflowStepKey.PackageRar => "05",
+            _ => "00",
+        };
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Controls.Symbol StepSymbol => StepKey switch
+        {
+            WorkflowStepKey.Download => Microsoft.UI.Xaml.Controls.Symbol.Download,
+            WorkflowStepKey.InspectSubs => Microsoft.UI.Xaml.Controls.Symbol.Find,
+            WorkflowStepKey.TranslateSubs => Microsoft.UI.Xaml.Controls.Symbol.World,
+            WorkflowStepKey.CleanTracks => Microsoft.UI.Xaml.Controls.Symbol.Setting,
+            WorkflowStepKey.TagAndRename => Microsoft.UI.Xaml.Controls.Symbol.Page,
+            WorkflowStepKey.PackageRar => Microsoft.UI.Xaml.Controls.Symbol.Save,
+            _ => Microsoft.UI.Xaml.Controls.Symbol.Forward,
+        };
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush RowBackgroundBrush => IsSelected ? SelectedRowBackgroundBrush : TransparentRowBrush;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush RowBorderBrush => IsSelected ? SelectedRowBorderBrush : SubtleRowBorderBrush;
+
+        [JsonIgnore]
+        public Microsoft.UI.Xaml.Media.Brush StatusBadgeBackgroundBrush => Status switch
+        {
+            WorkflowStepStatus.Succeeded => SuccessBackgroundBrush,
+            WorkflowStepStatus.Skipped => SkippedBackgroundBrush,
+            WorkflowStepStatus.Ready or WorkflowStepStatus.Running or WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision => ExpectedBackgroundBrush,
+            WorkflowStepStatus.Failed => FailedBackgroundBrush,
+            _ => PendingBackgroundBrush,
+        };
+
+        [JsonIgnore]
         public Microsoft.UI.Xaml.Media.Brush CardBackgroundBrush => Status switch
         {
+            _ when IsSelected => SelectedRowBackgroundBrush,
             WorkflowStepStatus.Succeeded => SuccessBackgroundBrush,
             WorkflowStepStatus.Skipped => SkippedBackgroundBrush,
             WorkflowStepStatus.Ready or WorkflowStepStatus.Running or WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision => ExpectedBackgroundBrush,
@@ -157,7 +200,7 @@ namespace MediaWorkflowOrchestrator.Models
         [JsonIgnore]
         public Microsoft.UI.Xaml.Media.Brush CardBorderBrush => Status switch
         {
-            _ when IsSelected => SelectedBorderBrush,
+            _ when IsSelected => SelectedRowBorderBrush,
             WorkflowStepStatus.Succeeded => SuccessBorderBrush,
             WorkflowStepStatus.Skipped => SkippedBorderBrush,
             WorkflowStepStatus.Ready or WorkflowStepStatus.Running or WorkflowStepStatus.Blocked or WorkflowStepStatus.NeedsDecision => ExpectedBorderBrush,
@@ -216,6 +259,9 @@ namespace MediaWorkflowOrchestrator.Models
 
         private void NotifyVisualStateChanged()
         {
+            OnPropertyChanged(nameof(RowBackgroundBrush));
+            OnPropertyChanged(nameof(RowBorderBrush));
+            OnPropertyChanged(nameof(StatusBadgeBackgroundBrush));
             OnPropertyChanged(nameof(CardBackgroundBrush));
             OnPropertyChanged(nameof(CardBorderBrush));
             OnPropertyChanged(nameof(StatusAccentBrush));

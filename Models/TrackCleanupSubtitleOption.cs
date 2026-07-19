@@ -29,7 +29,19 @@ namespace MediaWorkflowOrchestrator.Models
         public string LanguageCode
         {
             get => languageCode;
-            set => SetProperty(ref languageCode, value);
+            set
+            {
+                if (SetProperty(ref languageCode, NormalizeLanguageCode(value)))
+                {
+                    var label = TrackLanguageCatalog.GetDisplayName(languageCode, languageCode);
+                    if (!string.IsNullOrWhiteSpace(label))
+                    {
+                        LanguageLabel = label;
+                    }
+
+                    NotifyPresentationChanged();
+                }
+            }
         }
 
         public string LanguageLabel
@@ -178,5 +190,10 @@ namespace MediaWorkflowOrchestrator.Models
             OnPropertyChanged(nameof(PrimaryActionLabel));
             OnPropertyChanged(nameof(PrimaryBadgeLabel));
         }
+
+        private static string NormalizeLanguageCode(string? value) =>
+            string.IsNullOrWhiteSpace(value)
+                ? "und"
+                : value.Trim().Replace('_', '-').ToLowerInvariant();
     }
 }

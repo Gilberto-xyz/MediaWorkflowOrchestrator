@@ -137,6 +137,24 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private string _detailProgressPercentLabel = "En curso";
 
         [ObservableProperty]
+        private bool _detailItemProgressIsIndeterminate = true;
+
+        [ObservableProperty]
+        private double _detailItemProgressValue;
+
+        [ObservableProperty]
+        private string _detailItemProgressTitle = "Preparando operación...";
+
+        [ObservableProperty]
+        private string _detailItemProgressPercentLabel = "Esperando";
+
+        [ObservableProperty]
+        private string _detailProgressPhaseLabel = "Preparando";
+
+        [ObservableProperty]
+        private bool _isProgressOperationActive;
+
+        [ObservableProperty]
         private bool _detailOutputHeightWasResized;
 
         [ObservableProperty]
@@ -261,6 +279,32 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
         }
 
+        partial void OnRarSkipImagesEnabledChanged(bool value)
+        {
+            OnPropertyChanged(nameof(RarGenerateImagesEnabled));
+            OnPropertyChanged(nameof(RarImageOptionsEnabled));
+            OnPropertyChanged(nameof(RarGenerateImagesButtonLabel));
+            OnPropertyChanged(nameof(RarSkipImagesButtonLabel));
+            OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
+            OnPropertyChanged(nameof(RarQuickOptionsSummary));
+        }
+
+        partial void OnRarNoCompressEnabledChanged(bool value)
+        {
+            OnPropertyChanged(nameof(RarCreateArchiveEnabled));
+            OnPropertyChanged(nameof(RarArchiveOptionsEnabled));
+            OnPropertyChanged(nameof(RarCreateArchiveButtonLabel));
+            OnPropertyChanged(nameof(RarNoCompressButtonLabel));
+            OnPropertyChanged(nameof(RarCompressionModeButtonLabel));
+            OnPropertyChanged(nameof(RarQuickOptionsSummary));
+        }
+
+        partial void OnRarUseCompressionNormalEnabledChanged(bool value)
+        {
+            OnPropertyChanged(nameof(RarCompressionModeButtonLabel));
+            OnPropertyChanged(nameof(RarQuickOptionsSummary));
+        }
+
         partial void OnSelectedStepChanged(WorkflowStepState? value)
         {
             foreach (var step in StepItems)
@@ -304,12 +348,21 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public bool CanOpenSelectedLog => SelectedStep is not null
             && !string.IsNullOrWhiteSpace(SelectedStep.StdoutLogPath)
             && File.Exists(SelectedStep.StdoutLogPath);
+        public bool RarGenerateImagesEnabled => !RarSkipImagesEnabled;
+        public bool RarImageOptionsEnabled => RarGenerateImagesEnabled;
+        public bool RarCreateArchiveEnabled => !RarNoCompressEnabled;
+        public bool RarArchiveOptionsEnabled => RarCreateArchiveEnabled;
+        public string RarGenerateImagesButtonLabel => $"Generar imágenes: {(RarGenerateImagesEnabled ? "Sí" : "No")}";
+        public string RarCreateArchiveButtonLabel => $"Crear RAR: {(RarCreateArchiveEnabled ? "Sí" : "No")}";
         public string RarSkipImagesButtonLabel => $"Sin imágenes: {(RarSkipImagesEnabled ? "ON" : "OFF")}";
         public string RarNoCompressButtonLabel => $"Solo info: {(RarNoCompressEnabled ? "ON" : "OFF")}";
-        public string RarCompressionModeButtonLabel => $"Modo RAR: {(RarUseCompressionNormalEnabled ? "Comprimir" : "Contenedor fast")}";
+        public string RarCompressionModeButtonLabel => RarCreateArchiveEnabled
+            ? $"Modo RAR: {(RarUseCompressionNormalEnabled ? "Comprimir" : "Contenedor fast")}"
+            : "Modo RAR: desactivado";
         public string RarVerboseButtonLabel => $"Verbose: {(RarVerboseEnabled ? "ON" : "OFF")}";
         public string RarImageFormatButtonLabel => $"Formato imagen: {RarImageFormatQuick.ToUpperInvariant()}";
         public string RarCaptureCountButtonLabel => BuildRarCaptureCountButtonLabel();
+        public string RarQuickOptionsSummary => BuildRarQuickOptionsSummary();
         public string DetailOutputTerminalToggleLabel => ShowDetailOutputTerminal ? "Ocultar terminal" : "Mostrar terminal";
         public Microsoft.UI.Xaml.Controls.Symbol DetailOutputTerminalToggleSymbol => ShowDetailOutputTerminal
             ? Microsoft.UI.Xaml.Controls.Symbol.Remove
@@ -668,10 +721,34 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 return;
             }
 
+            NormalizeCleanupTrackMetadata();
             UpdateCleanupAudioSelectionMessage();
             UpdateCleanupSubtitleSelectionMessage();
             await PersistCleanupAudioSelectionAsync();
             ShowStatus(InfoBarSeverity.Success, "Metadata manual de tracks guardada para Limpiar tracks y pasos siguientes.");
+        }
+
+        private void NormalizeCleanupTrackMetadata()
+        {
+            foreach (var option in CleanupAudioOptions)
+            {
+                var code = TrackLanguageCatalog.GetLookupCode(option.LanguageCode, option.LanguageCode);
+                option.LanguageCode = code;
+                if (!string.Equals(code, "und", StringComparison.OrdinalIgnoreCase))
+                {
+                    option.LanguageLabel = TrackLanguageCatalog.GetDisplayName(code, code);
+                }
+            }
+
+            foreach (var option in CleanupSubtitleOptions)
+            {
+                var code = TrackLanguageCatalog.GetLookupCode(option.LanguageCode, option.LanguageCode);
+                option.LanguageCode = code;
+                if (!string.Equals(code, "und", StringComparison.OrdinalIgnoreCase))
+                {
+                    option.LanguageLabel = TrackLanguageCatalog.GetDisplayName(code, code);
+                }
+            }
         }
 
         [RelayCommand]
@@ -1362,12 +1439,19 @@ namespace MediaWorkflowOrchestrator.ViewModels
             OnPropertyChanged(nameof(CleanupCloseQbittorrentButtonLabel));
             OnPropertyChanged(nameof(CleanupDeleteOriginalsButtonLabel));
             OnPropertyChanged(nameof(TagAndRenameAttachCoverButtonLabel));
+            OnPropertyChanged(nameof(RarGenerateImagesButtonLabel));
+            OnPropertyChanged(nameof(RarCreateArchiveButtonLabel));
+            OnPropertyChanged(nameof(RarGenerateImagesEnabled));
+            OnPropertyChanged(nameof(RarCreateArchiveEnabled));
+            OnPropertyChanged(nameof(RarImageOptionsEnabled));
+            OnPropertyChanged(nameof(RarArchiveOptionsEnabled));
             OnPropertyChanged(nameof(RarSkipImagesButtonLabel));
             OnPropertyChanged(nameof(RarNoCompressButtonLabel));
             OnPropertyChanged(nameof(RarCompressionModeButtonLabel));
             OnPropertyChanged(nameof(RarVerboseButtonLabel));
             OnPropertyChanged(nameof(RarImageFormatButtonLabel));
             OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
+            OnPropertyChanged(nameof(RarQuickOptionsSummary));
         }
 
         private string BuildRarCaptureCountButtonLabel()
@@ -1395,6 +1479,18 @@ namespace MediaWorkflowOrchestrator.ViewModels
             return singleVideoContext
                 ? $"Máx imágenes: {normalizedCaptureCount} principal"
                 : $"Máx imágenes: {normalizedCaptureCount} c/u";
+        }
+
+        private string BuildRarQuickOptionsSummary()
+        {
+            var imageOutput = RarGenerateImagesEnabled ? "imágenes" : "sin imágenes";
+            if (!RarCreateArchiveEnabled)
+            {
+                return $"Salida: {imageOutput} + info, sin RAR";
+            }
+
+            var rarMode = RarUseCompressionNormalEnabled ? "RAR comprimido" : "RAR contenedor fast";
+            return $"Salida: {imageOutput} + {rarMode}";
         }
 
         private bool IsPackageRarSingleVideoContext()
@@ -1858,6 +1954,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             ClearLiveOutputBuffer();
             ResetDetailProgress("Progreso del paso", "Esperando señales del proceso...");
             ShowDetailProgress = false;
+            IsProgressOperationActive = false;
             HasExplicitStepSelection = false;
             DetailOutputHeightWasResized = false;
             DetailOutputHeight = 420;
@@ -2083,32 +2180,27 @@ namespace MediaWorkflowOrchestrator.ViewModels
             DetailProgressPercentLabel = "En curso";
             DetailProgressValue = 0;
             DetailProgressIsIndeterminate = true;
+            DetailProgressPhaseLabel = "Preparando";
+            DetailItemProgressTitle = "Esperando la primera tarea...";
+            DetailItemProgressPercentLabel = "Esperando";
+            DetailItemProgressValue = 0;
+            DetailItemProgressIsIndeterminate = true;
+            IsProgressOperationActive = true;
         }
 
         private void UpdateDetailProgressFromOutput(string line)
         {
             if (!TryParseProgressSnapshot(line, activeOutputStepKey, out var snapshot))
             {
-                if (ShowDetailProgress && DetailProgressIsIndeterminate)
+                if (ShowDetailProgress)
                 {
-                    DetailProgressMessage = ShortenProgressMessage(line);
+                    ApplyProgressActivityLine(line);
                 }
 
                 return;
             }
 
-            currentProgressSnapshot = snapshot;
-            ShowDetailProgress = true;
-            DetailProgressIsIndeterminate = snapshot.Percent is null;
-            DetailProgressValue = snapshot.Percent ?? 0;
-            DetailProgressPercentLabel = snapshot.Percent is null
-                ? "En curso"
-                : $"{Math.Round(snapshot.Percent.Value)}%";
-            DetailProgressMessage = snapshot.Message;
-            if (!string.IsNullOrWhiteSpace(snapshot.Title))
-            {
-                DetailProgressTitle = snapshot.Title;
-            }
+            ApplyProgressSnapshot(snapshot);
         }
 
         private void CompleteDetailProgress(bool success, string message)
@@ -2119,11 +2211,17 @@ namespace MediaWorkflowOrchestrator.ViewModels
             }
 
             DetailProgressIsIndeterminate = false;
-            DetailProgressValue = success ? 100 : Math.Max(DetailProgressValue, currentProgressSnapshot?.Percent ?? 0);
+            DetailProgressValue = success ? 100 : Math.Max(DetailProgressValue, currentProgressSnapshot?.OverallPercent ?? 0);
             DetailProgressPercentLabel = success ? "100%" : "Detenido";
             DetailProgressMessage = string.IsNullOrWhiteSpace(message)
                 ? success ? "Proceso completado." : "El proceso no terminó correctamente."
                 : message;
+            DetailProgressPhaseLabel = success ? "Completado" : "Proceso detenido";
+            DetailItemProgressIsIndeterminate = false;
+            DetailItemProgressValue = success ? 100 : DetailItemProgressValue;
+            DetailItemProgressPercentLabel = success ? "100%" : "Detenido";
+            DetailItemProgressTitle = success ? "Todas las tareas finalizaron" : "La tarea actual no terminó";
+            IsProgressOperationActive = false;
         }
 
         private void ApplyProgressForSelectedStep(WorkflowStepState step, IReadOnlyList<string> outputParts)
@@ -2136,12 +2234,18 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 DetailProgressTitle = title;
                 ShowDetailProgress = true;
+                IsProgressOperationActive = true;
                 if (snapshot is null)
                 {
                     DetailProgressIsIndeterminate = true;
                     DetailProgressValue = 0;
                     DetailProgressPercentLabel = "En curso";
                     DetailProgressMessage = "Proceso en ejecución...";
+                    DetailProgressPhaseLabel = "Procesando";
+                    DetailItemProgressIsIndeterminate = true;
+                    DetailItemProgressValue = 0;
+                    DetailItemProgressPercentLabel = "En curso";
+                    DetailItemProgressTitle = "Esperando detalles del proceso...";
                     return;
                 }
 
@@ -2157,6 +2261,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 DetailProgressValue = 100;
                 DetailProgressPercentLabel = "100%";
                 DetailProgressMessage = step.StatusReason;
+                DetailProgressPhaseLabel = "Completado";
+                DetailItemProgressIsIndeterminate = false;
+                DetailItemProgressValue = 100;
+                DetailItemProgressPercentLabel = "100%";
+                DetailItemProgressTitle = "Todas las tareas finalizaron";
+                IsProgressOperationActive = false;
                 return;
             }
 
@@ -2165,10 +2275,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 ApplyProgressSnapshot(snapshot.Value);
                 DetailProgressTitle = title;
                 DetailProgressPercentLabel = "Detenido";
+                DetailProgressPhaseLabel = "Proceso detenido";
+                DetailItemProgressPercentLabel = "Detenido";
+                IsProgressOperationActive = false;
                 return;
             }
 
             ShowDetailProgress = false;
+            IsProgressOperationActive = false;
         }
 
         private void ApplyProgressSnapshot(WorkflowProgressSnapshot snapshot)
@@ -2176,11 +2290,19 @@ namespace MediaWorkflowOrchestrator.ViewModels
             currentProgressSnapshot = snapshot;
             DetailProgressTitle = string.IsNullOrWhiteSpace(snapshot.Title) ? DetailProgressTitle : snapshot.Title;
             DetailProgressMessage = snapshot.Message;
-            DetailProgressIsIndeterminate = snapshot.Percent is null;
-            DetailProgressValue = snapshot.Percent ?? 0;
-            DetailProgressPercentLabel = snapshot.Percent is null
+            DetailProgressPhaseLabel = snapshot.Phase;
+            DetailProgressIsIndeterminate = snapshot.OverallPercent is null;
+            DetailProgressValue = snapshot.OverallPercent ?? 0;
+            DetailProgressPercentLabel = snapshot.OverallPercent is null
                 ? "En curso"
-                : $"{Math.Round(snapshot.Percent.Value)}%";
+                : $"{Math.Round(snapshot.OverallPercent.Value)}%";
+            DetailItemProgressTitle = snapshot.ItemLabel;
+            DetailItemProgressIsIndeterminate = snapshot.ItemPercent is null;
+            DetailItemProgressValue = snapshot.ItemPercent ?? 0;
+            DetailItemProgressPercentLabel = snapshot.ItemPercent is null
+                ? "En curso"
+                : $"{Math.Round(snapshot.ItemPercent.Value)}%";
+            IsProgressOperationActive = true;
             ShowDetailProgress = true;
         }
 
@@ -2215,10 +2337,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
             var structuredMatch = StructuredProgressRegex.Match(line);
             if (structuredMatch.Success && TryParsePercent(structuredMatch.Groups["percent"].Value, out var structuredPercent))
             {
+                var label = ShortenProgressMessage(structuredMatch.Groups["label"].Value);
                 snapshot = new WorkflowProgressSnapshot(
                     BuildProgressTitle(stepKey),
                     structuredPercent,
-                    ShortenProgressMessage(structuredMatch.Groups["label"].Value));
+                    label,
+                    DetectProgressPhase(stepKey, label),
+                    structuredPercent,
+                    label);
                 return true;
             }
 
@@ -2233,32 +2359,156 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 snapshot = new WorkflowProgressSnapshot(
                     BuildProgressTitle(stepKey),
                     aggregate,
-                    $"Mux {current}/{total}: {muxMatch.Groups["name"].Value.Trim()}");
+                    $"Procesando archivo {current} de {total}",
+                    "Procesando pistas",
+                    muxPercent,
+                    muxMatch.Groups["name"].Value.Trim());
                 return true;
             }
 
             var percentMatch = GenericPercentRegex.Match(line);
             if (percentMatch.Success && TryParsePercent(percentMatch.Groups["percent"].Value, out var percent))
             {
-                snapshot = new WorkflowProgressSnapshot(BuildProgressTitle(stepKey), percent, ShortenProgressMessage(line));
+                var message = ShortenProgressMessage(line);
+                var fractionWithPercent = FractionProgressRegex.Match(line);
+                double? overallPercent = null;
+                if (IsGlobalProgressLine(line))
+                {
+                    overallPercent = percent;
+                }
+                else if (TryReadProgressFraction(fractionWithPercent, out var genericCurrent, out var genericTotal))
+                {
+                    overallPercent = Math.Clamp((((genericCurrent - 1) + (percent / 100)) / genericTotal) * 100, 0, 100);
+                }
+
+                snapshot = new WorkflowProgressSnapshot(
+                    BuildProgressTitle(stepKey),
+                    overallPercent,
+                    message,
+                    DetectProgressPhase(stepKey, line),
+                    percent,
+                    message);
                 return true;
             }
 
             var fractionMatch = FractionProgressRegex.Match(line);
-            if (fractionMatch.Success
-                && int.TryParse(fractionMatch.Groups["current"].Value, out var fractionCurrent)
-                && int.TryParse(fractionMatch.Groups["total"].Value, out var fractionTotal)
-                && fractionTotal > 0
-                && fractionCurrent <= fractionTotal)
+            if (TryReadProgressFraction(fractionMatch, out var fractionCurrent, out var fractionTotal))
             {
+                var message = ShortenProgressMessage(line);
                 snapshot = new WorkflowProgressSnapshot(
                     BuildProgressTitle(stepKey),
                     Math.Clamp((fractionCurrent / (double)fractionTotal) * 100, 0, 100),
-                    ShortenProgressMessage(line));
+                    $"Procesando elemento {fractionCurrent} de {fractionTotal}",
+                    DetectProgressPhase(stepKey, line),
+                    null,
+                    message);
                 return true;
             }
 
             return false;
+        }
+
+        private void ApplyProgressActivityLine(string line)
+        {
+            var message = ShortenProgressMessage(line);
+            var phase = DetectProgressPhase(activeOutputStepKey, line);
+            if (!string.Equals(DetailProgressPhaseLabel, phase, StringComparison.Ordinal))
+            {
+                DetailProgressPhaseLabel = phase;
+                DetailItemProgressValue = 0;
+                DetailItemProgressIsIndeterminate = true;
+                DetailItemProgressPercentLabel = "En curso";
+            }
+
+            DetailProgressMessage = message;
+            DetailItemProgressTitle = message;
+            IsProgressOperationActive = true;
+        }
+
+        private static bool TryReadProgressFraction(Match match, out int current, out int total)
+        {
+            current = 0;
+            total = 0;
+            return match.Success
+                && int.TryParse(match.Groups["current"].Value, out current)
+                && int.TryParse(match.Groups["total"].Value, out total)
+                && total > 0
+                && current > 0
+                && current <= total;
+        }
+
+        private static bool IsGlobalProgressLine(string line) =>
+            CompactGlobalProgressRegex.IsMatch(line)
+            || line.Contains("global", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("overall", StringComparison.OrdinalIgnoreCase)
+            || line.Contains("progreso general", StringComparison.OrdinalIgnoreCase);
+
+        private static string DetectProgressPhase(WorkflowStepKey? stepKey, string line)
+        {
+            var normalized = line.ToLowerInvariant();
+            if (normalized.Contains("captur")
+                || normalized.Contains("screenshot")
+                || normalized.Contains("imagen")
+                || normalized.Contains("image")
+                || normalized.Contains("poster")
+                || normalized.Contains("cover")
+                || normalized.Contains("thumbnail"))
+            {
+                return "Generando imágenes";
+            }
+
+            if (normalized.Contains("comprimi")
+                || normalized.Contains("compress")
+                || normalized.Contains("creando rar")
+                || normalized.Contains("archivo rar")
+                || normalized.Contains("archive"))
+            {
+                return "Creando archivo RAR";
+            }
+
+            if (normalized.Contains("mux")
+                || normalized.Contains("mkvmerge")
+                || normalized.Contains("track")
+                || normalized.Contains("pista"))
+            {
+                return "Procesando pistas";
+            }
+
+            if (normalized.Contains("download")
+                || normalized.Contains("descarg")
+                || normalized.Contains("torrent"))
+            {
+                return "Descargando archivos";
+            }
+
+            if (normalized.Contains("traduc") || normalized.Contains("translat"))
+            {
+                return "Traduciendo subtítulos";
+            }
+
+            if (normalized.Contains("inspec") || normalized.Contains("analiz"))
+            {
+                return "Analizando archivos";
+            }
+
+            if (normalized.Contains("etiquet")
+                || normalized.Contains("filebot")
+                || normalized.Contains("renombr")
+                || normalized.Contains("rename"))
+            {
+                return "Etiquetando y renombrando";
+            }
+
+            return stepKey switch
+            {
+                WorkflowStepKey.Download => "Descargando archivos",
+                WorkflowStepKey.InspectSubs => "Analizando subtítulos",
+                WorkflowStepKey.TranslateSubs => "Traduciendo subtítulos",
+                WorkflowStepKey.CleanTracks => "Limpiando pistas",
+                WorkflowStepKey.TagAndRename => "Etiquetando y renombrando",
+                WorkflowStepKey.PackageRar => "Preparando empaquetado",
+                _ => "Procesando",
+            };
         }
 
         private static bool TryParsePercent(string value, out double percent)
@@ -2292,7 +2542,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
             return message.Length <= 180 ? message : $"{message[..177]}...";
         }
 
-        private readonly record struct WorkflowProgressSnapshot(string Title, double? Percent, string Message);
+        private readonly record struct WorkflowProgressSnapshot(
+            string Title,
+            double? OverallPercent,
+            string Message,
+            string Phase,
+            double? ItemPercent,
+            string ItemLabel);
 
         private static IReadOnlyList<WorkflowStepState> CreateNeutralStepTemplate() => new List<WorkflowStepState>
         {
