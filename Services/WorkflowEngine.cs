@@ -68,9 +68,9 @@ namespace MediaWorkflowOrchestrator.Services
 
             if (translateRequired)
             {
-                translationStep.UserDecision = "translate";
+                translationStep.UserDecision = "translate-codex-pending";
                 translationStep.Status = WorkflowStepStatus.Pending;
-                translationStep.StatusReason = "No se detectó español; el paso de traducción es obligatorio.";
+                translationStep.StatusReason = "Faltan subtítulos en español; completa la traducción en Codex.";
                 translationStep.StartedAt = null;
                 translationStep.FinishedAt = null;
                 translationStep.ExitCode = null;
@@ -122,7 +122,7 @@ namespace MediaWorkflowOrchestrator.Services
         private static string GetReadyReason(WorkflowStepKey stepKey) => stepKey switch
         {
             WorkflowStepKey.InspectSubs => "Listo para inspeccionar si el video ya contiene subtítulos en español.",
-            WorkflowStepKey.TranslateSubs => "Listo para traducir subtítulos al español.",
+            WorkflowStepKey.TranslateSubs => "Faltan subtítulos en español. Abre Codex y vuelve con el MKV _es-419 para continuar.",
             WorkflowStepKey.CleanTracks => "Listo para limpiar pistas y subtítulos extra.",
             WorkflowStepKey.TagAndRename => "Listo para aplicar etiquetas y renombrado final.",
             WorkflowStepKey.PackageRar => "Listo para generar el RAR con contraseña.",
@@ -148,7 +148,7 @@ namespace MediaWorkflowOrchestrator.Services
             {
                 StepKey = WorkflowStepKey.TranslateSubs,
                 DisplayName = "Traducir subtítulos",
-                StatusReason = "Pendiente de inspección o decisión manual."
+                StatusReason = "Pendiente de inspección; si faltan subs, el archivo se entregará a Codex."
             },
             new WorkflowStepState
             {

@@ -73,7 +73,6 @@
                                 </Grid>
                                 <TextBox Header="Script Nyaa" Text="{x:Bind ViewModel.Settings.DownloaderScriptPath, Mode=TwoWay}" />
                                 <TextBox Header="Script Nyaa por link" Text="{x:Bind ViewModel.Settings.DownloaderLinkScriptPath, Mode=TwoWay}" />
-                                <TextBox Header="Script traducción" Text="{x:Bind ViewModel.Settings.SubtitleTranslatorScriptPath, Mode=TwoWay}" />
                                 <TextBox Header="Script limpiar tracks" Text="{x:Bind ViewModel.Settings.TrackCleanupScriptPath, Mode=TwoWay}" />
                                 <TextBox Header="Script etiquetas" Text="{x:Bind ViewModel.Settings.TagAndRenameScriptPath, Mode=TwoWay}" />
                                 <TextBox Header="Script RAR" Text="{x:Bind ViewModel.Settings.RarPackagingScriptPath, Mode=TwoWay}" />
@@ -94,23 +93,20 @@
 
                         <Border Style="{StaticResource InsetPanelBorderStyle}">
                             <StackPanel Spacing="12">
-                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Descarga y traducción" />
+                                <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Descarga y procesamiento" />
                                 <CheckBox Content="Descarga en dry-run" IsChecked="{x:Bind ViewModel.Settings.DownloaderDryRun, Mode=TwoWay}" />
                                 <CheckBox Content="Forzar latest en Nyaa" IsChecked="{x:Bind ViewModel.Settings.DownloaderForceLatest, Mode=TwoWay}" />
                                 <CheckBox Content="Limpiar tracks: eliminar originales después de filtrar" IsChecked="{x:Bind ViewModel.Settings.TrackCleanupDeleteOriginals, Mode=TwoWay}" />
                                 <CheckBox Content="Etiquetas: buscar e incrustar cover/poster desde IMDb" IsChecked="{x:Bind ViewModel.Settings.TagAndRenameAttachCover, Mode=TwoWay}" />
-                                <Grid x:Name="ToolsTranslationGrid" ColumnSpacing="10" RowSpacing="10">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Grid.Column="0" Header="Ollama host" Text="{x:Bind ViewModel.Settings.OllamaHost, Mode=TwoWay}" />
-                                    <TextBox Grid.Column="1" Header="Modelo traducción" Text="{x:Bind ViewModel.Settings.OllamaModel, Mode=TwoWay}" />
-                                </Grid>
+                                <Border Style="{StaticResource AccentPanelBorderStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="Traducción de subtítulos · Codex" />
+                                        <TextBlock
+                                            Style="{StaticResource SectionDescriptionTextStyle}"
+                                            Text="La traducción ya no depende de Ollama ni de un script local. El dashboard prepara la solicitud para Codex y valida el MKV _es-419 antes de reanudar el workflow."
+                                            TextWrapping="WrapWholeWords" />
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
 

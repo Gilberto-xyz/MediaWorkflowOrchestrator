@@ -206,9 +206,11 @@ namespace MediaWorkflowOrchestrator.Views
             ApplyResponsiveGrid(
                 TranslateQuickOptionsGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto },
+                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto },
                 (0, 0),
-                (0, 1));
+                (0, 1),
+                (0, 2),
+                (0, 3));
 
             ApplyResponsiveGrid(
                 CleanupFlagsGrid,

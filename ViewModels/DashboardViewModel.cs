@@ -9,6 +9,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
 {
     public partial class DashboardViewModel : BaseViewModel, IRecipient<WorkflowSelectedMessage>
     {
+        private const string CodexSubtitleThreadUri = "codex://threads/019fbc21-ab50-7012-b28d-54c696fc4bba";
         private const double MinDetailOutputHeight = 220;
         private const double MaxDetailOutputHeight = 1200;
         private static readonly Regex CompactMuxProgressRegex = new(
@@ -221,12 +222,6 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _downloadForceLatestEnabled;
 
         [ObservableProperty]
-        private bool _translateFastModeEnabled = true;
-
-        [ObservableProperty]
-        private bool _translateSkipSummaryEnabled = true;
-
-        [ObservableProperty]
         private bool _cleanupCloseQbittorrentEnabled = true;
 
         [ObservableProperty]
@@ -318,13 +313,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
+            OnPropertyChanged(nameof(CodexTranslationPanelTitle));
+            OnPropertyChanged(nameof(CodexTranslationPanelDescription));
             _ = EnsureCleanupAudioSelectionForCurrentStepAsync(value);
         }
 
         public string DownloadDryRunButtonLabel => $"Dry-run: {(DownloadDryRunEnabled ? "ON" : "OFF")}";
         public string DownloadForceLatestButtonLabel => $"Force latest: {(DownloadForceLatestEnabled ? "ON" : "OFF")}";
-        public string TranslateFastModeButtonLabel => $"Modo rápido: {(TranslateFastModeEnabled ? "ON" : "OFF")}";
-        public string TranslateSkipSummaryButtonLabel => $"Omitir resumen: {(TranslateSkipSummaryEnabled ? "ON" : "OFF")}";
         public string CleanupCloseQbittorrentButtonLabel => $"Cerrar qBittorrent: {(CleanupCloseQbittorrentEnabled ? "ON" : "OFF")}";
         public string CleanupDeleteOriginalsButtonLabel => $"Eliminar originales: {(CleanupDeleteOriginalsEnabled ? "ON" : "OFF")}";
         public string TagAndRenameAttachCoverButtonLabel => $"Cover/poster: {(TagAndRenameAttachCoverEnabled ? "ON" : "OFF")}";
@@ -348,6 +343,25 @@ namespace MediaWorkflowOrchestrator.ViewModels
         public bool CanOpenSelectedLog => SelectedStep is not null
             && !string.IsNullOrWhiteSpace(SelectedStep.StdoutLogPath)
             && File.Exists(SelectedStep.StdoutLogPath);
+        public string CodexTranslationTargetLabel => GetTranslationSourcePath() is { Length: > 0 } path
+            ? path
+            : "Selecciona primero un archivo base para preparar la solicitud.";
+        public string CodexTranslationPanelTitle => SelectedStep?.Status switch
+        {
+            WorkflowStepStatus.Skipped => "Este archivo ya contiene subtítulos en español",
+            WorkflowStepStatus.Succeeded => "Traducción con Codex detectada",
+            _ => "Faltan subtítulos en español",
+        };
+        public string CodexTranslationPanelDescription => SelectedStep?.Status switch
+        {
+            WorkflowStepStatus.Skipped => "La inspección confirmó subtítulos en español y el workflow omitió este paso. Puedes abrir Codex si deseas generar una traducción alternativa.",
+            WorkflowStepStatus.Succeeded => "El MKV _es-419 ya fue validado y el workflow puede usarlo en los pasos siguientes.",
+            _ => "Codex extraerá la mejor pista fuente, traducirá con contexto y continuidad, validará los eventos y devolverá un MKV _es-419 conservando las pistas originales.",
+        };
+        public string CodexTranslationExpectedOutputLabel => GetTranslationSourcePath() is { Length: > 0 } path
+            ? $"Resultado esperado: {Path.GetFileNameWithoutExtension(path)}_es-419.mkv"
+            : "Resultado esperado: un MKV terminado en _es-419.mkv";
+
         public bool RarGenerateImagesEnabled => !RarSkipImagesEnabled;
         public bool RarImageOptionsEnabled => RarGenerateImagesEnabled;
         public bool RarCreateArchiveEnabled => !RarNoCompressEnabled;
@@ -434,6 +448,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 return;
             }
 
+            if (nextStep.StepKey == WorkflowStepKey.TranslateSubs)
+            {
+                await OpenCodexTranslationAsync();
+                return;
+            }
+
             await PersistQuickSettingsAsync();
             await ExecuteAsync(
                 () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, nextStep.StepKey, AppendOutput, CancellationToken),
@@ -451,6 +471,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
             SelectStep(SelectedStep.StepKey);
             if (!await EnsureStepPreconditionsAsync(SelectedStep.StepKey))
             {
+                return;
+            }
+
+            if (SelectedStep.StepKey == WorkflowStepKey.TranslateSubs)
+            {
+                await OpenCodexTranslationAsync();
                 return;
             }
 
@@ -519,22 +545,6 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             DownloadForceLatestEnabled = !DownloadForceLatestEnabled;
             OnPropertyChanged(nameof(DownloadForceLatestButtonLabel));
-            await PersistQuickSettingsAsync();
-        }
-
-        [RelayCommand]
-        private async Task ToggleTranslateFastModeAsync()
-        {
-            TranslateFastModeEnabled = !TranslateFastModeEnabled;
-            OnPropertyChanged(nameof(TranslateFastModeButtonLabel));
-            await PersistQuickSettingsAsync();
-        }
-
-        [RelayCommand]
-        private async Task ToggleTranslateSkipSummaryAsync()
-        {
-            TranslateSkipSummaryEnabled = !TranslateSkipSummaryEnabled;
-            OnPropertyChanged(nameof(TranslateSkipSummaryButtonLabel));
             await PersistQuickSettingsAsync();
         }
 
@@ -817,6 +827,118 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private async Task MarkTranslateSkippedAsync()
         {
             await ChangeTranslationDecisionAsync(translateRequired: false);
+        }
+
+        [RelayCommand]
+        private void CopyCodexTranslationRequest()
+        {
+            var request = BuildCodexTranslationRequest();
+            if (string.IsNullOrWhiteSpace(request))
+            {
+                ShowStatus(InfoBarSeverity.Warning, "Selecciona un archivo base antes de preparar la solicitud para Codex.");
+                return;
+            }
+
+            var package = new DataPackage();
+            package.SetText(request);
+            Clipboard.SetContent(package);
+            ShowStatus(InfoBarSeverity.Success, "Solicitud copiada. Pégala en Codex para iniciar la traducción.");
+        }
+
+        [RelayCommand]
+        private async Task OpenCodexTranslationAsync()
+        {
+            var request = BuildCodexTranslationRequest();
+            if (string.IsNullOrWhiteSpace(request))
+            {
+                ShowStatus(InfoBarSeverity.Warning, "No se encontró el video que debe recibir Codex.");
+                return;
+            }
+
+            var package = new DataPackage();
+            package.SetText(request);
+            Clipboard.SetContent(package);
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = CodexSubtitleThreadUri,
+                    UseShellExecute = true,
+                });
+                ShowStatus(
+                    InfoBarSeverity.Informational,
+                    "Solicitud copiada y Codex abierto. Pégala en el task de traducción; al terminar vuelve y detecta el MKV _es-419.");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsTrace.Write($"OpenCodexTranslationAsync failed: {ex}");
+                ShowStatus(
+                    InfoBarSeverity.Warning,
+                    "La solicitud quedó copiada, pero Windows no pudo abrir Codex. Abre Codex manualmente y pégala.");
+            }
+
+            await Task.CompletedTask;
+        }
+
+        [RelayCommand]
+        private void OpenTranslationFolder()
+        {
+            var sourcePath = GetTranslationSourcePath();
+            var folderPath = string.IsNullOrWhiteSpace(sourcePath) ? null : Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                ShowStatus(InfoBarSeverity.Warning, "No se encontró la carpeta del archivo que se traducirá.");
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = folderPath,
+                UseShellExecute = true,
+            });
+        }
+
+        [RelayCommand]
+        private async Task ConfirmCodexTranslationAsync()
+        {
+            if (currentWorkflow is null)
+            {
+                ShowStatus(InfoBarSeverity.Warning, "No hay un workflow activo que actualizar.");
+                return;
+            }
+
+            var translatedPath = FindCodexTranslatedVideoPath();
+            if (string.IsNullOrWhiteSpace(translatedPath))
+            {
+                ShowStatus(
+                    InfoBarSeverity.Warning,
+                    $"Todavía no encontré {CodexTranslationExpectedOutputLabel.Replace("Resultado esperado: ", string.Empty)} junto al archivo base.");
+                return;
+            }
+
+            var translateStep = currentWorkflow.FindStep(WorkflowStepKey.TranslateSubs);
+            if (translateStep is null)
+            {
+                ShowStatus(InfoBarSeverity.Error, "El workflow actual no contiene el paso de traducción.");
+                return;
+            }
+
+            currentWorkflow.PrimaryVideoPath = translatedPath;
+            currentWorkflow.TrackCleanupSelectionVideoPath = string.Empty;
+            currentWorkflow.TrackCleanupAudioOptions.Clear();
+            currentWorkflow.TrackCleanupSubtitleOptions.Clear();
+            translateStep.UserDecision = "translate-codex";
+            translateStep.Status = WorkflowStepStatus.Succeeded;
+            translateStep.StatusReason = $"Traducción de Codex detectada: {Path.GetFileName(translatedPath)}";
+            translateStep.StartedAt ??= DateTimeOffset.UtcNow;
+            translateStep.FinishedAt = DateTimeOffset.UtcNow;
+            translateStep.ExitCode = 0;
+            currentWorkflow.LastExecutionSummary = $"Subtítulos listos. El flujo continuará con {Path.GetFileName(translatedPath)}.";
+            App.Host.WorkflowEngine.RefreshStatuses(currentWorkflow);
+            await workflowStore.SaveAsync(currentWorkflow);
+            RefreshFromWorkflow(currentWorkflow, WorkflowStepKey.TranslateSubs);
+            ShowStatus(InfoBarSeverity.Success, currentWorkflow.LastExecutionSummary);
         }
 
         [RelayCommand]
@@ -1375,8 +1497,6 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 DownloadDryRunEnabled = quickSettings.DownloaderDryRun;
                 DownloadForceLatestEnabled = quickSettings.DownloaderForceLatest;
-                TranslateFastModeEnabled = quickSettings.SubtitleFastMode;
-                TranslateSkipSummaryEnabled = quickSettings.SubtitleSkipSummary;
                 CleanupCloseQbittorrentEnabled = quickSettings.TrackCleanupCloseQbittorrent;
                 CleanupDeleteOriginalsEnabled = quickSettings.TrackCleanupDeleteOriginals;
                 TagAndRenameAttachCoverEnabled = quickSettings.TagAndRenameAttachCover;
@@ -1398,8 +1518,6 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             quickSettings.DownloaderDryRun = DownloadDryRunEnabled;
             quickSettings.DownloaderForceLatest = DownloadForceLatestEnabled;
-            quickSettings.SubtitleFastMode = TranslateFastModeEnabled;
-            quickSettings.SubtitleSkipSummary = TranslateSkipSummaryEnabled;
             quickSettings.TrackCleanupCloseQbittorrent = CleanupCloseQbittorrentEnabled;
             quickSettings.TrackCleanupDeleteOriginals = CleanupDeleteOriginalsEnabled;
             quickSettings.TagAndRenameAttachCover = TagAndRenameAttachCoverEnabled;
@@ -1434,8 +1552,6 @@ namespace MediaWorkflowOrchestrator.ViewModels
         {
             OnPropertyChanged(nameof(DownloadDryRunButtonLabel));
             OnPropertyChanged(nameof(DownloadForceLatestButtonLabel));
-            OnPropertyChanged(nameof(TranslateFastModeButtonLabel));
-            OnPropertyChanged(nameof(TranslateSkipSummaryButtonLabel));
             OnPropertyChanged(nameof(CleanupCloseQbittorrentButtonLabel));
             OnPropertyChanged(nameof(CleanupDeleteOriginalsButtonLabel));
             OnPropertyChanged(nameof(TagAndRenameAttachCoverButtonLabel));
@@ -1611,10 +1727,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
             {
                 DiagnosticsTrace.Write($"Translation decision requested. translateRequired={translateRequired}.");
                 currentWorkflow = await workflowExecutionService.DecideTranslationAsync(currentWorkflow, translateRequired);
-                RefreshFromWorkflow(currentWorkflow);
+                RefreshFromWorkflow(
+                    currentWorkflow,
+                    translateRequired ? WorkflowStepKey.TranslateSubs : null);
                 StatusSeverity = InfoBarSeverity.Informational;
                 StatusMessage = translateRequired
-                    ? "Se marcó la traducción de subtítulos como requerida."
+                    ? "Faltan subtítulos en español. La solicitud para Codex está lista en el paso Traducir subtítulos."
                     : "Se omitió la traducción de subtítulos y el flujo avanzó al siguiente paso disponible.";
                 IsStatusInfoOpen = true;
             }
@@ -1625,6 +1743,81 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 StatusMessage = $"No se pudo actualizar la decisión de traducción: {ex.Message}";
                 IsStatusInfoOpen = true;
             }
+        }
+
+        private string GetTranslationSourcePath()
+        {
+            if (currentWorkflow is null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentWorkflow.SourcePrimaryVideoPath)
+                && File.Exists(currentWorkflow.SourcePrimaryVideoPath))
+            {
+                return Path.GetFullPath(currentWorkflow.SourcePrimaryVideoPath);
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentWorkflow.PrimaryVideoPath)
+                && File.Exists(currentWorkflow.PrimaryVideoPath))
+            {
+                return Path.GetFullPath(currentWorkflow.PrimaryVideoPath);
+            }
+
+            return string.Empty;
+        }
+
+        private string BuildCodexTranslationRequest()
+        {
+            var sourcePath = GetTranslationSourcePath();
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return string.Empty;
+            }
+
+            var expectedOutput = Path.Combine(
+                Path.GetDirectoryName(sourcePath) ?? string.Empty,
+                $"{Path.GetFileNameWithoutExtension(sourcePath)}_es-419.mkv");
+
+            return string.Join(
+                Environment.NewLine,
+                "Traduce los subtítulos de este video a español latino natural usando @subtitle-workbench:",
+                sourcePath,
+                string.Empty,
+                "Toma la mejor pista fuente disponible, conserva tiempos, estilos ASS, carteles y continuidad de nombres y términos.",
+                "Investiga solo lo necesario para resolver contexto; valida todos los eventos antes de terminar.",
+                "Entrega un MKV nuevo con la pista es-419 como predeterminada, sin eliminar las pistas originales ni los adjuntos.",
+                $"Guarda el resultado exactamente aquí: {expectedOutput}",
+                "También conserva el ASS es-419 por separado junto al MKV.");
+        }
+
+        private string FindCodexTranslatedVideoPath()
+        {
+            var sourcePath = GetTranslationSourcePath();
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return string.Empty;
+            }
+
+            var directory = Path.GetDirectoryName(sourcePath);
+            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
+            {
+                return string.Empty;
+            }
+
+            var stem = Path.GetFileNameWithoutExtension(sourcePath);
+            var exactPath = Path.Combine(directory, $"{stem}_es-419.mkv");
+            if (File.Exists(exactPath))
+            {
+                return Path.GetFullPath(exactPath);
+            }
+
+            return Directory.EnumerateFiles(directory, $"{stem}_es-419.*", SearchOption.TopDirectoryOnly)
+                .Where(IsVideoFile)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .Select(Path.GetFullPath)
+                .FirstOrDefault()
+                ?? string.Empty;
         }
 
         private async Task ExecuteAsync(Func<Task<ExecutionRecord?>> operation, WorkflowStepKey outputStepKey)
@@ -1765,6 +1958,10 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdatePackageRarDetailActions();
             RefreshSelectedStepOutput();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
+            OnPropertyChanged(nameof(CodexTranslationPanelTitle));
+            OnPropertyChanged(nameof(CodexTranslationPanelDescription));
+            OnPropertyChanged(nameof(CodexTranslationTargetLabel));
+            OnPropertyChanged(nameof(CodexTranslationExpectedOutputLabel));
             OnPropertyChanged(nameof(RarCaptureCountButtonLabel));
         }
 
@@ -1986,6 +2183,10 @@ namespace MediaWorkflowOrchestrator.ViewModels
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
+            OnPropertyChanged(nameof(CodexTranslationPanelTitle));
+            OnPropertyChanged(nameof(CodexTranslationPanelDescription));
+            OnPropertyChanged(nameof(CodexTranslationTargetLabel));
+            OnPropertyChanged(nameof(CodexTranslationExpectedOutputLabel));
         }
 
         private void EnsurePrimaryCleanupSelections(WorkflowInstance workflow)
@@ -2079,7 +2280,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             QuickOptionsDescription = SelectedStep?.StepKey switch
             {
                 WorkflowStepKey.Download => "Ajusta cómo se lanzan las descargas de Nyaa desde el panel lateral.",
-                WorkflowStepKey.TranslateSubs => "Controla los flags rápidos del traductor antes de ejecutarlo.",
+                WorkflowStepKey.TranslateSubs => "Entrega el archivo a Codex y valida el MKV traducido antes de permitir que continúe el workflow.",
                 WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso y marca exactamente qué audios y subtítulos deben sobrevivir al filtrado.",
                 WorkflowStepKey.TagAndRename => "Controla si el MKV recibe un poster embebido; la búsqueda automática usa IMDb y funciona con películas o series.",
                 WorkflowStepKey.PackageRar => "Puedes saltar pasos previos y empaquetar de inmediato si tu release ya está lista.",

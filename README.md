@@ -39,13 +39,13 @@ También puede usarse de forma parcial. Por ejemplo:
 
 ## Scripts que orquesta
 
-La app no reemplaza estos scripts. Los ejecuta, valida y monitorea.
+La app ejecuta, valida y monitorea los scripts locales del pipeline. La traducción se entrega a Codex como una tarea guiada.
 
 | Paso | Script |
 |---|---|
 | Descarga semanal | `auto_backup_nyaa.py` |
 | Descarga directa por link | `source_from_link.py` |
-| Traducción de subtítulos | `traducir_subtitulos.py` |
+| Traducción de subtítulos | Codex + `@subtitle-workbench` |
 | Limpieza de tracks | `limpiar_tracks.py` |
 | Etiquetas y renombre | `ETIQUETAS_GDRIVELATINO.py` |
 | Empaquetado / capturas / RAR | `rar_folder_image_info.py` |
@@ -77,7 +77,7 @@ La ruta operativa del workflow puede seguir apuntando al archivo original extern
   - `mkvmerge`
   - `mkvpropedit`
   - `rar.exe`
-  - `ollama.exe`
+  - Codex para los archivos que no contienen subtítulos en español
   - `FileBot` vía `Renombrar.lnk`
 
 ## Compilación

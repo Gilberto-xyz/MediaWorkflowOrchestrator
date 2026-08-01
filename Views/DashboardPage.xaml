@@ -21,7 +21,12 @@
 
                 <StackPanel x:Name="DashboardMainColumn" Spacing="10">
                     <StackPanel x:Name="TranslationDecisionPanel" Spacing="8">
-                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="DECISION PENDIENTE" />
+                        <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="NO SE PUDO CONFIRMAR EL IDIOMA" />
+                        <TextBlock
+                            MaxWidth="920"
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource SectionDescriptionTextStyle}"
+                            Text="Indica si faltan los subtítulos en español. El flujo quedará detenido hasta que vuelvas de Codex con el MKV traducido." />
                         <Grid x:Name="TranslationDecisionGrid" ColumnSpacing="10" RowSpacing="8">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -34,13 +39,13 @@
                             <Button Grid.Column="0" Command="{x:Bind ViewModel.MarkTranslateRequiredCommand}" Style="{StaticResource PrimaryCommandButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <SymbolIcon Symbol="World" />
-                                    <TextBlock Text="Traducir subs" />
+                                    <TextBlock Text="Faltan subs · usar Codex" />
                                 </StackPanel>
                             </Button>
                             <Button Grid.Column="1" Command="{x:Bind ViewModel.MarkTranslateSkippedCommand}" Style="{StaticResource DenseActionButtonStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <SymbolIcon Symbol="Cancel" />
-                                    <TextBlock Text="Omitir traducción" />
+                                    <SymbolIcon Symbol="Accept" />
+                                    <TextBlock Text="Ya contiene español" />
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -100,29 +105,113 @@
                                 </Grid>
                             </Border>
 
-                            <Border x:Name="TranslateQuickOptionsPanel" Background="Transparent">
-                                <Grid x:Name="TranslateQuickOptionsGrid" ColumnSpacing="10" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <ToggleButton Grid.Column="0" Command="{x:Bind ViewModel.ToggleTranslateFastModeCommand}" IsChecked="{x:Bind ViewModel.TranslateFastModeEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Play" />
-                                            <TextBlock Text="{x:Bind ViewModel.TranslateFastModeButtonLabel, Mode=OneWay}" />
+                            <Border
+                                x:Name="TranslateQuickOptionsPanel"
+                                Padding="16"
+                                Background="#201D4ED8"
+                                BorderBrush="#80638CFF"
+                                BorderThickness="1"
+                                CornerRadius="10">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnSpacing="14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border
+                                            Width="42"
+                                            Height="42"
+                                            Background="#334F7CFF"
+                                            CornerRadius="9">
+                                            <SymbolIcon
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Foreground="#FFB9CBFF"
+                                                Symbol="World" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="4">
+                                            <TextBlock
+                                                FontSize="17"
+                                                FontWeight="SemiBold"
+                                                Foreground="#FFF3F6FF"
+                                                Text="{x:Bind ViewModel.CodexTranslationPanelTitle, Mode=OneWay}" />
+                                            <TextBlock
+                                                MaxWidth="980"
+                                                HorizontalAlignment="Left"
+                                                Foreground="#FFB8C5E2"
+                                                Text="{x:Bind ViewModel.CodexTranslationPanelDescription, Mode=OneWay}"
+                                                TextWrapping="WrapWholeWords" />
                                         </StackPanel>
-                                    </ToggleButton>
-                                    <ToggleButton Grid.Column="1" Command="{x:Bind ViewModel.ToggleTranslateSkipSummaryCommand}" IsChecked="{x:Bind ViewModel.TranslateSkipSummaryEnabled, Mode=OneWay}" Style="{StaticResource QuickToggleButtonStyle}">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <SymbolIcon Symbol="Page" />
-                                            <TextBlock Text="{x:Bind ViewModel.TranslateSkipSummaryButtonLabel, Mode=OneWay}" />
+                                    </Grid>
+
+                                    <Border
+                                        Padding="10,8"
+                                        Background="#2210182A"
+                                        BorderBrush="#405D72A0"
+                                        BorderThickness="1"
+                                        CornerRadius="7">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock
+                                                FontSize="11"
+                                                FontWeight="SemiBold"
+                                                Foreground="#FF88A9FF"
+                                                Text="ARCHIVO QUE RECIBIRÁ CODEX" />
+                                            <TextBlock
+                                                FontFamily="Consolas"
+                                                Foreground="#FFE4E9F5"
+                                                Text="{x:Bind ViewModel.CodexTranslationTargetLabel, Mode=OneWay}"
+                                                TextTrimming="CharacterEllipsis"
+                                                TextWrapping="NoWrap" />
+                                            <TextBlock
+                                                Style="{StaticResource MutedCaptionTextStyle}"
+                                                Text="{x:Bind ViewModel.CodexTranslationExpectedOutputLabel, Mode=OneWay}" />
                                         </StackPanel>
-                                    </ToggleButton>
-                                </Grid>
+                                    </Border>
+
+                                    <Grid x:Name="TranslateQuickOptionsGrid" ColumnSpacing="10" RowSpacing="8">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Command="{x:Bind ViewModel.OpenCodexTranslationCommand}" Style="{StaticResource PrimaryCommandButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Send" />
+                                                <TextBlock Text="Copiar solicitud y abrir Codex" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Command="{x:Bind ViewModel.ConfirmCodexTranslationCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Sync" />
+                                                <TextBlock Text="Detectar MKV traducido" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="2" Command="{x:Bind ViewModel.CopyCodexTranslationRequestCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Copy" />
+                                                <TextBlock Text="Copiar solicitud" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="3" Command="{x:Bind ViewModel.OpenTranslationFolderCommand}" Style="{StaticResource DenseActionButtonStyle}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <SymbolIcon Symbol="Folder" />
+                                                <TextBlock Text="Abrir carpeta" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+
+                                    <TextBlock
+                                        Foreground="#FFAAB6CE"
+                                        Text="Al regresar, pulsa “Detectar MKV traducido”. El siguiente paso solo se habilitará cuando el archivo exista."
+                                        TextWrapping="WrapWholeWords" />
+                                </StackPanel>
                             </Border>
 
                             <Border

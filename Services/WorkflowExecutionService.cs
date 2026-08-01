@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -133,7 +132,7 @@ namespace MediaWorkflowOrchestrator.Services
             }
 
             workflow.LastExecutionSummary = translateRequired
-                ? "La traducción de subtítulos quedó marcada como requerida."
+                ? "Faltan subtítulos en español. El paso está listo para abrirse en Codex."
                 : "La traducción de subtítulos se omitió manualmente.";
             await workflowStore.SaveAsync(workflow);
             return workflow;
@@ -186,24 +185,23 @@ namespace MediaWorkflowOrchestrator.Services
 
             if (stepKey == WorkflowStepKey.TranslateSubs)
             {
-                var (reachable, message) = await CheckOllamaReachabilityAsync(settings.OllamaHost, cancellationToken);
-                if (!reachable)
+                const string message = "Faltan subtítulos en español. Copia la solicitud, completa la traducción en Codex y detecta el MKV _es-419 para continuar.";
+                step.Status = WorkflowStepStatus.Ready;
+                step.StatusReason = message;
+                workflow.LastExecutionSummary = message;
+                workflowEngine.RefreshStatuses(workflow);
+                await workflowStore.SaveAsync(workflow);
+                onOutput?.Invoke(message);
+                return new ExecutionRecord
                 {
-                    step.Status = WorkflowStepStatus.Failed;
-                    step.StatusReason = message;
-                    workflow.LastExecutionSummary = $"{step.DisplayName}: {message}";
-                    await workflowStore.SaveAsync(workflow);
-                    return new ExecutionRecord
-                    {
-                        WorkflowId = workflow.Id,
-                        StepKey = stepKey,
-                        StartedAt = DateTimeOffset.UtcNow,
-                        FinishedAt = DateTimeOffset.UtcNow,
-                        ExitCode = -1,
-                        Success = false,
-                        Summary = message,
-                    };
-                }
+                    WorkflowId = workflow.Id,
+                    StepKey = stepKey,
+                    StartedAt = DateTimeOffset.UtcNow,
+                    FinishedAt = DateTimeOffset.UtcNow,
+                    ExitCode = 0,
+                    Success = true,
+                    Summary = message,
+                };
             }
 
             var request = stepKey == WorkflowStepKey.CleanTracks
@@ -326,12 +324,6 @@ namespace MediaWorkflowOrchestrator.Services
                         settings.DownloaderConfigPath,
                     },
                     WorkingDirectory = settings.DownloadWorkingDirectory,
-                },
-                WorkflowStepKey.TranslateSubs => new ProcessExecutionRequest
-                {
-                    FileName = settings.PythonPath,
-                    Arguments = BuildSubtitleTranslatorArgs(settings, workflow).ToArray(),
-                    WorkingDirectory = settings.SubtitleWorkingDirectory,
                 },
                 WorkflowStepKey.CleanTracks => new ProcessExecutionRequest
                 {
@@ -666,57 +658,6 @@ namespace MediaWorkflowOrchestrator.Services
             {
                 workflow.SourcePrimaryVideoPath = workflow.PrimaryVideoPath;
             }
-        }
-
-        private static IEnumerable<string> BuildSubtitleInputArgs(WorkflowInstance workflow)
-        {
-            var root = ResolveSourceRootPath(workflow);
-            if (string.IsNullOrWhiteSpace(root))
-            {
-                root = workflow.RootPath;
-            }
-
-            if (!Directory.Exists(root))
-            {
-                return Array.Empty<string>();
-            }
-
-            var source = Directory.EnumerateFiles(root, "*.ass", SearchOption.AllDirectories).FirstOrDefault()
-                ?? Directory.EnumerateFiles(root, "*.srt", SearchOption.AllDirectories).FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(source))
-            {
-                return Array.Empty<string>();
-            }
-
-            var output = Path.Combine(Path.GetDirectoryName(source) ?? root, $"{Path.GetFileNameWithoutExtension(source)}.translated{Path.GetExtension(source)}");
-            return new[] { "--in", source, "--out", output };
-        }
-
-        private static IEnumerable<string> BuildSubtitleTranslatorArgs(AppSettings settings, WorkflowInstance workflow)
-        {
-            var args = new List<string>
-            {
-                settings.SubtitleTranslatorScriptPath,
-                "--model",
-                settings.OllamaModel,
-                "--host",
-                settings.OllamaHost,
-                "--target",
-                settings.SubtitleTargetLanguage,
-            };
-
-            if (settings.SubtitleFastMode)
-            {
-                args.Add("--fast");
-            }
-
-            if (settings.SubtitleSkipSummary)
-            {
-                args.Add("--skip-summary");
-            }
-
-            args.AddRange(BuildSubtitleInputArgs(workflow));
-            return args;
         }
 
         private async Task<ProcessExecutionRequest> BuildTrackCleanupRequestAsync(
@@ -1592,6 +1533,15 @@ namespace MediaWorkflowOrchestrator.Services
                 }
             }
 
+            var translationStep = workflow.FindStep(WorkflowStepKey.TranslateSubs);
+            if (translationStep?.UserDecision == "translate-codex"
+                && translationStep.Status == WorkflowStepStatus.Succeeded
+                && !string.IsNullOrWhiteSpace(workflow.PrimaryVideoPath)
+                && File.Exists(workflow.PrimaryVideoPath))
+            {
+                return Path.GetFullPath(workflow.PrimaryVideoPath);
+            }
+
             if (!string.IsNullOrWhiteSpace(workflow.SourcePrimaryVideoPath) && File.Exists(workflow.SourcePrimaryVideoPath))
             {
                 return Path.GetFullPath(workflow.SourcePrimaryVideoPath);
@@ -1722,7 +1672,7 @@ namespace MediaWorkflowOrchestrator.Services
 
             if (stepKey == WorkflowStepKey.TranslateSubs && step.Status == WorkflowStepStatus.NeedsDecision)
             {
-                step.UserDecision = "translate";
+                step.UserDecision = "translate-codex-pending";
             }
 
             step.Status = WorkflowStepStatus.Pending;
@@ -3274,26 +3224,6 @@ namespace MediaWorkflowOrchestrator.Services
             return (
                 int.TryParse(match.Groups["season"].Value, out var season) ? season : int.MaxValue,
                 int.TryParse(match.Groups["episode"].Value, out var episode) ? episode : int.MaxValue);
-        }
-
-        private static async Task<(bool reachable, string message)> CheckOllamaReachabilityAsync(string host, CancellationToken cancellationToken)
-        {
-            if (!Uri.TryCreate(host, UriKind.Absolute, out var uri) || string.IsNullOrWhiteSpace(uri.Host))
-            {
-                return (false, "El host de Ollama no tiene un formato válido.");
-            }
-
-            var port = uri.Port > 0 ? uri.Port : 11434;
-            try
-            {
-                using var client = new TcpClient();
-                await client.ConnectAsync(uri.Host, port, cancellationToken);
-                return (true, "Ollama disponible.");
-            }
-            catch (Exception)
-            {
-                return (false, $"No se pudo conectar a Ollama en {uri.Host}:{port}.");
-            }
         }
 
         private static void UpdateWorkflowOutputs(WorkflowInstance workflow, WorkflowStepKey stepKey, ProcessExecutionResult result, Action<string>? onOutput)

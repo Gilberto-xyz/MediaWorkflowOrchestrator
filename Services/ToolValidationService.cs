@@ -9,15 +9,12 @@ namespace MediaWorkflowOrchestrator.Services
                 ValidatePath("python", "Python", settings.PythonPath, allowCommandAlias: true),
                 ValidatePath("downloader", "Script Nyaa", settings.DownloaderScriptPath),
                 ValidatePath("downloaderlink", "Script Nyaa por link", settings.DownloaderLinkScriptPath),
-                ValidatePath("translator", "Script traducción", settings.SubtitleTranslatorScriptPath),
                 ValidatePath("cleanup", "Script limpiar tracks", settings.TrackCleanupScriptPath),
                 ValidatePath("tagrename", "Script etiquetas", settings.TagAndRenameScriptPath),
                 ValidatePath("rarpack", "Script RAR", settings.RarPackagingScriptPath),
                 ValidatePath("mkvmerge", "mkvmerge", settings.MkvmergePath),
                 ValidatePath("mkvpropedit", "mkvpropedit", settings.MkvpropeditPath),
                 ValidatePath("rar", "rar.exe", settings.RarExePath),
-                ValidatePath("ollamaexe", "Ollama", settings.OllamaExePath),
-                ValidateUrl("ollamahost", "Ollama host", settings.OllamaHost),
             };
 
             return Task.FromResult<IReadOnlyList<ToolValidationResult>>(results);
@@ -67,29 +64,5 @@ namespace MediaWorkflowOrchestrator.Services
                 };
         }
 
-        private static ToolValidationResult ValidateUrl(string key, string displayName, string url)
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri)
-                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
-            {
-                return new ToolValidationResult
-                {
-                    ToolKey = key,
-                    DisplayName = displayName,
-                    State = ToolValidationState.Available,
-                    Message = "Host válido.",
-                    Path = url,
-                };
-            }
-
-            return new ToolValidationResult
-            {
-                ToolKey = key,
-                DisplayName = displayName,
-                State = ToolValidationState.Incomplete,
-                Message = "La URL no es válida.",
-                Path = url,
-            };
-        }
     }
 }

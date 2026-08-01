@@ -37,7 +37,6 @@ namespace MediaWorkflowOrchestrator.Views
             ApplyResponsiveGrid(ToolsHeaderGrid, width < WideLayoutBreakpoint, new[] { Star(), GridLength.Auto }, (0, 0), (0, 1));
             ApplyResponsiveGrid(ToolsBaseEnvironmentGrid, width < WideLayoutBreakpoint, new[] { Star(), Star() }, (0, 0), (0, 1));
             ApplyResponsiveGrid(ToolsBinaryPathsGrid, width < WideLayoutBreakpoint, new[] { Star(), Star() }, (0, 0), (0, 1));
-            ApplyResponsiveGrid(ToolsTranslationGrid, width < WideLayoutBreakpoint, new[] { Star(), Star() }, (0, 0), (0, 1));
             ApplyResponsiveGrid(ToolsRarFlagsGrid, width < WideLayoutBreakpoint, new[] { Star(), Star() }, (0, 0), (0, 1));
             ApplyResponsiveGrid(ToolsRarCaptureGrid, width < WideLayoutBreakpoint, new[] { Star(), Star() }, (0, 0), (0, 1));
             ApplyResponsiveGrid(ToolsValidationHeaderGrid, width < WideLayoutBreakpoint, new[] { Star(), GridLength.Auto }, (0, 0), (0, 1));
