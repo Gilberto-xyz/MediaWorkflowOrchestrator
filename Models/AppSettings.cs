@@ -29,6 +29,13 @@ namespace MediaWorkflowOrchestrator.Models
         public string DownloadWorkingDirectory { get; set; } = @"C:\Users\gilbe\Downloads\Nyaa-autoDownload";
         public string TagAndRenameWorkingDirectory { get; set; } = @"C:\Users\gilbe\OneDrive\Documentos\ENCODER_INMORTUS\1 Subs";
         public bool PreferSkipTranslationWhenSpanishExists { get; set; } = true;
+        public string FileUploaderExePath { get; set; } = @"C:\Users\gilbe\OneDrive\Documentos\ENCODER_INMORTUS\3 Upload 1Ficher\FileUploader.exe";
+        public string FileUploaderLogPath { get; set; } = @"C:\Users\gilbe\OneDrive\Documentos\ENCODER_INMORTUS\3 Upload 1Ficher\FileUploader.log";
+        public string PublicationDriveRootUrl { get; set; } = "https://drive.google.com/drive/my-drive";
+        public string PublicationMediaFireRootUrl { get; set; } = "https://app.mediafire.com/folder/myfiles";
+        public string PublicationTransferItUrl { get; set; } = "https://transfer.it/start";
+        public string PublicationSheetUrl { get; set; } = string.Empty;
+        public string MediaFireAccountProfile { get; set; } = DateTime.Now.ToString("yyyy-MM");
 
         public static AppSettings CreateDefault() => new();
     }

@@ -105,6 +105,10 @@ namespace MediaWorkflowOrchestrator
                 ? new Thickness(0, 0, 4, 4)
                 : new Thickness(0, 0, 8, 8);
             AppNavigationView.OpenPaneLength = compactShell ? 208 : 224;
+            QuickAccessCommandBar.MaxWidth = Math.Clamp(width * 0.62, 320, 1020);
+            QuickAccessCommandBar.DefaultLabelPosition = compactShell
+                ? CommandBarDefaultLabelPosition.Collapsed
+                : CommandBarDefaultLabelPosition.Right;
             ShellCommandBar.DefaultLabelPosition = compactShell
                 ? CommandBarDefaultLabelPosition.Collapsed
                 : CommandBarDefaultLabelPosition.Right;

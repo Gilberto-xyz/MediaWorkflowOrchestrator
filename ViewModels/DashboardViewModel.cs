@@ -48,8 +48,10 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
         private readonly IWorkflowExecutionService workflowExecutionService = App.Host.WorkflowExecutionService;
         private readonly IWorkflowStore workflowStore = App.Host.WorkflowStore;
+        private readonly IPublicationService publicationService = App.Host.PublicationService;
         private CancellationTokenSource? executionCancellationTokenSource;
         private WorkflowInstance? currentWorkflow;
+        private PublicationWorkspace? publicationWorkspace;
         private WorkflowStepKey? activeOutputStepKey;
         private bool utilityOutputActive;
         private AppSettings quickSettings = AppSettings.CreateDefault();
@@ -192,6 +194,57 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private bool _showPackageRarDetailActions;
 
         [ObservableProperty]
+        private bool _showPublishQuickOptions;
+
+        [ObservableProperty]
+        private bool _showPublishDetailActions;
+
+        [ObservableProperty]
+        private string _publicationCanonicalTitle = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationContentKindLabel = "Sin analizar";
+
+        [ObservableProperty]
+        private string _publicationEpisodeLabel = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationSourceRoot = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationDriveFolderUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationMediaFireFolderUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationMediaFireAccountProfile = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationTransferStartUrl = "https://transfer.it/start";
+
+        [ObservableProperty]
+        private string _publicationSheetUrl = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationDriveLinksText = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationMediaFireLinksText = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationTransferLink = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationTransferExpiryText = string.Empty;
+
+        [ObservableProperty]
+        private string _publicationSummary = "Ejecuta Preparar publicación para clasificar el contenido y crear su manifiesto.";
+
+        [ObservableProperty]
+        private string _publicationFilesPreview = "Aún no hay archivos preparados.";
+
+        [ObservableProperty]
         private bool _showSkipAheadActions;
 
         [ObservableProperty]
@@ -311,11 +364,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
             SelectedStepDescription = value?.StatusReason ?? "Selecciona un paso para ver detalle y salida.";
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
+            ShowPublishDetailActions = value?.StepKey == WorkflowStepKey.Publish && publicationWorkspace is not null;
             RefreshSelectedStepOutput();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
             OnPropertyChanged(nameof(CodexTranslationPanelTitle));
             OnPropertyChanged(nameof(CodexTranslationPanelDescription));
             _ = EnsureCleanupAudioSelectionForCurrentStepAsync(value);
+            _ = LoadPublicationWorkspaceForCurrentStepAsync(value);
         }
 
         public string DownloadDryRunButtonLabel => $"Dry-run: {(DownloadDryRunEnabled ? "ON" : "OFF")}";
@@ -454,6 +509,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 return;
             }
 
+            if (nextStep.StepKey == WorkflowStepKey.Publish)
+            {
+                await PreparePublicationAsync();
+                return;
+            }
+
             await PersistQuickSettingsAsync();
             await ExecuteAsync(
                 () => workflowExecutionService.ExecuteStepAsync(currentWorkflow, nextStep.StepKey, AppendOutput, CancellationToken),
@@ -477,6 +538,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
             if (SelectedStep.StepKey == WorkflowStepKey.TranslateSubs)
             {
                 await OpenCodexTranslationAsync();
+                return;
+            }
+
+            if (SelectedStep.StepKey == WorkflowStepKey.Publish)
+            {
+                await PreparePublicationAsync();
                 return;
             }
 
@@ -1034,6 +1101,14 @@ namespace MediaWorkflowOrchestrator.ViewModels
         }
 
         [RelayCommand]
+        private void CopyDetailOutput()
+        {
+            var package = new DataPackage();
+            package.SetText(DetailOutput ?? string.Empty);
+            Clipboard.SetContent(package);
+        }
+
+        [RelayCommand]
         private void OpenSelectedLog()
         {
             var logPath = SelectedStep?.StdoutLogPath;
@@ -1089,6 +1164,239 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowExecutionService.PackageRarSeriesNameHintKey,
                 "No hay nombre corto disponible para copiar.",
                 "Se copió el nombre corto.");
+        }
+
+        [RelayCommand]
+        private async Task PreparePublicationAsync()
+        {
+            if (currentWorkflow is null)
+            {
+                ShowStatus(InfoBarSeverity.Warning, "Selecciona primero el archivo o la carpeta que vas a publicar.");
+                return;
+            }
+
+            try
+            {
+                publicationWorkspace = await publicationService.PrepareAsync(currentWorkflow, CancellationToken.None);
+                ApplyPublicationWorkspace(publicationWorkspace);
+                var step = currentWorkflow.FindStep(WorkflowStepKey.Publish);
+                if (step is not null)
+                {
+                    step.Status = WorkflowStepStatus.NeedsDecision;
+                    step.StatusReason = "Destinos preparados. Sube los archivos, recopila los links y confirma la publicación.";
+                    step.StartedAt ??= DateTimeOffset.UtcNow;
+                    step.OutputHints["publication_route"] = publicationWorkspace.RouteKey;
+                    step.OutputHints["publication_files"] = publicationWorkspace.Files.Count.ToString(CultureInfo.InvariantCulture);
+                }
+                currentWorkflow.LastExecutionSummary = $"Publicación preparada: {publicationService.BuildSummary(publicationWorkspace)}";
+                App.Host.WorkflowEngine.RefreshStatuses(currentWorkflow);
+                await workflowStore.SaveAsync(currentWorkflow);
+                RefreshFromWorkflow(currentWorkflow, WorkflowStepKey.Publish);
+                ShowStatus(InfoBarSeverity.Success, "Manifiesto listo. Abre los destinos y pega aquí los enlaces cuando termine cada subida.");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsTrace.Write($"Publication preparation failed: {ex}");
+                ShowStatus(InfoBarSeverity.Error, $"No se pudo preparar la publicación: {ex.Message}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task SavePublicationRouteAsync()
+        {
+            if (!TrySyncPublicationWorkspaceFromEditor(out var workspace))
+            {
+                return;
+            }
+
+            await publicationService.SaveAsync(workspace, CancellationToken.None);
+            ApplyPublicationWorkspace(workspace);
+            ShowStatus(InfoBarSeverity.Success, $"Ruta guardada para {workspace.CanonicalTitle}. Se reutilizará en próximos capítulos.");
+        }
+
+        [RelayCommand]
+        private async Task RefreshPublicationLinksAsync()
+        {
+            if (!TrySyncPublicationWorkspaceFromEditor(out var workspace))
+            {
+                return;
+            }
+
+            publicationWorkspace = await publicationService.RefreshLinksAsync(workspace, CancellationToken.None);
+            await publicationService.SaveAsync(publicationWorkspace, CancellationToken.None);
+            ApplyPublicationWorkspace(publicationWorkspace);
+            ShowStatus(InfoBarSeverity.Success, "Se volvió a leer FileUploader.log y se actualizaron los links de 1fichier.");
+        }
+
+        [RelayCommand]
+        private void CopyPublicationRows()
+        {
+            if (!TrySyncPublicationWorkspaceFromEditor(out var workspace))
+            {
+                return;
+            }
+
+            var package = new DataPackage();
+            package.SetText(publicationService.BuildSheetRows(workspace));
+            Clipboard.SetContent(package);
+            ShowStatus(InfoBarSeverity.Success, $"Se copiaron {Math.Max(1, workspace.Files.Count)} fila(s) tabuladas. Pégalas directamente en Excel o Google Sheets.");
+        }
+
+        [RelayCommand]
+        private async Task ConfirmPublicationAsync()
+        {
+            if (currentWorkflow is null || !TrySyncPublicationWorkspaceFromEditor(out var workspace))
+            {
+                return;
+            }
+
+            await publicationService.SaveAsync(workspace, CancellationToken.None);
+            var step = currentWorkflow.FindStep(WorkflowStepKey.Publish);
+            if (step is not null)
+            {
+                step.Status = WorkflowStepStatus.Succeeded;
+                step.StatusReason = publicationService.BuildSummary(workspace);
+                step.FinishedAt = DateTimeOffset.UtcNow;
+                step.ExitCode = 0;
+            }
+            currentWorkflow.LastExecutionSummary = $"Publicación confirmada: {publicationService.BuildSummary(workspace)}";
+            App.Host.WorkflowEngine.RefreshStatuses(currentWorkflow);
+            await workflowStore.SaveAsync(currentWorkflow);
+            RefreshFromWorkflow(currentWorkflow, WorkflowStepKey.Publish);
+            ShowStatus(InfoBarSeverity.Success, "Publicación confirmada y links conservados en el manifiesto.");
+        }
+
+        [RelayCommand]
+        private void OpenPublicationSource() => OpenPublicationTarget(PublicationSourceRoot, "No se encontró la carpeta de archivos preparados.");
+
+        [RelayCommand]
+        private void OpenPublicationDrive() => OpenPublicationTarget(PublicationDriveFolderUrl, "Guarda primero la URL de la carpeta correcta de Google Drive.");
+
+        [RelayCommand]
+        private void OpenPublicationMediaFire() => OpenPublicationTarget(PublicationMediaFireFolderUrl, "Guarda primero la URL de la carpeta correcta de MediaFire.");
+
+        [RelayCommand]
+        private void OpenPublicationTransferIt() => OpenPublicationTarget(PublicationTransferStartUrl, "Configura la dirección de Transfer.it.");
+
+        [RelayCommand]
+        private void OpenPublicationSheet() => OpenPublicationTarget(PublicationSheetUrl, "Configura la URL de el_inmortus_bulklist en Herramientas o en esta publicación.");
+
+        [RelayCommand]
+        private void OpenFileUploader() => OpenPublicationTarget(quickSettings.FileUploaderExePath, "No se encontró File & Image Uploader. Revisa su ruta en Herramientas.");
+
+        private async Task LoadPublicationWorkspaceForCurrentStepAsync(WorkflowStepState? step)
+        {
+            if (step?.StepKey != WorkflowStepKey.Publish || currentWorkflow is null)
+            {
+                return;
+            }
+
+            publicationWorkspace = await publicationService.LoadAsync(currentWorkflow.Id, CancellationToken.None);
+            if (publicationWorkspace is null)
+            {
+                PublicationSummary = "Ejecuta Preparar publicación para clasificar este episodio, lote, película o colección.";
+                PublicationFilesPreview = "Aún no hay archivos preparados.";
+                ShowPublishDetailActions = false;
+                return;
+            }
+
+            ApplyPublicationWorkspace(publicationWorkspace);
+        }
+
+        private bool TrySyncPublicationWorkspaceFromEditor(out PublicationWorkspace workspace)
+        {
+            workspace = publicationWorkspace!;
+            if (publicationWorkspace is null)
+            {
+                ShowStatus(InfoBarSeverity.Warning, "Primero ejecuta Preparar publicación.");
+                return false;
+            }
+
+            publicationWorkspace.CanonicalTitle = PublicationCanonicalTitle.Trim();
+            publicationWorkspace.ContentKind = PublicationContentKindLabel switch
+            {
+                "Episodio individual" => PublicationContentKind.SeriesEpisode,
+                "Serie o temporada" => PublicationContentKind.SeriesBatch,
+                "Película" => PublicationContentKind.Movie,
+                "Colección" => PublicationContentKind.Collection,
+                _ => PublicationContentKind.Unknown,
+            };
+            publicationWorkspace.DriveFolderUrl = PublicationDriveFolderUrl.Trim();
+            publicationWorkspace.MediaFireFolderUrl = PublicationMediaFireFolderUrl.Trim();
+            publicationWorkspace.MediaFireAccountProfile = PublicationMediaFireAccountProfile.Trim();
+            publicationWorkspace.TransferItStartUrl = PublicationTransferStartUrl.Trim();
+            publicationWorkspace.SheetUrl = PublicationSheetUrl.Trim();
+            publicationWorkspace.DriveLinksText = PublicationDriveLinksText.Trim();
+            publicationWorkspace.MediaFireLinksText = PublicationMediaFireLinksText.Trim();
+            publicationWorkspace.TransferLink = PublicationTransferLink.Trim();
+            publicationWorkspace.TransferExpiresAt = ParsePublicationExpiry(PublicationTransferExpiryText);
+            workspace = publicationWorkspace;
+            return true;
+        }
+
+        private void ApplyPublicationWorkspace(PublicationWorkspace workspace)
+        {
+            publicationWorkspace = workspace;
+            PublicationCanonicalTitle = workspace.CanonicalTitle;
+            PublicationContentKindLabel = workspace.ContentKind switch
+            {
+                PublicationContentKind.SeriesEpisode => "Episodio individual",
+                PublicationContentKind.SeriesBatch => "Serie o temporada",
+                PublicationContentKind.Movie => "Película",
+                PublicationContentKind.Collection => "Colección",
+                _ => "Sin clasificar",
+            };
+            PublicationEpisodeLabel = workspace.SeasonNumber is not null && workspace.EpisodeNumber is not null
+                ? $"S{workspace.SeasonNumber:00}E{workspace.EpisodeNumber:00}"
+                : string.Empty;
+            PublicationSourceRoot = workspace.SourceRootPath;
+            PublicationDriveFolderUrl = workspace.DriveFolderUrl;
+            PublicationMediaFireFolderUrl = workspace.MediaFireFolderUrl;
+            PublicationMediaFireAccountProfile = workspace.MediaFireAccountProfile;
+            PublicationTransferStartUrl = workspace.TransferItStartUrl;
+            PublicationSheetUrl = workspace.SheetUrl;
+            PublicationDriveLinksText = workspace.DriveLinksText;
+            PublicationMediaFireLinksText = workspace.MediaFireLinksText;
+            PublicationTransferLink = workspace.TransferLink;
+            PublicationTransferExpiryText = workspace.TransferExpiresAt?.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
+            PublicationSummary = publicationService.BuildSummary(workspace);
+            PublicationFilesPreview = workspace.Files.Count == 0
+                ? "No se encontraron archivos publicables en la selección."
+                : string.Join(Environment.NewLine, workspace.Files.Take(8).Select(file => $"• {file.FileName}"))
+                    + (workspace.Files.Count > 8 ? $"{Environment.NewLine}… y {workspace.Files.Count - 8} más" : string.Empty);
+            ShowPublishDetailActions = true;
+        }
+
+        private void OpenPublicationTarget(string target, string missingMessage)
+        {
+            if (string.IsNullOrWhiteSpace(target) || (!Uri.TryCreate(target, UriKind.Absolute, out _) && !File.Exists(target) && !Directory.Exists(target)))
+            {
+                ShowStatus(InfoBarSeverity.Warning, missingMessage);
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                DiagnosticsTrace.Write($"Could not open publication target '{target}': {ex}");
+                ShowStatus(InfoBarSeverity.Error, $"No se pudo abrir el destino: {ex.Message}");
+            }
+        }
+
+        private static DateTimeOffset? ParsePublicationExpiry(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            string[] formats = { "yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy" };
+            return DateTimeOffset.TryParseExact(value.Trim(), formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var expiry)
+                ? expiry
+                : DateTimeOffset.TryParse(value, CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out expiry) ? expiry : null;
         }
 
         public async Task CreateWorkflowFromPathAsync(string path, bool isFile)
@@ -1187,6 +1495,25 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 return;
             }
 
+            // A completed cleanup should already describe the filtered PrimaryVideoPath. Keep a
+            // current selection, but repair workflows saved by older versions with the source
+            // path and stale tracks.
+            if (step.Status == WorkflowStepStatus.Succeeded
+                && currentWorkflow?.TrackCleanupAudioOptions.Count > 0)
+            {
+                var selectionTargetsPrimaryVideo = string.Equals(
+                    currentWorkflow.TrackCleanupSelectionVideoPath,
+                    currentWorkflow.PrimaryVideoPath,
+                    StringComparison.OrdinalIgnoreCase);
+                if (selectionTargetsPrimaryVideo)
+                {
+                    return;
+                }
+
+                await RefreshCleanupAudioSelectionAsync(forceReload: true);
+                return;
+            }
+
             await RefreshCleanupAudioSelectionAsync(forceReload: false);
         }
 
@@ -1211,6 +1538,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
 
             try
             {
+                if (forceReload)
+                {
+                    currentWorkflow.TrackCleanupSelectionVideoPath = string.Empty;
+                    currentWorkflow.TrackCleanupAudioOptions.Clear();
+                    currentWorkflow.TrackCleanupSubtitleOptions.Clear();
+                }
+
                 var inspection = await workflowExecutionService.GetTrackCleanupAudioInspectionAsync(currentWorkflow, CancellationToken.None);
                 if (requestVersion != cleanupAudioInspectionVersion || currentWorkflow is null)
                 {
@@ -1843,6 +2177,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 {
                     currentWorkflow = await workflowExecutionService.LoadWorkflowAsync(currentWorkflow.Id) ?? currentWorkflow;
                     RefreshFromWorkflow(currentWorkflow, activeOutputStepKey);
+
+                    // CleanTracks changes PrimaryVideoPath to the filtered MKV. Invalidate the
+                    // pre-cleanup selection and inspect that new file before presenting the page.
+                    if (record?.Success == true && outputStepKey == WorkflowStepKey.CleanTracks)
+                    {
+                        await RefreshCleanupAudioSelectionAsync(forceReload: true);
+                    }
                 }
 
                 if (record is not null)
@@ -1919,6 +2260,12 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private void RefreshFromWorkflow(WorkflowInstance workflow, WorkflowStepKey? preferredSelectedStep = null)
         {
             utilityOutputActive = false;
+            var disabledPublishStepWasPresent = workflow.FindStep(WorkflowStepKey.Publish) is not null;
+            App.Host.WorkflowEngine.RefreshStatuses(workflow);
+            if (disabledPublishStepWasPresent)
+            {
+                _ = workflowStore.SaveAsync(workflow);
+            }
             DisplayName = workflow.DisplayName;
             RootPath = workflow.RootPath;
             StepItems.Clear();
@@ -2147,6 +2494,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
         private void ResetWorkflowState(string message)
         {
             currentWorkflow = null;
+            publicationWorkspace = null;
             activeOutputStepKey = null;
             ClearLiveOutputBuffer();
             ResetDetailProgress("Progreso del paso", "Esperando señales del proceso...");
@@ -2182,6 +2530,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
             ShowTranslationDecisionActions = false;
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActions();
+            ResetPublicationEditor();
             OnPropertyChanged(nameof(CanOpenSelectedLog));
             OnPropertyChanged(nameof(CodexTranslationPanelTitle));
             OnPropertyChanged(nameof(CodexTranslationPanelDescription));
@@ -2264,8 +2613,9 @@ namespace MediaWorkflowOrchestrator.ViewModels
             ShowCleanTracksQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.CleanTracks;
             ShowTagAndRenameQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.TagAndRename;
             ShowPackageRarQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.PackageRar;
+            ShowPublishQuickOptions = SelectedStep?.StepKey == WorkflowStepKey.Publish;
             ShowQuickActionOptions = SelectedStep is not null
-                && (ShowDownloadQuickOptions || ShowTranslateQuickOptions || ShowCleanTracksQuickOptions || ShowTagAndRenameQuickOptions || ShowPackageRarQuickOptions);
+                && (ShowDownloadQuickOptions || ShowTranslateQuickOptions || ShowCleanTracksQuickOptions || ShowTagAndRenameQuickOptions || ShowPackageRarQuickOptions || ShowPublishQuickOptions);
             ShowSkipAheadActions = currentWorkflow is not null
                 && SelectedStep is not null
                 && SelectedStep.StepKey != WorkflowStepKey.Download
@@ -2284,8 +2634,29 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowStepKey.CleanTracks => "Controla qué hace SubForge cuando encuentra el archivo en uso y marca exactamente qué audios y subtítulos deben sobrevivir al filtrado.",
                 WorkflowStepKey.TagAndRename => "Controla si el MKV recibe un poster embebido; la búsqueda automática usa IMDb y funciona con películas o series.",
                 WorkflowStepKey.PackageRar => "Puedes saltar pasos previos y empaquetar de inmediato si tu release ya está lista.",
-                _ => "Este paso no tiene flags rápidos expuestos en el dashboard."
+                WorkflowStepKey.Publish => "Clasifica la entrega, recuerda sus carpetas y reúne los enlaces de los cuatro destinos en un solo manifiesto.",
+                _ => "Consulta el estado de esta etapa. El registro técnico está disponible en Detalle y salida."
             };
+        }
+
+        private void ResetPublicationEditor()
+        {
+            ShowPublishDetailActions = false;
+            PublicationCanonicalTitle = string.Empty;
+            PublicationContentKindLabel = "Sin analizar";
+            PublicationEpisodeLabel = string.Empty;
+            PublicationSourceRoot = string.Empty;
+            PublicationDriveFolderUrl = string.Empty;
+            PublicationMediaFireFolderUrl = string.Empty;
+            PublicationMediaFireAccountProfile = string.Empty;
+            PublicationTransferStartUrl = "https://transfer.it/start";
+            PublicationSheetUrl = string.Empty;
+            PublicationDriveLinksText = string.Empty;
+            PublicationMediaFireLinksText = string.Empty;
+            PublicationTransferLink = string.Empty;
+            PublicationTransferExpiryText = string.Empty;
+            PublicationSummary = "Ejecuta Preparar publicación para clasificar el contenido y crear su manifiesto.";
+            PublicationFilesPreview = "Aún no hay archivos preparados.";
         }
 
         private void UpdatePackageRarDetailActions()
@@ -2708,6 +3079,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowStepKey.CleanTracks => "Limpiando pistas",
                 WorkflowStepKey.TagAndRename => "Etiquetando y renombrando",
                 WorkflowStepKey.PackageRar => "Preparando empaquetado",
+                WorkflowStepKey.Publish => "Preparando publicación",
                 _ => "Procesando",
             };
         }
@@ -2733,6 +3105,7 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 WorkflowStepKey.CleanTracks => "Progreso de limpieza",
                 WorkflowStepKey.TagAndRename => "Progreso de etiquetas",
                 WorkflowStepKey.PackageRar => "Progreso de empaquetado",
+                WorkflowStepKey.Publish => "Progreso de publicación",
                 _ => "Progreso del proceso",
             };
         }
@@ -2794,6 +3167,13 @@ namespace MediaWorkflowOrchestrator.ViewModels
                 DisplayName = "Empaquetar RAR",
                 Status = WorkflowStepStatus.Pending,
                 StatusReason = "Genera el comprimido final con contraseña e información adjunta.",
+            },
+            new()
+            {
+                StepKey = WorkflowStepKey.Publish,
+                DisplayName = "Publicar y recopilar links",
+                Status = WorkflowStepStatus.Pending,
+                StatusReason = "Prepara destinos, recopila enlaces y crea filas tabuladas para Excel.",
             }
         };
 

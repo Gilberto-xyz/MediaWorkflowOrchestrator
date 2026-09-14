@@ -12,6 +12,13 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <ResourceDictionary Source="Styles/ThemeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <!-- Native command templates keep their overflow and keyboard behavior. -->
+            <Thickness x:Key="AppBarButtonContentViewboxMargin">8,8,0,8</Thickness>
+            <Thickness x:Key="AppBarButtonContentViewboxCollapsedMargin">8,8,8,8</Thickness>
+            <Thickness x:Key="AppBarButtonContentViewboxCompactMargin">8,8,8,8</Thickness>
+            <Thickness x:Key="AppBarButtonTextLabelOnRightMargin">8,8,10,8</Thickness>
+            <Thickness x:Key="AppBarButtonInnerBorderMargin">0</Thickness>
+            <Thickness x:Key="AppBarButtonInnerBorderCompactMargin">0</Thickness>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

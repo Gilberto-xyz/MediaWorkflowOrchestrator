@@ -76,6 +76,20 @@ namespace MediaWorkflowOrchestrator.Models
             }
         }
 
+        [JsonIgnore]
+        public string StatusDisplay => Status switch
+        {
+            WorkflowStepStatus.Pending => "Pendiente",
+            WorkflowStepStatus.Ready => "Listo",
+            WorkflowStepStatus.Running => "En curso",
+            WorkflowStepStatus.Succeeded => "Completado",
+            WorkflowStepStatus.Failed => "Error",
+            WorkflowStepStatus.Skipped => "Omitido",
+            WorkflowStepStatus.NeedsDecision => "Por decidir",
+            WorkflowStepStatus.Blocked => "Bloqueado",
+            _ => Status.ToString(),
+        };
+
         public string StatusReason
         {
             get => statusReason;
@@ -155,6 +169,7 @@ namespace MediaWorkflowOrchestrator.Models
             WorkflowStepKey.CleanTracks => "03",
             WorkflowStepKey.TagAndRename => "04",
             WorkflowStepKey.PackageRar => "05",
+            WorkflowStepKey.Publish => "06",
             _ => "00",
         };
 
@@ -167,6 +182,7 @@ namespace MediaWorkflowOrchestrator.Models
             WorkflowStepKey.CleanTracks => Microsoft.UI.Xaml.Controls.Symbol.Setting,
             WorkflowStepKey.TagAndRename => Microsoft.UI.Xaml.Controls.Symbol.Page,
             WorkflowStepKey.PackageRar => Microsoft.UI.Xaml.Controls.Symbol.Save,
+            WorkflowStepKey.Publish => Microsoft.UI.Xaml.Controls.Symbol.Upload,
             _ => Microsoft.UI.Xaml.Controls.Symbol.Forward,
         };
 
@@ -259,6 +275,7 @@ namespace MediaWorkflowOrchestrator.Models
 
         private void NotifyVisualStateChanged()
         {
+            OnPropertyChanged(nameof(StatusDisplay));
             OnPropertyChanged(nameof(RowBackgroundBrush));
             OnPropertyChanged(nameof(RowBorderBrush));
             OnPropertyChanged(nameof(StatusBadgeBackgroundBrush));

@@ -8,6 +8,7 @@ namespace MediaWorkflowOrchestrator.Models
         CleanTracks,
         TagAndRename,
         PackageRar,
+        Publish,
     }
 
     public enum WorkflowStepStatus
@@ -35,5 +36,14 @@ namespace MediaWorkflowOrchestrator.Models
         Unknown,
         Present,
         Missing,
+    }
+
+    public enum PublicationContentKind
+    {
+        Unknown,
+        SeriesEpisode,
+        SeriesBatch,
+        Movie,
+        Collection,
     }
 }

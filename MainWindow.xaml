@@ -19,12 +19,12 @@
         <Grid x:Name="ShellHeaderLayout" Margin="8,0,8,6">
             <Border
                 x:Name="ShellWorkflowHeader"
-                Padding="12,7"
+                Padding="12,6"
                 Background="{StaticResource DashboardPanelBrush}"
                 BorderBrush="{StaticResource HairlineBrush}"
                 BorderThickness="0,0,0,1"
                 CornerRadius="7">
-                <Grid ColumnSpacing="14" RowSpacing="4">
+                <Grid ColumnSpacing="14" RowSpacing="6">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -34,7 +34,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Grid MinWidth="0" ColumnSpacing="18" RowSpacing="2">
+                    <Grid MinWidth="0" ColumnSpacing="12" RowSpacing="2" VerticalAlignment="Center">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -45,19 +45,21 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                             <Ellipse
                                 Width="8"
                                 Height="8"
                                 Fill="{StaticResource AccentSecondaryBrush}"
                                 VerticalAlignment="Center" />
                             <TextBlock
-                                FontSize="15"
+                                Grid.Column="1"
+                                FontSize="14"
                                 FontWeight="SemiBold"
                                 MaxLines="1"
                                 Text="{Binding DisplayName}"
                                 TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
+                        </Grid>
                         <TextBlock
                             Grid.Row="1"
                             Margin="16,0,0,0"
@@ -105,7 +107,7 @@
                         <AppBarButton
                             Click="OnQuickRunNextClicked"
                             Icon="Play"
-                            Label="Ejecutar siguiente"
+                            Label="Siguiente"
                             Background="{StaticResource RunNextBackgroundBrush}"
                             BorderBrush="{StaticResource RunNextBorderBrush}"
                             Foreground="{StaticResource RunNextForegroundBrush}"
@@ -115,7 +117,7 @@
                             x:Name="QuickRunSelectedButton"
                             Click="OnQuickRunSelectedClicked"
                             Icon="Forward"
-                            Label="Ejecutar seleccionado"
+                            Label="Ejecutar etapa"
                             Background="{StaticResource RunSelectedBackgroundBrush}"
                             BorderBrush="{StaticResource RunSelectedBorderBrush}"
                             Foreground="{StaticResource RunSelectedForegroundBrush}"
@@ -135,7 +137,7 @@
                         Padding="0,4,0,0"
                         BorderBrush="{StaticResource HairlineBrush}"
                         BorderThickness="0,1,0,0">
-                        <Grid ColumnSpacing="10">
+                        <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -143,163 +145,84 @@
 
                             <Border
                                 x:Name="ShellProgressMonitor"
-                                MinWidth="240"
-                                Padding="10,6"
-                                Background="{StaticResource DashboardInfoBrush}"
-                                BorderBrush="{StaticResource HairlineBrush}"
-                                BorderThickness="1"
-                                CornerRadius="7"
+                                MinWidth="0"
+                                HorizontalAlignment="Stretch"
+                                Padding="0,2,12,2"
+                                VerticalAlignment="Center"
                                 Visibility="Collapsed">
                                 <Grid ColumnSpacing="8" RowSpacing="3">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-
-                                    <ProgressRing
-                                        Grid.RowSpan="2"
-                                        Width="20"
-                                        Height="20"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource AccentSecondaryBrush}"
-                                        IsActive="{Binding IsProgressOperationActive}" />
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        FontSize="12"
-                                        FontWeight="SemiBold"
-                                        MaxLines="1"
-                                        Text="{Binding DetailProgressPhaseLabel}"
-                                        TextTrimming="CharacterEllipsis" />
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        FontSize="12"
-                                        FontWeight="SemiBold"
-                                        Foreground="{StaticResource AccentSecondaryBrush}"
-                                        Text="{Binding DetailProgressPercentLabel}" />
-                                    <TextBlock
-                                        Grid.Row="1"
-                                        Grid.Column="1"
-                                        Grid.ColumnSpan="2"
-                                        MaxLines="1"
-                                        Style="{StaticResource MutedCaptionTextStyle}"
-                                        Text="{Binding DetailProgressMessage}"
-                                        TextTrimming="CharacterEllipsis"
+                                    <TextBlock FontSize="12" FontWeight="SemiBold"
+                                        Text="{Binding DetailProgressPhaseLabel}" TextTrimming="CharacterEllipsis"
                                         ToolTipService.ToolTip="{Binding DetailProgressMessage}" />
-                                    <ProgressBar
-                                        Grid.Row="2"
-                                        Grid.ColumnSpan="3"
-                                        Height="5"
+                                    <TextBlock Grid.Column="1" FontSize="12" Foreground="{StaticResource AccentSecondaryBrush}"
+                                        Text="{Binding DetailProgressPercentLabel}" />
+                                    <ProgressBar x:Name="ShellOverallProgressBar" Grid.Row="1" Grid.ColumnSpan="2" Height="3" HorizontalAlignment="Stretch"
                                         Foreground="{StaticResource AccentSecondaryBrush}"
                                         IsIndeterminate="{Binding DetailProgressIsIndeterminate}"
-                                        Maximum="100"
-                                        Minimum="0"
-                                        Value="{Binding DetailProgressValue}" />
-
-                                    <Grid Grid.Row="3" Grid.ColumnSpan="3" Margin="0,2,0,0" ColumnSpacing="6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Style="{StaticResource MutedCaptionTextStyle}" Text="Actual" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            FontSize="11"
-                                            MaxLines="1"
-                                            Text="{Binding DetailItemProgressTitle}"
-                                            TextTrimming="CharacterEllipsis"
+                                        Maximum="100" Value="{Binding DetailProgressValue}" />
+                                    <Grid Grid.Row="2" Grid.ColumnSpan="2" ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                        <TextBlock Style="{StaticResource MutedCaptionTextStyle}" MaxLines="1"
+                                            Text="{Binding DetailItemProgressTitle}" TextTrimming="CharacterEllipsis"
                                             ToolTipService.ToolTip="{Binding DetailItemProgressTitle}" />
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            FontSize="11"
-                                            FontWeight="SemiBold"
+                                        <TextBlock Grid.Column="1" Style="{StaticResource MutedCaptionTextStyle}"
                                             Text="{Binding DetailItemProgressPercentLabel}" />
                                     </Grid>
-                                    <ProgressBar
-                                        Grid.Row="4"
-                                        Grid.ColumnSpan="3"
-                                        Height="4"
-                                        Foreground="{StaticResource AccentPrimaryBrush}"
-                                        IsIndeterminate="{Binding DetailItemProgressIsIndeterminate}"
-                                        Maximum="100"
-                                        Minimum="0"
-                                        Value="{Binding DetailItemProgressValue}" />
                                 </Grid>
                             </Border>
 
-                            <ScrollViewer
-                                Grid.Column="1"
-                                HorizontalScrollBarVisibility="Hidden"
-                                HorizontalScrollMode="Auto"
-                                VerticalScrollBarVisibility="Disabled"
-                                VerticalScrollMode="Disabled">
-                                <CommandBar
+                            <CommandBar
                                     x:Name="QuickAccessCommandBar"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
                                     Background="Transparent"
                                     ClosedDisplayMode="Compact"
                                     DefaultLabelPosition="Right"
-                                    IsDynamicOverflowEnabled="False"
+                                    IsDynamicOverflowEnabled="True"
                                     IsOpen="False"
-                                    OverflowButtonVisibility="Collapsed">
+                                    OverflowButtonVisibility="Auto">
                                     <AppBarButton
                                         Click="OnQuickPickFileClicked"
                                         Icon="Document"
-                                        Label="Elegir archivo base"
-                                        Background="{StaticResource QuickFileBackgroundBrush}"
-                                        BorderBrush="{StaticResource QuickFileBorderBrush}"
-                                        Foreground="{StaticResource QuickFileForegroundBrush}"
-                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                        Label="Archivo base" ToolTipService.ToolTip="Elegir archivo base"
+                                        Style="{StaticResource SecondaryCommandAppBarButtonStyle}" />
                                     <AppBarButton
                                         Click="OnQuickPickFolderClicked"
                                         Icon="Folder"
-                                        Label="Elegir carpeta del release"
-                                        Background="{StaticResource QuickFolderBackgroundBrush}"
-                                        BorderBrush="{StaticResource QuickFolderBorderBrush}"
-                                        Foreground="{StaticResource QuickFolderForegroundBrush}"
-                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                        Label="Carpeta del release" ToolTipService.ToolTip="Elegir carpeta del release"
+                                        Style="{StaticResource SecondaryCommandAppBarButtonStyle}" />
                                     <AppBarButton
                                         Click="OnQuickDownloadWeeklyClicked"
                                         Icon="Download"
-                                        Label="Descarga semanal desde Nyaa"
-                                        Background="{StaticResource QuickWeeklyBackgroundBrush}"
-                                        BorderBrush="{StaticResource QuickWeeklyBorderBrush}"
-                                        Foreground="{StaticResource QuickWeeklyForegroundBrush}"
-                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                        Label="Nyaa semanal" ToolTipService.ToolTip="Descarga semanal desde Nyaa"
+                                        Style="{StaticResource SecondaryCommandAppBarButtonStyle}" />
                                     <AppBarButton
                                         Click="OnQuickDownloadFromLinkClicked"
                                         Icon="World"
-                                        Label="Descargar desde link de Nyaa"
-                                        Background="{StaticResource QuickLinkBackgroundBrush}"
-                                        BorderBrush="{StaticResource QuickLinkBorderBrush}"
-                                        Foreground="{StaticResource QuickLinkForegroundBrush}"
-                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                        Label="Enlace Nyaa" ToolTipService.ToolTip="Descargar desde link de Nyaa"
+                                        Style="{StaticResource SecondaryCommandAppBarButtonStyle}" />
                                     <AppBarSeparator />
                                     <AppBarButton
                                         Click="OnQuickOpenFolderClicked"
                                         Icon="OpenFile"
-                                        Label="Abrir carpeta del workflow"
-                                        Background="{StaticResource QuickOpenFolderBackgroundBrush}"
-                                        BorderBrush="{StaticResource QuickOpenFolderBorderBrush}"
-                                        Foreground="{StaticResource QuickOpenFolderForegroundBrush}"
-                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                        Label="Abrir carpeta" ToolTipService.ToolTip="Abrir carpeta del workflow"
+                                        Style="{StaticResource SecondaryCommandAppBarButtonStyle}" />
                                     <AppBarButton
                                         Click="OnQuickOpenLogClicked"
                                         Icon="Page"
-                                        Label="Abrir log del paso"
-                                        Background="{StaticResource QuickLogBackgroundBrush}"
-                                        BorderBrush="{StaticResource QuickLogBorderBrush}"
-                                        Foreground="{StaticResource QuickLogForegroundBrush}"
-                                        Style="{StaticResource ColoredCommandAppBarButtonStyle}" />
+                                        Label="Abrir log" ToolTipService.ToolTip="Abrir log del paso"
+                                        Style="{StaticResource SecondaryCommandAppBarButtonStyle}" />
                                 </CommandBar>
-                            </ScrollViewer>
                         </Grid>
                     </Border>
                 </Grid>

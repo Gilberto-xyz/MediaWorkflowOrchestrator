@@ -1,6 +1,6 @@
 # Media Workflow Orchestrator
 
-Aplicación de escritorio en WinUI 3 para orquestar un flujo local de descarga, inspección, traducción, limpieza, renombre y empaquetado multimedia desde una sola ventana.
+Aplicación de escritorio en WinUI 3 para orquestar un flujo local de descarga, inspección, traducción, limpieza, renombre, empaquetado y publicación multimedia desde una sola ventana.
 
 Está pensada para un caso real de trabajo en Windows donde ya existen scripts operativos en Python y se necesita una capa de control visual, persistencia de estado y ejecución ordenada, sin reescribir la lógica principal de cada herramienta.
 
@@ -13,6 +13,9 @@ Está pensada para un caso real de trabajo en Windows donde ya existen scripts o
 - Detecta si hay subtítulos en español y evita traducir cuando no hace falta.
 - Permite saltar pasos y ejecutar directamente `Empaquetar RAR` cuando el release ya está listo.
 - Expone flags rápidos por paso desde el dashboard.
+- Clasifica episodios individuales, temporadas, películas y colecciones antes de publicar.
+- Recuerda las carpetas de Google Drive y MediaFire por título y perfil de cuenta.
+- Recupera automáticamente links de 1fichier desde `FileUploader.log` y genera filas tabuladas para Excel o Google Sheets.
 - Maneja casos prácticos como:
   - archivo final único listo para RAR
   - staging previo en `Completado`
@@ -28,6 +31,7 @@ flowchart LR
     C --> D["Limpiar tracks"]
     D --> E["Etiquetas y renombre"]
     E --> F["Empaquetar RAR"]
+    F --> G["Publicar y recopilar links"]
 ```
 
 También puede usarse de forma parcial. Por ejemplo:
@@ -49,6 +53,7 @@ La app ejecuta, valida y monitorea los scripts locales del pipeline. La traducci
 | Limpieza de tracks | `limpiar_tracks.py` |
 | Etiquetas y renombre | `ETIQUETAS_GDRIVELATINO.py` |
 | Empaquetado / capturas / RAR | `rar_folder_image_info.py` |
+| Publicación | File & Image Uploader + sesiones abiertas de Drive, MediaFire y Transfer.it |
 
 Nota:
 `Scripts\ETIQUETAS_GDRIVELATINO.py` es una copia versionada dentro de este repo para respaldo y seguimiento de cambios.
@@ -116,6 +121,7 @@ bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\MediaWorkflowOrchestrator.exe
 3. Ejecutar el siguiente paso o el paso seleccionado.
 4. Consultar salida y logs.
 5. Empaquetar RAR al final.
+6. Preparar la publicación, abrir los destinos correctos, pegar los links y copiar las filas para Excel.
 
 ### Solo empaquetar RAR
 
@@ -163,6 +169,8 @@ Contenido principal:
 - `workflows\`
 - `logs\`
 - `rar-input\` para contextos temporales de empaquetado
+- `publishing\manifests\` para archivos, links y caducidad por workflow
+- `publishing\routes.json` para recordar destinos por serie, película o colección
 
 ## Arquitectura
 

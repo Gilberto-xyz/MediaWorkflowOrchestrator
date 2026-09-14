@@ -495,11 +495,19 @@ namespace MediaWorkflowOrchestrator.Services
                 return;
             }
 
+            var selectionAlreadyTargetsVideo = !string.IsNullOrWhiteSpace(workflow.TrackCleanupSelectionVideoPath)
+                && PathsEqual(workflow.TrackCleanupSelectionVideoPath, videoPath);
+
+            // When the options were inspected from this exact file, every option maps to an
+            // existing track. Filtering out unchecked options would compress the list and shift
+            // their languages onto earlier tracks (for example a2/a3). Only filter when the
+            // options still describe the pre-cleanup source and the output contains selected
+            // tracks only.
             var audioOptions = workflow.TrackCleanupAudioOptions
-                .Where(option => !selectedOnly || option.IsSelected)
+                .Where(option => !selectedOnly || selectionAlreadyTargetsVideo || option.IsSelected)
                 .ToList();
             var subtitleOptions = workflow.TrackCleanupSubtitleOptions
-                .Where(option => !selectedOnly || option.IsSelected)
+                .Where(option => !selectedOnly || selectionAlreadyTargetsVideo || option.IsSelected)
                 .ToList();
 
             var args = new List<string> { videoPath };

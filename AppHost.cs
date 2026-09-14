@@ -11,6 +11,7 @@ namespace MediaWorkflowOrchestrator
             ToolValidationService = new ToolValidationService();
             SubtitleInspectorService = new SubtitleInspectorService(ProcessRunnerService);
             WorkflowEngine = new WorkflowEngine();
+            PublicationService = new PublicationService(AppSettingsService);
             WorkflowExecutionService = new WorkflowExecutionService(
                 AppSettingsService,
                 WorkflowStore,
@@ -28,6 +29,7 @@ namespace MediaWorkflowOrchestrator
         public IToolValidationService ToolValidationService { get; }
         public ISubtitleInspectorService SubtitleInspectorService { get; }
         public IWorkflowEngine WorkflowEngine { get; }
+        public IPublicationService PublicationService { get; }
         public IWorkflowExecutionService WorkflowExecutionService { get; }
     }
 }

@@ -90,6 +90,13 @@ namespace MediaWorkflowOrchestrator.Services
 
         public void RefreshStatuses(WorkflowInstance workflow)
         {
+            // Publication is intentionally disabled for now. Remove the persisted step too so
+            // workflows created while the module was enabled do not keep showing stage 06.
+            workflow.Steps.RemoveAll(step => step.StepKey == WorkflowStepKey.Publish);
+            if (workflow.CurrentStep == WorkflowStepKey.Publish)
+            {
+                workflow.CurrentStep = WorkflowStepKey.PackageRar;
+            }
             var previousSatisfied = true;
             foreach (var step in workflow.Steps)
             {
@@ -126,6 +133,7 @@ namespace MediaWorkflowOrchestrator.Services
             WorkflowStepKey.CleanTracks => "Listo para limpiar pistas y subtítulos extra.",
             WorkflowStepKey.TagAndRename => "Listo para aplicar etiquetas y renombrado final.",
             WorkflowStepKey.PackageRar => "Listo para generar el RAR con contraseña.",
+            WorkflowStepKey.Publish => "Listo para preparar destinos, recopilar enlaces y generar filas para Excel.",
             _ => "Paso listo para ejecutar."
         };
 

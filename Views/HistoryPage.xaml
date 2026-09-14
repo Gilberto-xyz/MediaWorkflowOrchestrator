@@ -7,20 +7,13 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:MediaWorkflowOrchestrator.Models"
     mc:Ignorable="d">
-    <Grid x:Name="HistoryLayoutRoot" Padding="24,18,24,28">
+    <Grid x:Name="HistoryLayoutRoot" Padding="{StaticResource PagePaddingDefault}">
         <ScrollViewer
             HorizontalScrollMode="Disabled"
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Visible"
             VerticalScrollMode="Auto">
-            <StackPanel Spacing="18">
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Memoria de ejecución" />
-                    <TextBlock
-                        Style="{StaticResource SectionDescriptionTextStyle}"
-                        Text="Revisa workflows guardados, abre su contexto y retoma uno previo sin reconstruir el estado desde cero." />
-                </StackPanel>
-
+            <StackPanel Spacing="8">
                 <Border Style="{StaticResource CardContainerStyle}">
                     <Grid x:Name="HistoryHeaderGrid" ColumnSpacing="12" RowSpacing="12">
                         <Grid.RowDefinitions>
@@ -32,10 +25,10 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="4">
-                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Historial" />
+                            <TextBlock Style="{StaticResource PageHeadlineTextStyle}" Text="Historial" />
                             <TextBlock
                                 Style="{StaticResource SectionDescriptionTextStyle}"
-                                Text="La lista conserva workflows previos para reabrirlos rápido cuando vuelves a una serie o release." />
+                                Text="Reabre un workflow guardado para continuar desde su último estado." />
                         </StackPanel>
                         <Button
                             Grid.Column="1"
@@ -46,7 +39,7 @@
                 </Border>
 
                 <Border Style="{StaticResource CardContainerStyle}">
-                    <Grid x:Name="HistoryContentGrid" ColumnSpacing="16" RowSpacing="16">
+                    <Grid x:Name="HistoryContentGrid" ColumnSpacing="12" RowSpacing="12">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -73,7 +66,7 @@
                                 SelectedItem="{x:Bind ViewModel.SelectedWorkflow, Mode=TwoWay}">
                                 <ListView.ItemTemplate>
                                     <DataTemplate x:DataType="models:WorkflowInstance">
-                                        <Border Margin="0,0,0,10" Style="{StaticResource InsetPanelBorderStyle}">
+                                        <Border Margin="0,0,0,6" Style="{StaticResource InsetPanelBorderStyle}">
                                             <StackPanel Spacing="6">
                                                 <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" TextWrapping="WrapWholeWords" />
                                                 <TextBlock Style="{StaticResource MonoCaptionTextStyle}" Text="{x:Bind RootPath}" TextWrapping="Wrap" />
@@ -89,7 +82,7 @@
                         </StackPanel>
 
                         <Border Grid.Column="1" Style="{StaticResource AccentPanelBorderStyle}">
-                            <StackPanel Spacing="12">
+                            <StackPanel Spacing="8">
                                 <TextBlock Style="{StaticResource SectionTitleTextStyle}" Text="Detalle" />
                                 <TextBlock
                                     Style="{StaticResource PageHeadlineTextStyle}"

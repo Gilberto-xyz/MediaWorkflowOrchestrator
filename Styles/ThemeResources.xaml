@@ -254,15 +254,24 @@
         <GradientStop Color="{ThemeResource AccentSweepEndColor}" Offset="1" />
     </LinearGradientBrush>
 
+    <!-- Shared desktop density: consistent across the shell and all pages. -->
+    <Thickness x:Key="PagePaddingDefault">16,10,16,16</Thickness>
+    <Thickness x:Key="PagePaddingNarrow">10,8,10,12</Thickness>
+    <x:Double x:Key="CompactControlHeight">32</x:Double>
+    <x:Double x:Key="CompactBodySize">13</x:Double>
+    <x:Double x:Key="CompactSectionSize">16</x:Double>
+    <Thickness x:Key="CompactControlPadding">10,4</Thickness>
+    <CornerRadius x:Key="CompactControlRadius">6</CornerRadius>
+
     <Style x:Key="HeroTitleTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontSize" Value="{StaticResource CompactSectionSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="CharacterSpacing" Value="0" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
     </Style>
 
     <Style x:Key="PageHeadlineTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontSize" Value="{StaticResource CompactSectionSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="CharacterSpacing" Value="0" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
@@ -310,7 +319,7 @@
 
     <Style x:Key="CardContainerStyle" TargetType="Border">
         <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="10" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
@@ -342,56 +351,70 @@
     </Style>
 
     <Style x:Key="DenseActionButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="10,5" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="{StaticResource CompactControlPadding}" />
+        <Setter Property="CornerRadius" Value="{StaticResource CompactControlRadius}" />
+        <Setter Property="MinHeight" Value="{StaticResource CompactControlHeight}" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="{ThemeResource DashboardChipBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+        <Setter Property="FontSize" Value="{StaticResource CompactBodySize}" />
     </Style>
 
     <Style x:Key="PrimaryCommandButtonStyle" TargetType="Button">
-        <Setter Property="Padding" Value="10,5" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="{StaticResource CompactControlPadding}" />
+        <Setter Property="CornerRadius" Value="{StaticResource CompactControlRadius}" />
+        <Setter Property="MinHeight" Value="{StaticResource CompactControlHeight}" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="{ThemeResource AccentPrimaryBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource AccentPrimaryBrush}" />
         <Setter Property="Foreground" Value="{ThemeResource AccentForegroundBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="{StaticResource CompactBodySize}" />
     </Style>
 
     <Style x:Key="ColoredCommandAppBarButtonStyle" TargetType="AppBarButton">
         <Setter Property="MinWidth" Value="0" />
         <Setter Property="Margin" Value="2,0" />
-        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
+    <Style x:Key="SecondaryCommandAppBarButtonStyle" TargetType="AppBarButton" BasedOn="{StaticResource ColoredCommandAppBarButtonStyle}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
+        <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+
     <Style x:Key="QuickToggleButtonStyle" TargetType="ToggleButton">
-        <Setter Property="Padding" Value="10,5" />
-        <Setter Property="CornerRadius" Value="7" />
-        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="{StaticResource CompactControlPadding}" />
+        <Setter Property="CornerRadius" Value="{StaticResource CompactControlRadius}" />
+        <Setter Property="MinHeight" Value="{StaticResource CompactControlHeight}" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Background" Value="{ThemeResource DashboardChipBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
+        <Setter Property="FontSize" Value="{StaticResource CompactBodySize}" />
     </Style>
 
     <Style x:Key="CleanTracksToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource QuickToggleButtonStyle}">
-        <Setter Property="Padding" Value="12,7" />
-        <Setter Property="MinHeight" Value="36" />
-        <Setter Property="Background" Value="#3321184E" />
-        <Setter Property="BorderBrush" Value="#7A5B4BE0" />
+        <Setter Property="Padding" Value="{StaticResource CompactControlPadding}" />
+        <Setter Property="MinHeight" Value="{StaticResource CompactControlHeight}" />
+        <Setter Property="Background" Value="{ThemeResource DashboardChipBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource HairlineBrush}" />
         <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     </Style>
 
     <Style x:Key="DashboardSectionHeadingTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="19" />
+        <Setter Property="FontSize" Value="{StaticResource CompactSectionSize}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="CharacterSpacing" Value="0" />
         <Setter Property="TextWrapping" Value="WrapWholeWords" />

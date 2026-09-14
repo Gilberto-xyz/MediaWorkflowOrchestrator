@@ -1,18 +1,18 @@
 using Windows.Storage.Pickers;
 using System.ComponentModel;
 using MediaWorkflowOrchestrator.Models;
-using Microsoft.UI.Input;
-using Microsoft.UI.Xaml.Input;
 
 namespace MediaWorkflowOrchestrator.Views
 {
     public sealed partial class DashboardPage : Page
     {
-        private const double WideLayoutBreakpoint = 1080;
         private const double MediumLayoutBreakpoint = 900;
         private const double NarrowLayoutBreakpoint = 760;
-        private bool detailOutputResizeActive;
-        private double lastDetailOutputPointerY;
+        private WorkflowStepKey? displayedContextStep;
+        private bool restoringContextScroll;
+        private bool contextLayoutPending;
+        private double pendingContextOffset;
+        private readonly Dictionary<WorkflowStepKey, double> contextScrollOffsets = new();
 
         public DashboardPage()
         {
@@ -29,12 +29,12 @@ namespace MediaWorkflowOrchestrator.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            ViewModel.EnsureDetailOutputFitsViewport(ActualHeight);
             UpdateTranslationDecisionVisibility();
             UpdateQuickOptionsVisibility();
             UpdatePackageRarDetailActionsVisibility();
-            UpdateDetailOutputTerminalVisibility();
+            UpdatePublishDetailActionsVisibility();
             UpdateResponsiveLayout(ActualWidth);
+            UpdateSelectedContext();
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -47,7 +47,6 @@ namespace MediaWorkflowOrchestrator.Views
 
         private void OnPageSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            ViewModel.EnsureDetailOutputFitsViewport(e.NewSize.Height);
             UpdateResponsiveLayout(e.NewSize.Width);
         }
 
@@ -64,6 +63,7 @@ namespace MediaWorkflowOrchestrator.Views
                 or nameof(DashboardViewModel.ShowCleanTracksQuickOptions)
                 or nameof(DashboardViewModel.ShowTagAndRenameQuickOptions)
                 or nameof(DashboardViewModel.ShowPackageRarQuickOptions)
+                or nameof(DashboardViewModel.ShowPublishQuickOptions)
                 or nameof(DashboardViewModel.ShowSkipAheadActions))
             {
                 _ = DispatcherQueue.TryEnqueue(UpdateQuickOptionsVisibility);
@@ -74,9 +74,16 @@ namespace MediaWorkflowOrchestrator.Views
                 _ = DispatcherQueue.TryEnqueue(UpdatePackageRarDetailActionsVisibility);
             }
 
-            if (e.PropertyName == nameof(DashboardViewModel.ShowDetailOutputTerminal))
+            if (e.PropertyName == nameof(DashboardViewModel.ShowPublishDetailActions))
             {
-                _ = DispatcherQueue.TryEnqueue(UpdateDetailOutputTerminalVisibility);
+                _ = DispatcherQueue.TryEnqueue(UpdatePublishDetailActionsVisibility);
+            }
+
+            if (e.PropertyName == nameof(DashboardViewModel.SelectedStep)
+                && ViewModel.SelectedStep?.StepKey != displayedContextStep)
+            {
+                restoringContextScroll = true;
+                _ = DispatcherQueue.TryEnqueue(UpdateSelectedContext);
             }
         }
 
@@ -95,6 +102,7 @@ namespace MediaWorkflowOrchestrator.Views
             CleanTracksQuickOptionsPanel.Visibility = ViewModel.ShowCleanTracksQuickOptions ? Visibility.Visible : Visibility.Collapsed;
             TagAndRenameQuickOptionsPanel.Visibility = ViewModel.ShowTagAndRenameQuickOptions ? Visibility.Visible : Visibility.Collapsed;
             PackageRarQuickOptionsPanel.Visibility = ViewModel.ShowPackageRarQuickOptions ? Visibility.Visible : Visibility.Collapsed;
+            PublishQuickOptionsPanel.Visibility = ViewModel.ShowPublishQuickOptions ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void UpdatePackageRarDetailActionsVisibility()
@@ -104,215 +112,143 @@ namespace MediaWorkflowOrchestrator.Views
                 : Visibility.Collapsed;
         }
 
-        private void UpdateDetailOutputTerminalVisibility()
+        private void UpdatePublishDetailActionsVisibility()
         {
-            var visibility = ViewModel.ShowDetailOutputTerminal ? Visibility.Visible : Visibility.Collapsed;
-            DetailOutputTerminal.Visibility = visibility;
-            DetailOutputResizeHandle.Visibility = visibility;
-            DetailOutputAutoSizeButton.Visibility = visibility;
+            PublishDetailActionsPanel.Visibility = ViewModel.ShowPublishDetailActions
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private void OnStepItemClicked(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement { DataContext: WorkflowStepState step })
             {
+                if (displayedContextStep is { } key && key != step.StepKey)
+                {
+                    contextScrollOffsets[key] = StepOptionsScrollViewer.VerticalOffset;
+                    restoringContextScroll = true;
+                }
                 ViewModel.SelectStepFromUser(step);
             }
         }
 
-        private void OnDetailOutputResizeHandlePointerPressed(object sender, PointerRoutedEventArgs e)
+        private void UpdateSelectedContext()
         {
-            detailOutputResizeActive = true;
-            lastDetailOutputPointerY = e.GetCurrentPoint(this).Position.Y;
-            if (sender is UIElement element)
-            {
-                element.CapturePointer(e.Pointer);
-            }
-        }
-
-        private void OnDetailOutputResizeHandlePointerMoved(object sender, PointerRoutedEventArgs e)
-        {
-            if (!detailOutputResizeActive)
+            var nextStep = ViewModel.SelectedStep?.StepKey;
+            if (nextStep == displayedContextStep)
             {
                 return;
             }
 
-            var pointerY = e.GetCurrentPoint(this).Position.Y;
-            var delta = pointerY - lastDetailOutputPointerY;
-            if (Math.Abs(delta) < 1)
+            displayedContextStep = nextStep;
+            pendingContextOffset = nextStep is { } key && contextScrollOffsets.TryGetValue(key, out var saved) ? saved : 0;
+            restoringContextScroll = true;
+            contextLayoutPending = true;
+            StepOptionsScrollViewer.InvalidateMeasure();
+            // Diagnostics are controlled exclusively by the user, never by step changes.
+        }
+
+        private void OnContextViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+        {
+            if (!restoringContextScroll && !e.IsIntermediate
+                && displayedContextStep is { } key && key == ViewModel.SelectedStep?.StepKey)
+            {
+                contextScrollOffsets[key] = StepOptionsScrollViewer.VerticalOffset;
+            }
+        }
+
+        private void OnContextLayoutUpdated(object? sender, object e)
+        {
+            if (!contextLayoutPending)
             {
                 return;
             }
-
-            ViewModel.ResizeDetailOutput(delta);
-            lastDetailOutputPointerY = pointerY;
-        }
-
-        private void OnDetailOutputResizeHandlePointerReleased(object sender, PointerRoutedEventArgs e)
-        {
-            ReleaseDetailOutputResize(sender, e.Pointer);
-        }
-
-        private void OnDetailOutputResizeHandlePointerCaptureLost(object sender, PointerRoutedEventArgs e)
-        {
-            ReleaseDetailOutputResize(sender, e.Pointer);
-        }
-
-        private void OnDetailOutputAutoSizeClicked(object sender, RoutedEventArgs e)
-        {
-            ViewModel.ResetDetailOutputAutoSize(ActualHeight);
-        }
-
-        private void ReleaseDetailOutputResize(object sender, Pointer pointer)
-        {
-            detailOutputResizeActive = false;
-            if (sender is UIElement element)
+            contextLayoutPending = false;
+            var step = displayedContextStep;
+            var offset = pendingContextOffset;
+            // Wait for the newly selected controls to establish their scroll extent.
+            _ = DispatcherQueue.TryEnqueue(() =>
             {
-                element.ReleasePointerCapture(pointer);
-            }
+                if (step != displayedContextStep || step != ViewModel.SelectedStep?.StepKey)
+                {
+                    return;
+                }
+                StepOptionsScrollViewer.ChangeView(null, offset, null, disableAnimation: true);
+                restoringContextScroll = false;
+            });
+        }
+
+        private void OnStepWorkspaceSizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateOptionsLayout(Math.Max(0, e.NewSize.Width - 24));
+            DiagnosticsContentGrid.Height = Math.Clamp(e.NewSize.Height * 0.35, 100, 300);
+        }
+
+        private void OnDiagnosticsExpanding(Expander sender, ExpanderExpandingEventArgs args)
+        {
+            DiagnosticsContentGrid.Height = Math.Clamp(StepWorkspace.ActualHeight * 0.35, 100, 300);
         }
 
         private void UpdateResponsiveLayout(double width)
         {
-            DashboardLayoutRoot.Padding = width < NarrowLayoutBreakpoint
-                ? new Thickness(8, 6, 8, 10)
-                : width < WideLayoutBreakpoint
-                    ? new Thickness(12, 8, 12, 14)
-                    : new Thickness(16, 10, 16, 16);
+            DashboardLayoutRoot.Padding = ResponsiveLayout.PagePadding(width);
+            var stacked = width < 760;
+            DashboardContentGrid.ColumnSpacing = stacked ? 0 : 16;
+            DashboardContentGrid.RowSpacing = stacked ? 12 : 0;
+            DashboardContentGrid.ColumnDefinitions[0].Width = stacked ? Star() : new GridLength(Math.Clamp(width * 0.18, 240, 320));
+            DashboardContentGrid.ColumnDefinitions[1].Width = stacked ? new GridLength(0) : Star();
+            DashboardContentGrid.RowDefinitions[0].Height = stacked ? new GridLength(154) : Star();
+            DashboardContentGrid.RowDefinitions[1].Height = stacked ? Star() : new GridLength(0);
+            Grid.SetColumn(StepWorkspace, stacked ? 0 : 1);
+            Grid.SetRow(StepWorkspace, stacked ? 1 : 0);
+            UpdateOptionsLayout(Math.Max(0, StepWorkspace.ActualWidth - 24));
+        }
 
-            DashboardContentGrid.ColumnSpacing = 0;
+        private void UpdateOptionsLayout(double width)
+        {
 
             ApplyResponsiveGrid(
-                TranslationDecisionGrid,
+                PublicationSummaryGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto },
-                (0, 0),
-                (0, 1));
-
-            ApplyResponsiveGrid(
-                SkipAheadActionGrid,
-                width < WideLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto },
-                (0, 0),
-                (0, 1));
-
-            ApplyResponsiveGrid(
-                DownloadQuickOptionsGrid,
-                width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto },
-                (0, 0),
-                (0, 1));
-
-            ApplyResponsiveGrid(
-                TranslateQuickOptionsGrid,
-                width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto },
-                (0, 0),
-                (0, 1),
-                (0, 2),
-                (0, 3));
-
-            ApplyResponsiveGrid(
-                CleanupFlagsGrid,
-                width < WideLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto },
-                (0, 0),
-                (0, 1));
-
-            ApplyResponsiveGrid(
-                CleanupAudioActionGrid,
-                width < WideLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto },
+                new[] { Star(), GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1),
                 (0, 2));
 
             ApplyResponsiveGrid(
-                CleanupSubtitleActionGrid,
+                PublicationRouteGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto },
+                new[] { Star(), Star() },
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1));
+
+            ApplyResponsiveGrid(
+                PublicationLinksGrid,
+                width < MediumLayoutBreakpoint,
+                new[] { Star(), Star() },
                 (0, 0),
                 (0, 1));
 
             ApplyResponsiveGrid(
-                TagAndRenameQuickOptionsGrid,
+                PublicationTransferGrid,
                 width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto },
-                (0, 0));
-
-            ApplyResponsiveGrid(
-                PackageRarQuickOptionsGrid,
-                width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto },
+                new[] { Star(), new GridLength(220) },
                 (0, 0),
-                (0, 1),
-                (0, 2),
-                (0, 3),
-                (0, 4),
-                (0, 5));
-
-            ApplyResponsiveGrid(
-                PackageRarDetailActionsGrid,
-                width < MediumLayoutBreakpoint,
-                new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, GridLength.Auto },
-                (0, 0),
-                (0, 1),
-                (0, 2),
-                (0, 3));
+                (0, 1));
 
             ApplyResponsiveGrid(
                 DetailOutputToolbarGrid,
-                width < MediumLayoutBreakpoint,
-                new[] { Star(), GridLength.Auto, GridLength.Auto, GridLength.Auto },
+                width < 420,
+                new[] { Star(), GridLength.Auto, GridLength.Auto },
                 (0, 0),
                 (0, 1),
-                (0, 2),
-                (0, 3));
+                (0, 2));
         }
 
         private static void ApplyResponsiveGrid(Grid grid, bool stacked, GridLength[] wideColumnWidths, params (int row, int column)[] widePositions)
-        {
-            if (grid.Children.Count < widePositions.Length)
-            {
-                return;
-            }
-
-            if (stacked)
-            {
-                grid.ColumnDefinitions[0].Width = Star();
-                for (var column = 1; column < grid.ColumnDefinitions.Count; column++)
-                {
-                    grid.ColumnDefinitions[column].Width = new GridLength(0);
-                }
-
-                for (var index = 0; index < widePositions.Length; index++)
-                {
-                    if (grid.Children[index] is FrameworkElement child)
-                    {
-                        Grid.SetColumn(child, 0);
-                        Grid.SetRow(child, index);
-                    }
-                }
-
-                return;
-            }
-
-            for (var column = 0; column < grid.ColumnDefinitions.Count; column++)
-            {
-                grid.ColumnDefinitions[column].Width = column < wideColumnWidths.Length
-                    ? wideColumnWidths[column]
-                    : GridLength.Auto;
-            }
-
-            for (var index = 0; index < widePositions.Length; index++)
-            {
-                if (grid.Children[index] is FrameworkElement child)
-                {
-                    Grid.SetRow(child, widePositions[index].row);
-                    Grid.SetColumn(child, widePositions[index].column);
-                }
-            }
-        }
+            => ResponsiveLayout.ApplyGrid(grid, stacked, wideColumnWidths, widePositions);
 
         private static GridLength Star(double value = 1) => new(value, GridUnitType.Star);
 
